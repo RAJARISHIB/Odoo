@@ -1,0 +1,80 @@
+/* =========================================================================
+   Type, space, radius, elevation and layout scales.
+
+   The half-pixel type sizes are inherited from the running app on purpose —
+   every screen is already calibrated to them. Re-tuning the ramp is a separate
+   visual pass, not part of the token swap.
+   ========================================================================= */
+
+:root {
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
+
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15.5px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 40px;
+
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.65;
+
+  --tracking-tight: -0.015em;
+  --tracking-tighter: -0.025em;
+  --tracking-wide: 0.05em;
+  --tracking-widest: 0.08em;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --shadow-xs: 0 1px 2px rgb(15 28 34 / 5%);
+  --shadow-sm: 0 1px 3px rgb(15 28 34 / 7%);
+  --shadow-md: 0 6px 16px rgb(15 28 34 / 9%);
+  --shadow-lg: 0 16px 40px rgb(15 28 34 / 13%);
+
+  --sidebar-full-w: 248px;
+  --sidebar-rail-w: 64px;
+  --sidebar-w: var(--sidebar-full-w);
+  --topbar-h: 60px;
+  --content-max: 1400px;
+
+  --z-topbar: 20;
+  --z-sidebar: 30;
+  --z-scrim: 40;
+  --z-drawer: 50;
+  --z-menu: 60;
+  --z-toast: 1000;
+
+  /* ---- Back-compat aliases -------------------------------------------
+     Every pre-existing component stylesheet still reads these. They keep
+     the token swap non-breaking; retire them once nothing references them. */
+  --sidebar-width: var(--sidebar-w);
+  --header-height: var(--topbar-h);
+  --font: var(--font-sans);
+  --radius: var(--radius-md);
+  --shadow: var(--shadow-md);
+}

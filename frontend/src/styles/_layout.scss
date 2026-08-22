@@ -1,0 +1,116 @@
+/* =========================================================================
+   Page-level layout helpers, shared by every screen.
+   ========================================================================= */
+
+.page {
+  padding: var(--space-6) var(--space-7);
+  max-width: var(--content-max);
+  margin-inline: auto;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.page-head h1 {
+  font-size: var(--text-xl);
+}
+
+.page-head p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+}
+
+.page-head .actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.grid.cols-3 {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.grid.cols-4 {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+/* Employee directory: cards, not a table. */
+.grid.cards {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.subtle {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+/* Clock times, durations, login IDs — anything that should align in a column. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center;
+}
+
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* One chevron icon, four directions. */
+.rot-90 {
+  transform: rotate(90deg);
+}
+.rot-180 {
+  transform: rotate(180deg);
+}
+.rot-270 {
+  transform: rotate(270deg);
+}

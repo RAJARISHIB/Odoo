@@ -1,0 +1,132 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Employees</h1>
+      <p>
+        {{ meta().total }} {{ meta().total === 1 ? 'person' : 'people' }}
+        @if (canSeePresence() && inOfficeCount()) {
+          · <strong class="in-count">{{ inOfficeCount() }} in office</strong>
+        }
+      </p>
+    </div>
+
+    @if (canManage()) {
+      <div class="actions">
+        <a class="btn ghost" routerLink="/settings/people">
+          <app-icon name="briefcase" />Manage roles
+        </a>
+        <a class="btn" routerLink="/settings/people" [queryParams]="{ new: 1 }">
+          <app-icon name="plus" [strokeWidth]="2" />New employee
+        </a>
+      </div>
+    }
+  </div>
+
+  <form class="toolbar" [formGroup]="filters" (ngSubmit)="applyFilters()">
+    <label class="search">
+      <app-icon name="search" />
+      <input type="search" formControlName="search" placeholder="Name, email or employee ID" />
+    </label>
+
+    <select formControlName="department_id" (change)="applyFilters()" aria-label="Department">
+      <option value="">All departments</option>
+      @for (department of departments(); track department.id) {
+        <option [value]="department.id">{{ department.name }}</option>
+      }
+    </select>
+
+    <select formControlName="role" (change)="applyFilters()" aria-label="Role">
+      @for (role of roles; track role.value) {
+        <option [value]="role.value">{{ role.label }}</option>
+      }
+    </select>
+
+    <button class="btn ghost sm" type="button" (click)="resetFilters()">Reset</button>
+  </form>
+
+  @if (loading()) {
+    <div class="grid cards">
+      @for (i of skeletons; track i) {
+        <div class="card person-card is-loading">
+          <span class="skeleton avatar-skeleton"></span>
+          <span class="skeleton line lg"></span>
+          <span class="skeleton line"></span>
+        </div>
+      }
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="card">
+      <div class="empty">
+        <app-icon name="people" style="--icon-size: 28px" [strokeWidth]="1.5" />
+        <strong>No one matches those filters</strong>
+        <p>Try a different department or clear the search to see the whole directory.</p>
+        <button class="btn ghost sm" type="button" (click)="resetFilters()">Clear filters</button>
+      </div>
+    </div>
+  } @else {
+    <div class="grid cards stagger">
+      @for (person of rows(); track person.id; let i = $index) {
+        <a class="card person-card" [routerLink]="['/employees', person.id]" [style.--i]="i">
+          @if (presenceFor(person); as presence) {
+            <span class="presence" [class]="presence.kind" [title]="presence.label">
+              @if (presence.icon) {
+                <app-icon [name]="presence.icon" [strokeWidth]="2" />
+              } @else {
+                <span class="pip"></span>
+              }
+              <span class="sr-only">{{ presence.label }}</span>
+            </span>
+          }
+
+          <div class="face">
+            @if (person.avatar_url) {
+              <img class="avatar lg" [src]="person.avatar_url" [alt]="" />
+            } @else {
+              <span class="avatar lg" [class]="tint(person)">{{ initials(person) }}</span>
+            }
+          </div>
+
+          <div class="who">
+            <strong class="truncate">{{ person.full_name }}</strong>
+            <span class="truncate role">{{ person.designation || 'No designation' }}</span>
+          </div>
+
+          <div class="meta">
+            <span class="truncate">{{ departmentName(person) }}</span>
+            @if (person.employee_id) {
+              <code>{{ person.employee_id }}</code>
+            }
+          </div>
+        </a>
+      }
+    </div>
+
+    @if (meta().total_pages > 1) {
+      <div class="card pager-card">
+        <div class="pager">
+          <span>
+            Page {{ meta().page }} of {{ meta().total_pages }} · {{ meta().total }} people
+          </span>
+          <div class="row">
+            <button
+              class="btn ghost sm"
+              type="button"
+              [disabled]="!meta().has_previous"
+              (click)="goToPage(meta().page - 1)"
+            >
+              Previous
+            </button>
+            <button
+              class="btn ghost sm"
+              type="button"
+              [disabled]="!meta().has_next"
+              (click)="goToPage(meta().page + 1)"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

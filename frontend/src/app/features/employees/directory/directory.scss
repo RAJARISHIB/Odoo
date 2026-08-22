@@ -1,0 +1,229 @@
+.in-count {
+  color: var(--success);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---------- toolbar ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-subtle);
+  --icon-size: 15px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.search:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  outline: none;
+}
+
+.search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.toolbar select {
+  padding: 8px var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.toolbar select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* ---------- person card ---------- */
+.person-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  color: inherit;
+  text-align: center;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+a.person-card:hover {
+  text-decoration: none;
+  color: inherit;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+a.person-card:active {
+  transform: translateY(0);
+}
+
+.face {
+  position: relative;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.who strong {
+  font-size: 14.5px;
+  font-weight: var(--weight-semibold);
+}
+
+.who .role {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.meta code {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+/* ---------- presence marker ----------
+   The wireframe's corner status: green in office, aeroplane on leave,
+   amber absent. */
+.presence {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  --icon-size: 13px;
+}
+
+.presence .pip {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.presence.in {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.presence.in .pip {
+  animation: pulse-dot 2s infinite;
+}
+
+.presence.out {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.presence.out .pip {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+
+.presence.leave {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.presence.absent {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.presence.unknown {
+  background: var(--surface-alt);
+  color: var(--text-subtle);
+}
+
+.presence.unknown .pip {
+  background: transparent;
+  border: 1.5px dashed currentColor;
+}
+
+/* ---------- loading ---------- */
+.person-card.is-loading {
+  pointer-events: none;
+}
+
+.avatar-skeleton {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+}
+
+.line {
+  width: 60%;
+  height: 11px;
+}
+
+.line.lg {
+  width: 80%;
+  height: 14px;
+}
+
+.pager-card {
+  margin-top: var(--space-5);
+}
+
+.pager-card .pager {
+  border-top: none;
+}

@@ -4,20 +4,42 @@
   min-height: 100vh;
 }
 
+/* Deep teal, identical in both themes - a brand surface, not a themed one. */
 .brand-pane {
-  background: linear-gradient(150deg, #4f46e5, #6d28d9 55%, #9333ea);
-  color: #fff;
-  padding: 46px 52px;
+  position: relative;
+  overflow: hidden;
+  background: var(--brand-deep);
+  color: var(--brand-deep-ink);
+  padding: 52px 56px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.13;
+  stroke: var(--brand-deep-accent);
+  stroke-width: 1.25;
+  fill: none;
+  pointer-events: none;
+}
+
+.brand,
+.pitch,
+.foot {
+  position: relative;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
-  font-weight: 650;
+  gap: var(--space-3);
+  font-weight: var(--weight-semibold);
   font-size: 17px;
 }
 
@@ -25,61 +47,63 @@
   width: 36px;
   height: 36px;
   border-radius: 9px;
-  background: rgb(255 255 255 / 18%);
+  background: var(--brand-deep-accent);
+  color: var(--brand-deep);
   display: grid;
   place-items: center;
-  font-size: 13px;
-  letter-spacing: 0.03em;
-}
-
-.pitch {
-  margin-top: auto;
+  flex: none;
+  --icon-size: 20px;
 }
 
 .pitch h1 {
-  font-size: 34px;
-  line-height: 1.2;
-  margin-bottom: 14px;
-  color: #fff;
+  font-size: var(--text-3xl);
+  line-height: 1.18;
+  letter-spacing: var(--tracking-tighter);
+  margin-bottom: var(--space-5);
+  color: var(--brand-deep-ink);
+  text-wrap: pretty;
 }
 
 .pitch p {
-  color: rgb(255 255 255 / 82%);
+  color: var(--brand-deep-muted);
   max-width: 44ch;
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
 }
 
 .features {
   list-style: none;
   padding: 0;
-  margin: 0 0 auto;
+  margin: var(--space-7) 0 0;
   display: grid;
-  gap: 11px;
-  color: rgb(255 255 255 / 88%);
+  gap: var(--space-3);
+  color: color-mix(in srgb, var(--brand-deep-ink) 88%, transparent);
 }
 
 .features li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
+  font-size: var(--text-base);
+  --icon-size: 17px;
 }
 
-.features span {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 20%);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  flex: none;
+.features app-icon {
+  color: var(--brand-deep-accent);
+}
+
+.foot {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--brand-deep-subtle);
 }
 
 .form-pane {
   display: grid;
   place-items: center;
-  padding: 40px 24px;
+  padding: var(--space-9) var(--space-6);
   background: var(--bg);
 }
 
@@ -89,15 +113,17 @@
   }
 
   .brand-pane {
-    padding: 28px;
-    gap: 22px;
+    padding: var(--space-7);
+    gap: var(--space-5);
   }
 
   .pitch h1 {
-    font-size: 26px;
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-3);
   }
 
-  .features {
+  .features,
+  .foot {
     display: none;
   }
 }

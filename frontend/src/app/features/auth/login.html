@@ -1,5 +1,4 @@
 <div class="auth-card">
-  <div class="logo-slot">App/Web Logo</div>
 
   <header>
     <h1>Welcome back</h1>
@@ -12,7 +11,7 @@
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <div class="field">
-      <label for="identifier">Login Id / Email :-</label>
+      <label for="identifier">Login ID or email</label>
       <input
         id="identifier"
         type="text"
@@ -29,7 +28,7 @@
     </div>
 
     <div class="field">
-      <label for="password">Password :-</label>
+      <label for="password">Password</label>
       <div class="input-with-action">
         <input
           id="password"
@@ -45,7 +44,7 @@
           (click)="togglePassword()"
           [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
         >
-          {{ showPassword() ? '🙈' : '👁' }}
+          <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
         </button>
       </div>
       @if (invalid('password')) {
@@ -54,7 +53,7 @@
     </div>
 
     <button class="btn block" type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Signing in…' : 'SIGN IN' }}
+      {{ submitting() ? 'Signing in…' : 'Sign in' }}
     </button>
   </form>
 
@@ -67,6 +66,6 @@
   </div>
 
   <footer>
-    Don't have an Account? <a routerLink="/auth/register">Sign Up</a>
+    Setting up a new company? <a routerLink="/auth/register">Create an organization</a>
   </footer>
 </div>

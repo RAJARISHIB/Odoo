@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SlicePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,16 +9,22 @@ import { Realtime } from '../../../core/services/realtime';
 import { Role, User } from '../../../core/models/user.model';
 import { Toast } from '../../../core/services/toast';
 import { Users } from '../../../core/services/users';
+import { RouterLink } from '@angular/router';
+import { Icon } from '../../../shared/icon/icon';
 
 /** Employee directory: search, paginate, invite, deactivate, reset passwords. */
 @Component({
   selector: 'app-employees',
-  imports: [ReactiveFormsModule, SlicePipe],
+  imports: [ReactiveFormsModule, SlicePipe, RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employees.html',
   styleUrl: './employees.scss',
 })
 export class Employees {
+  /** `?new=1` from the directory's "New employee" button, bound by
+      `withComponentInputBinding()`. Opens the create form on arrival. */
+  readonly new = input<string | undefined>(undefined);
+
   private readonly users = inject(Users);
   private readonly toast = inject(Toast);
   private readonly realtime = inject(Realtime);
@@ -59,6 +65,10 @@ export class Employees {
 
   constructor() {
     this.load();
+
+    effect(() => {
+      if (this.new()) this.showForm.set(true);
+    });
 
     // Keep the table honest when another admin adds or edits someone.
     this.realtime

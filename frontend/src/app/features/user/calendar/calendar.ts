@@ -26,6 +26,7 @@ import {
 } from '../../../core/models/leaves.model';
 import { Leaves } from '../../../core/services/leaves';
 import { Toast } from '../../../core/services/toast';
+import { Icon } from '../../../shared/icon/icon';
 
 export interface CalendarDay {
   date: Date;
@@ -41,7 +42,7 @@ export interface CalendarDay {
 @Component({
   selector: 'app-user-calendar',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',

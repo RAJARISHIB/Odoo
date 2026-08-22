@@ -1,62 +1,55 @@
 /* Shared by the login, register and change-password cards. */
 .auth-card {
-  width: min(400px, 100%);
+  width: min(420px, 100%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  padding: 32px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-8);
 }
 
 .auth-card.wide {
-  width: min(520px, 100%);
-}
-
-/* The "App/Web Logo" placeholder at the top of each card. */
-.logo-slot {
-  height: 44px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  display: grid;
-  place-items: center;
-  color: var(--text-subtle);
-  font-size: 12.5px;
-  letter-spacing: 0.03em;
-  margin-bottom: 22px;
+  width: min(540px, 100%);
 }
 
 header {
-  margin-bottom: 22px;
+  margin-bottom: var(--space-6);
+}
+
+header h1 {
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tighter);
 }
 
 header p {
-  margin: 5px 0 0;
+  margin: 6px 0 0;
+  color: var(--text-muted);
 }
 
 .alert {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 10px 13px;
-  margin-bottom: 16px;
-  font-size: 13px;
+  padding: 11px var(--space-3);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
 }
 
 .notice {
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--info-soft);
+  color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 10px 13px;
-  margin-bottom: 16px;
-  font-size: 13px;
+  padding: 11px var(--space-3);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 /* An input with a trailing button: the password eye, the logo upload. */
 .input-with-action {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .input-with-action input {
@@ -70,26 +63,30 @@ header p {
   width: 42px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface-alt);
+  background: var(--surface);
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
   padding: 0;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  --icon-size: 17px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .reveal:hover,
 .upload:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .upload {
   background: var(--primary-soft);
   color: var(--primary);
+  border-style: dashed;
   overflow: hidden;
 }
 
@@ -101,7 +98,7 @@ header p {
 
 .hint-row {
   margin-top: 6px;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: baseline;
 }
 
@@ -112,35 +109,49 @@ header p {
 code {
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 1px 5px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 button[type='submit'] {
-  margin-top: 6px;
-  letter-spacing: 0.04em;
+  margin-top: var(--space-2);
+  padding-block: 11px;
+  font-size: 14.5px;
 }
 
 .demo {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 footer {
-  margin-top: 18px;
+  margin-top: var(--space-5);
   text-align: center;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 520px) {
+  .auth-card {
+    padding: var(--space-6);
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
 }

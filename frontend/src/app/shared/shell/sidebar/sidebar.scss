@@ -1,0 +1,266 @@
+/* Sidebar. Width is driven by --sidebar-w, which the shell overrides when
+   collapsed; every rule here reads that variable rather than a fixed number. */
+:host {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ---------- brand ---------- */
+.brand {
+  height: var(--topbar-h);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mark {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  display: grid;
+  place-items: center;
+  flex: none;
+  --icon-size: 17px;
+}
+
+.mark:hover {
+  background: var(--primary-hover);
+}
+
+.mark img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+  background: var(--surface-alt);
+  padding: 3px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.brand-text strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.drawer-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  --icon-size: 19px;
+}
+
+.drawer-close:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+/* ---------- nav ---------- */
+nav {
+  flex: 1;
+  padding: var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.nav-section {
+  padding: var(--space-2) 10px 6px;
+  white-space: nowrap;
+}
+
+.nav-section:not(:first-child) {
+  padding-top: var(--space-5);
+}
+
+.nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* 22 + 20 + 22 = the 64px rail. Holding the icon's x-position constant is
+     what makes the collapse read as the sidebar closing around the nav
+     rather than squashing it. */
+  padding: 9px 22px;
+  margin-inline: -10px;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+  font-size: 13.5px;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  transition: color var(--dur-fast) var(--ease-out);
+  --icon-size: 20px;
+}
+
+.nav-row:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-row:hover:not(.is-active)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  z-index: -1;
+}
+
+.nav-row.is-active {
+  color: var(--primary);
+}
+
+/* The pill is its own element so it can be the shared element that morphs
+   between rows on navigation. */
+.nav-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  z-index: -1;
+  view-transition-name: nav-pill;
+}
+
+.nav-label {
+  transition: opacity var(--dur-fast) linear;
+}
+
+.nav-skeleton {
+  height: 34px;
+  margin: 3px 10px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- foot ---------- */
+.sidebar-foot {
+  flex: none;
+  padding: var(--space-3) 15px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.user-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px;
+  margin: -4px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+
+.user-chip:hover {
+  background: var(--surface-alt);
+  text-decoration: none;
+}
+
+.user-chip .who {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-chip .who strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.user-chip .who span {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  text-transform: capitalize;
+}
+
+.collapse-toggle {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  --icon-size: 16px;
+}
+
+.collapse-toggle:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.collapse-toggle app-icon {
+  transition: transform var(--dur-med) var(--ease-emphasized);
+}
+
+/* ---------- collapsed rail ---------- */
+:host-context(.shell.is-collapsed) {
+  .brand-text,
+  .nav-section,
+  .nav-label,
+  .user-chip .who {
+    opacity: 0;
+    visibility: hidden;
+    /* Delay only the visibility flip, so the fade still runs but the hidden
+       labels leave the accessibility tree once it is done. */
+    transition:
+      opacity var(--dur-fast) linear,
+      visibility 0s var(--dur-fast);
+  }
+
+  .sidebar-foot {
+    flex-direction: column;
+    padding-inline: 15px;
+  }
+
+  .user-chip {
+    flex: none;
+  }
+}
+
+/* ---------- drawer ---------- */
+:host-context(.shell.is-compact) {
+  .drawer-close {
+    display: inline-flex;
+  }
+
+  /* A drawer is a temporary surface - never a rail. */
+  .brand-text,
+  .nav-section,
+  .nav-label,
+  .user-chip .who {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .collapse-toggle {
+    display: none;
+  }
+
+  .nav-row {
+    /* 44px minimum touch target. */
+    padding-block: 12px;
+  }
+}

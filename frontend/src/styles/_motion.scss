@@ -1,0 +1,191 @@
+/* =========================================================================
+   Motion: tokens, page transitions, micro-interactions.
+
+   Page swaps use the native View Transitions API, enabled in app.config.ts by
+   `withViewTransitions()`. Everything else here is plain CSS. Nothing in this
+   file needs @angular/animations.
+   ========================================================================= */
+
+:root {
+  --dur-fast: 120ms;
+  --dur-med: 200ms;
+  --dur-slow: 320ms;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  /* A real spring with no JS and no library. */
+  --ease-spring: linear(0, 0.35 8%, 0.82 20%, 1.06 32%, 0.99 46%, 1.01 62%, 1);
+}
+
+/* ---------- page transitions ----------------------------------------------
+   1. Kill the default whole-document cross-fade. Without this the sidebar and
+      topbar are part of the `root` snapshot pair and visibly flash on every
+      navigation.
+   2. Lift the persistent chrome out of that snapshot with its own name. Old
+      and new are identical, so the group is a no-op and the chrome never moves.
+   3. Only the content area actually animates. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(shell-sidebar),
+::view-transition-group(shell-topbar) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(shell-content) {
+  animation: vt-out var(--dur-fast) var(--ease-in) both;
+}
+
+::view-transition-new(shell-content) {
+  animation: vt-in var(--dur-med) var(--ease-out) both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The active nav pill is a shared element: old and new carry the same
+   `view-transition-name`, so the browser interpolates the rectangle and the
+   pill slides between rows. Suppress the cross-fade — two solid rectangles
+   fading into each other just reads as a flicker. */
+::view-transition-old(nav-pill),
+::view-transition-new(nav-pill) {
+  animation: none;
+  opacity: 1;
+}
+
+::view-transition-group(nav-pill) {
+  animation-duration: var(--dur-med);
+  animation-timing-function: var(--ease-emphasized);
+}
+
+/* ---------- micro-interactions ---------- */
+
+/* Card / row entrance. Templates set `[style.--i]="$index"`; the min() cap
+   stops a 50-row table taking two seconds to appear. */
+.stagger > * {
+  animation: stagger-in var(--dur-med) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+/* Punch-in confirmation: an expanding ring behind the clock face. */
+@keyframes punch-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.punch-ring {
+  animation: punch-ring 2.4s var(--ease-out) infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- reduced motion ------------------------------------------------
+   Belt and braces. The reliable half is `transition.skipTransition()` in
+   app.config.ts, which works on engines that do not support
+   `::view-transition-group(*)`; this block is the CSS safety net. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

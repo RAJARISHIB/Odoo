@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ApiErrorBody } from '../../core/models/api.model';
 import { Auth } from '../../core/services/auth';
 import { Toast } from '../../core/services/toast';
+import { Icon } from '../../shared/icon/icon';
 
 /**
  * First-login password change.
@@ -15,7 +16,7 @@ import { Toast } from '../../core/services/toast';
  */
 @Component({
   selector: 'app-change-password',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './change-password.html',
   styleUrl: './auth-form.scss',

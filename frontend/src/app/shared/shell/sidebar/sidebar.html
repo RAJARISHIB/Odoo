@@ -1,0 +1,76 @@
+<div class="brand">
+  <a class="mark" routerLink="/employees" [attr.aria-label]="auth.organization()?.name ?? 'HRMS Portal'">
+    @if (auth.organization()?.logo_url; as logo) {
+      <img [src]="logo" [alt]="auth.organization()?.name ?? 'Logo'" />
+    } @else {
+      <app-icon name="people" [strokeWidth]="2" />
+    }
+  </a>
+  <span class="brand-text">
+    <strong class="truncate">{{ auth.organization()?.name ?? 'HRMS Portal' }}</strong>
+    <span class="section-label">{{ auth.user()?.role === 'employee' ? 'Employee' : 'Workspace' }}</span>
+  </span>
+
+  <button
+    class="drawer-close"
+    type="button"
+    (click)="layout.closeDrawer()"
+    aria-label="Close navigation"
+  >
+    <app-icon name="x" [strokeWidth]="2" />
+  </button>
+</div>
+
+<nav [attr.aria-label]="'Main'">
+  @if (loading()) {
+    @for (row of skeletonRows; track row) {
+      <span class="nav-skeleton skeleton"></span>
+    }
+  } @else {
+    @for (section of sections(); track section.label) {
+      <span class="section-label nav-section">{{ section.label }}</span>
+
+      @for (item of section.items; track item.path) {
+        <a
+          class="nav-row"
+          [routerLink]="item.path"
+          [class.is-active]="activePath() === item.path"
+          [attr.aria-current]="activePath() === item.path ? 'page' : null"
+          [title]="item.label"
+        >
+          <!-- Only the active row carries the shared name: two elements with the
+               same view-transition-name abort the whole transition. -->
+          @if (activePath() === item.path) {
+            <span class="nav-pill"></span>
+          }
+          <app-icon [name]="item.icon" />
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    }
+  }
+</nav>
+
+<div class="sidebar-foot">
+  <a class="user-chip" routerLink="/me" [title]="auth.user()?.full_name ?? 'My profile'">
+    @if (auth.user()?.avatar_url; as avatar) {
+      <img class="avatar" [src]="avatar" [alt]="auth.user()?.full_name ?? ''" />
+    } @else {
+      <span class="avatar">{{ initials() }}</span>
+    }
+    <span class="who">
+      <strong class="truncate">{{ auth.user()?.full_name }}</strong>
+      <span class="truncate">{{ roleLabel() }}</span>
+    </span>
+  </a>
+
+  <button
+    class="collapse-toggle"
+    type="button"
+    (click)="layout.setCollapsed(!layout.collapsed())"
+    [attr.aria-label]="layout.collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    [title]="layout.collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+  >
+    <app-icon name="chevron" [class.rot-270]="!layout.collapsed()" [class.rot-90]="layout.collapsed()" />
+  </button>
+</div>

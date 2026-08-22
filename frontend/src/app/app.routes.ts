@@ -1,20 +1,27 @@
 import { Routes } from '@angular/router';
 
 import {
-  adminGuard,
   authGuard,
+  capabilityGuard,
   guestGuard,
   passwordChangeGuard,
   rootRedirectGuard,
 } from './core/guards/auth.guard';
 
 /**
- * Two panels behind one login:
- *   /auth/*   public - login and organization signup
- *   /admin/*  admin panel  (super_admin, admin, hr, manager)
- *   /app/*    user panel   (every signed-in employee)
+ * One shell behind one login.
  *
- * Both shells are lazy-loaded, so a user only downloads the panel they use.
+ * There is no separate admin panel: everybody gets the same chrome and the same
+ * routes, and admin power shows up as capability-gated nav items under
+ * /settings plus inline actions on the shared pages.
+ *
+ * The leave module keeps its files under features/admin/leave, but its routes
+ * are placed by audience rather than by folder: approving requests is a
+ * day-to-day job so it sits beside Time off, while policy, holidays and the
+ * roll-up are configuration and live under /settings.
+ *
+ * `title` sets document.title through Angular's built-in TitleStrategy.
+ * `data.breadcrumb` feeds the topbar - see AppShell.crumbs().
  */
 export const routes: Routes = [
   {
@@ -31,88 +38,166 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/auth-layout').then((m) => m.AuthLayout),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'login' },
-      { path: 'login', loadComponent: () => import('./features/auth/login').then((m) => m.Login) },
-      { path: 'register', loadComponent: () => import('./features/auth/register').then((m) => m.Register) },
+      {
+        path: 'login',
+        title: 'Sign in',
+        loadComponent: () => import('./features/auth/login').then((m) => m.Login),
+      },
+      {
+        path: 'register',
+        title: 'Create organization',
+        loadComponent: () => import('./features/auth/register').then((m) => m.Register),
+      },
     ],
   },
 
   {
-    // Forced first-login password change. Outside both panels: a user who has
-    // not set their own password yet is not allowed into either.
+    // Forced first-login password change. Outside the shell: a user still on a
+    // system-generated password is not allowed anywhere else.
     path: 'change-password',
+    title: 'Set your password',
     canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/auth/change-password').then((m) => m.ChangePassword),
+    loadComponent: () => import('./features/auth/change-password').then((m) => m.ChangePassword),
   },
 
   {
-    path: 'admin',
-    canActivate: [adminGuard, passwordChangeGuard],
-    loadComponent: () => import('./features/admin/admin-shell').then((m) => m.AdminShell),
+    path: '',
+    canActivate: [authGuard, passwordChangeGuard],
+    loadComponent: () => import('./shared/shell/app-shell').then((m) => m.AppShell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-      {
-        path: 'dashboard',
-        loadComponent: () => import('./features/admin/dashboard/dashboard').then((m) => m.AdminDashboard),
-      },
       {
         path: 'employees',
-        loadComponent: () => import('./features/admin/employees/employees').then((m) => m.Employees),
+        data: { breadcrumb: 'Employees' },
+        children: [
+          {
+            path: '',
+            title: 'Employees',
+            loadComponent: () =>
+              import('./features/employees/directory/directory').then((m) => m.Directory),
+          },
+          {
+            path: ':id',
+            title: 'Employee',
+            data: { breadcrumb: 'Details' },
+            loadComponent: () =>
+              import('./features/employees/detail/employee-detail').then((m) => m.EmployeeDetail),
+          },
+        ],
       },
-      {
-        path: 'attendance',
-        loadComponent: () => import('./features/admin/attendance/attendance-board').then((m) => m.AttendanceBoard),
-      },
-      {
-        path: 'organization',
-        loadComponent: () => import('./features/admin/organization/organization-settings').then((m) => m.OrganizationSettings),
-      },
-      {
-        path: 'leave/requests',
-        loadComponent: () => import('./features/admin/leave/requests/leave-requests').then((m) => m.LeaveRequests),
-      },
-      {
-        path: 'leave/configuration',
-        loadComponent: () => import('./features/admin/leave/configuration/leave-configuration').then((m) => m.LeaveConfiguration),
-      },
-      {
-        path: 'leave/holidays',
-        loadComponent: () => import('./features/admin/leave/holidays/holiday-calendar').then((m) => m.HolidayCalendar),
-      },
-      {
-        path: 'leave/dashboard',
-        loadComponent: () => import('./features/admin/leave/dashboard/leave-dashboard').then((m) => m.LeaveDashboard),
-      },
-    ],
-  },
 
-  {
-    path: 'app',
-    canActivate: [authGuard, passwordChangeGuard],
-    loadComponent: () => import('./features/user/user-shell').then((m) => m.UserShell),
-    children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-      {
-        path: 'dashboard',
-        loadComponent: () => import('./features/user/dashboard/dashboard').then((m) => m.UserDashboard),
-      },
       {
         path: 'attendance',
-        loadComponent: () => import('./features/user/attendance/my-attendance').then((m) => m.MyAttendance),
+        data: { breadcrumb: 'Attendance' },
+        children: [
+          {
+            path: '',
+            title: 'My attendance',
+            loadComponent: () =>
+              import('./features/user/attendance/my-attendance').then((m) => m.MyAttendance),
+          },
+          {
+            path: 'team',
+            title: 'Team attendance',
+            data: { breadcrumb: 'Team' },
+            canActivate: [capabilityGuard('can_view_all_attendance')],
+            loadComponent: () =>
+              import('./features/admin/attendance/attendance-board').then((m) => m.AttendanceBoard),
+          },
+        ],
       },
+
       {
-        path: 'calendar',
-        loadComponent: () => import('./features/user/calendar/calendar').then((m) => m.UserCalendar),
+        path: 'time-off',
+        data: { breadcrumb: 'Time off' },
+        children: [
+          {
+            path: '',
+            title: 'Time off',
+            loadComponent: () =>
+              import('./features/user/calendar/calendar').then((m) => m.UserCalendar),
+          },
+          {
+            path: 'requests',
+            title: 'Leave approvals',
+            data: { breadcrumb: 'Approvals' },
+            canActivate: [capabilityGuard('can_approve_attendance')],
+            loadComponent: () =>
+              import('./features/admin/leave/requests/leave-requests').then((m) => m.LeaveRequests),
+          },
+        ],
       },
+
       {
-        path: 'profile',
+        path: 'me',
+        title: 'My profile',
+        data: { breadcrumb: 'My profile' },
         loadComponent: () => import('./features/user/profile/profile').then((m) => m.Profile),
+      },
+
+      {
+        path: 'settings',
+        data: { breadcrumb: 'Settings' },
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          {
+            path: 'overview',
+            title: 'Overview',
+            data: { breadcrumb: 'Overview' },
+            canActivate: [capabilityGuard('can_view_all_attendance')],
+            loadComponent: () =>
+              import('./features/admin/dashboard/dashboard').then((m) => m.AdminDashboard),
+          },
+          {
+            path: 'people',
+            title: 'People',
+            data: { breadcrumb: 'People' },
+            canActivate: [capabilityGuard('can_manage_users')],
+            loadComponent: () => import('./features/admin/employees/employees').then((m) => m.Employees),
+          },
+          {
+            path: 'organization',
+            title: 'Organization',
+            data: { breadcrumb: 'Organization' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/organization/organization-settings').then(
+                (m) => m.OrganizationSettings,
+              ),
+          },
+          {
+            path: 'leave-insights',
+            title: 'Leave insights',
+            data: { breadcrumb: 'Leave insights' },
+            canActivate: [capabilityGuard('can_view_all_attendance')],
+            loadComponent: () =>
+              import('./features/admin/leave/dashboard/leave-dashboard').then((m) => m.LeaveDashboard),
+          },
+          {
+            path: 'leave-policy',
+            title: 'Leave policy',
+            data: { breadcrumb: 'Leave policy' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/leave/configuration/leave-configuration').then(
+                (m) => m.LeaveConfiguration,
+              ),
+          },
+          {
+            path: 'holidays',
+            title: 'Holidays',
+            data: { breadcrumb: 'Holidays' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/leave/holidays/holiday-calendar').then((m) => m.HolidayCalendar),
+          },
+        ],
       },
     ],
   },
 
   {
     path: '**',
+    title: 'Not found',
     loadComponent: () => import('./shared/not-found/not-found').then((m) => m.NotFound),
   },
 ];

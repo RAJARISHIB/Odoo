@@ -1,0 +1,43 @@
+<button
+  class="nav-toggle"
+  type="button"
+  (click)="layout.toggle()"
+  [attr.aria-label]="layout.isCompact() ? 'Open navigation' : 'Toggle sidebar'"
+>
+  <app-icon name="menu" />
+</button>
+
+<nav class="crumbs" aria-label="Breadcrumb">
+  @for (crumb of trail(); track crumb.path) {
+    <a [routerLink]="crumb.path">{{ crumb.label }}</a>
+    <app-icon name="chevron" class="rot-270 sep" />
+  }
+  @if (last(); as current) {
+    <h1>{{ current.label }}</h1>
+  }
+</nav>
+
+<span class="spacer"></span>
+
+<label class="search">
+  <app-icon name="search" />
+  <input type="search" placeholder="Search people, records…" aria-label="Search" />
+  <kbd>/</kbd>
+</label>
+
+<div class="tools">
+  <app-punch-widget />
+
+  <app-realtime-indicator class="hide-sm" />
+
+  <button class="tool" type="button" aria-label="Notifications">
+    <app-icon name="bell" />
+    @if (eventCount(); as count) {
+      <span class="count">{{ count > 9 ? '9+' : count }}</span>
+    }
+  </button>
+
+  <app-theme-toggle class="hide-sm" />
+
+  <app-user-menu />
+</div>

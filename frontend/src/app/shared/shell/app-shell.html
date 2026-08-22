@@ -1,0 +1,34 @@
+<div
+  class="shell"
+  [class.is-collapsed]="layout.collapsed()"
+  [class.is-compact]="layout.isCompact()"
+>
+  <!-- Never @if-ed: staying mounted keeps scroll position and focus across
+       breakpoint changes; on compact it only translates off-canvas. -->
+  <app-sidebar
+    class="shell-sidebar"
+    [class.is-open]="layout.drawerOpen()"
+    [activePath]="activePath()"
+    [attr.role]="layout.isCompact() ? 'dialog' : null"
+    [attr.aria-modal]="layout.isCompact() && layout.drawerOpen() ? 'true' : null"
+    [attr.inert]="layout.isCompact() && !layout.drawerOpen() ? '' : null"
+    (keydown.escape)="layout.closeDrawer()"
+  />
+
+  @if (layout.isCompact() && layout.drawerOpen()) {
+    <div
+      class="scrim"
+      (click)="layout.closeDrawer()"
+      animate.enter="scrim-enter"
+      animate.leave="scrim-leave"
+    ></div>
+  }
+
+  <div class="main">
+    <app-topbar class="shell-topbar" [crumbs]="crumbs()" />
+
+    <main class="content shell-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

@@ -1,0 +1,103 @@
+/* =========================================================================
+   Color tokens — "Deep Teal + Slate".
+
+   Light is the default on :root.  The dark palette is authored ONCE as the
+   `dark` mixin and emitted twice, because a media query and a plain selector
+   cannot be merged into one CSS rule:
+
+     1. @media (prefers-color-scheme: dark) :root:not([data-theme='light'])
+        follows the OS *unless* the user has pinned light.
+     2. :root[data-theme='dark'] wins regardless of the OS setting.
+
+   `[data-theme='light']` needs no rule of its own — light lives on :root, and
+   the `:not()` in (1) is what lets a pinned light theme survive a dark OS.
+   ========================================================================= */
+
+@mixin dark {
+  --bg: #0b1417;
+  --surface: #111e22;
+  --surface-alt: #16262b;
+  --surface-sunken: #080f11;
+  --border: #1e2f35;
+  --border-strong: #2a3f47;
+
+  --text: #e6f0f0;
+  --text-muted: #93a5ac;
+  /* 4.9:1 on --surface. The obvious #6B7F87 measures 4.1:1 and fails AA. */
+  --text-subtle: #7a8c94;
+
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-soft: #10312f;
+  --primary-contrast: #06201e;
+
+  --accent: #fbbf24;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --info: #22d3ee;
+
+  /* Shadows must deepen in dark or cards read as flat. */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 45%);
+  --shadow-md: 0 6px 16px rgb(0 0 0 / 50%);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 60%);
+
+  --scrim: rgb(0 0 0 / 62%);
+}
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --surface-alt: #f0f4f5;
+  --surface-sunken: #eef2f4;
+  --border: #e2e8ec;
+  --border-strong: #cbd6db;
+
+  --text: #0f1c22;
+  --text-muted: #5b6b73;
+  /* 4.5:1 on --bg, 4.8:1 on --surface. */
+  --text-subtle: #65747b;
+
+  --primary: #0f766e;
+  --primary-hover: #0b5f58;
+  --primary-soft: #e6f4f1;
+  --primary-contrast: #ffffff;
+
+  /* Amber is 3.2:1 on white — a FILL, never body text. */
+  --accent: #d97706;
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #be123c;
+  --info: #0e7490;
+
+  /* Deep brand surface: auth panel, punch-in hero. Identical in both themes. */
+  --brand-deep: #0b3b38;
+  --brand-deep-ink: #ffffff;
+  --brand-deep-muted: #a7d9d2;
+  --brand-deep-subtle: #6fa9a2;
+  --brand-deep-accent: #2dd4bf;
+
+  /* Derived, not authored: one definition stays correct in both themes. */
+  --primary-tint: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --success-soft: color-mix(in srgb, var(--success) 12%, var(--surface));
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  --info-soft: color-mix(in srgb, var(--info) 12%, var(--surface));
+
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 32%, transparent);
+  --scrim: rgb(15 28 34 / 38%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark;
+}

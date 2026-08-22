@@ -1,0 +1,97 @@
+/* Shell layout.
+
+   $compact mirrors COMPACT_QUERY in core/services/layout.ts — a CSS @media
+   cannot read a custom property, so the number lives in both files on purpose.
+   Keep them in step. */
+$compact: 880px;
+
+:host {
+  display: block;
+}
+
+/* The sidebar is deliberately NOT a grid track.
+   Animating `grid-template-columns` re-resolves the sticky topbar's containing
+   block every frame — visible jitter plus a full-page layout at 60fps. Instead
+   the sidebar is fixed and the shell animates its own inline padding; two
+   transitions with identical duration and easing stay in lockstep. */
+.shell {
+  min-height: 100vh;
+  padding-inline-start: var(--sidebar-w);
+  transition: padding-inline-start var(--dur-med) var(--ease-emphasized);
+}
+
+.shell.is-collapsed {
+  --sidebar-w: var(--sidebar-rail-w);
+}
+
+.shell-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--sidebar-w);
+  z-index: var(--z-sidebar);
+  transition:
+    width var(--dur-med) var(--ease-emphasized),
+    transform var(--dur-med) var(--ease-emphasized);
+
+  /* Lifts the chrome out of the `root` view-transition snapshot, so it never
+     flashes on navigation and its own width morph is not frozen mid-swap. */
+  view-transition-name: shell-sidebar;
+}
+
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.shell-topbar {
+  view-transition-name: shell-topbar;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  /* The only part of the page that actually cross-fades between routes. */
+  view-transition-name: shell-content;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: var(--z-scrim);
+  animation: scrim-in var(--dur-med) var(--ease-out);
+}
+
+/* `animate.leave` comes from @angular/core 21 — no @angular/animations needed
+   to fade the scrim out before it is removed. */
+.scrim-enter {
+  animation: scrim-in var(--dur-med) var(--ease-out);
+}
+
+.scrim-leave {
+  animation: scrim-out var(--dur-fast) var(--ease-in) forwards;
+  /* A scrim on its way out must never swallow clicks. If the exit animation is
+     ever interrupted - a backgrounded tab, an engine that skips it - the
+     element can linger, and without this it is an invisible full-screen trap. */
+  pointer-events: none;
+}
+
+@media (max-width: $compact) {
+  .shell {
+    padding-inline-start: 0;
+  }
+
+  .shell-sidebar {
+    width: min(var(--sidebar-full-w), 84vw);
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-drawer);
+  }
+
+  .shell-sidebar.is-open {
+    transform: none;
+  }
+}

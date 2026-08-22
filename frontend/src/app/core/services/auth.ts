@@ -47,8 +47,8 @@ export class Auth {
     return !!user && ADMIN_ROLES.includes(user.role);
   });
   readonly panel = computed(() => (this.isAdmin() ? 'admin' : 'user'));
-  /** Where this user belongs after signing in. */
-  readonly homeRoute = computed(() => (this.isAdmin() ? '/admin' : '/app'));
+  /** Where every user lands after signing in - one landing page for everybody. */
+  readonly homeRoute = computed(() => '/employees');
 
   // -----------------------------------------------------------------
   // Session lifecycle

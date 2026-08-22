@@ -1,0 +1,144 @@
+<div class="page">
+  @if (loading()) {
+    <div class="card">
+      <div class="card-body hero-skeleton">
+        <span class="skeleton circle"></span>
+        <span class="skeleton line lg"></span>
+        <span class="skeleton line"></span>
+      </div>
+    </div>
+  } @else if (notFound()) {
+    <div class="card">
+      <div class="empty">
+        <app-icon name="people" style="--icon-size: 28px" [strokeWidth]="1.5" />
+        <strong>Employee not found</strong>
+        <p>They may have been removed, or the link is out of date.</p>
+        <a class="btn ghost sm" routerLink="/employees">Back to directory</a>
+      </div>
+    </div>
+  } @else if (person(); as p) {
+    <a class="back" routerLink="/employees">
+      <app-icon name="chevron" class="rot-90" />Directory
+    </a>
+
+    <div class="card hero">
+      <div class="hero-main">
+        @if (p.avatar_url) {
+          <img class="avatar xl" [src]="p.avatar_url" [alt]="" />
+        } @else {
+          <span class="avatar xl">{{ initials() }}</span>
+        }
+
+        <div class="hero-text">
+          <h1>{{ p.full_name }}</h1>
+          <p>{{ p.designation || 'No designation' }}@if (departmentName()) { · {{ departmentName() }} }</p>
+
+          <div class="row badges">
+            <span class="badge" [class]="p.status">{{ p.status }}</span>
+            <span class="badge">{{ p.role.replace('_', ' ') }}</span>
+            @if (isSelf()) {
+              <span class="badge primary">This is you</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        @if (isSelf()) {
+          <a class="btn" routerLink="/me"><app-icon name="edit" />Edit my profile</a>
+        } @else if (canManage()) {
+          <a class="btn ghost" routerLink="/settings/people">
+            <app-icon name="edit" />Manage in People
+          </a>
+        }
+        @if (p.email) {
+          <a class="btn ghost" [href]="'mailto:' + p.email"><app-icon name="mail" />Email</a>
+        }
+      </div>
+    </div>
+
+    <div class="grid cols-2 detail-grid">
+      <div class="card">
+        <div class="card-head"><h2>Details</h2><span class="badge">Read only</span></div>
+        <div class="card-body facts">
+          <div class="fact">
+            <span class="key">Login ID</span>
+            <span class="val mono">{{ p.login_id }}</span>
+          </div>
+          <div class="fact">
+            <span class="key">Employee ID</span>
+            <span class="val mono">{{ p.employee_id || '—' }}</span>
+          </div>
+          <div class="fact">
+            <span class="key">Work email</span>
+            <span class="val">{{ p.email }}</span>
+          </div>
+          <div class="fact">
+            <span class="key">Phone</span>
+            <span class="val mono">{{ p.phone || '—' }}</span>
+          </div>
+          <div class="fact">
+            <span class="key">Department</span>
+            <span class="val">{{ departmentName() || 'No department' }}</span>
+          </div>
+          <div class="fact">
+            <span class="key">Joined</span>
+            <span class="val">
+              {{ p.date_of_joining ? (p.date_of_joining | date: 'd MMMM y') : '—' }}
+            </span>
+          </div>
+          <div class="fact">
+            <span class="key">Last seen</span>
+            <span class="val">
+              {{ p.last_login_at ? (p.last_login_at | date: 'd MMM y, HH:mm') : 'Never signed in' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      @if (canSeeAttendance()) {
+        <div class="card">
+          <div class="card-head">
+            <h2>Last 30 days</h2>
+            <a class="badge primary" routerLink="/attendance/team">Open board</a>
+          </div>
+
+          @if (summary(); as s) {
+            <div class="card-body">
+              <div class="grid cols-3 summary">
+                <div class="stat">
+                  <div class="label">Days recorded</div>
+                  <div class="value">{{ s.days_recorded }}</div>
+                </div>
+                <div class="stat">
+                  <div class="label">Total hours</div>
+                  <div class="value">{{ s.total_hours | number: '1.0-1' }}</div>
+                </div>
+                <div class="stat">
+                  <div class="label">Average day</div>
+                  <div class="value">{{ s.average_hours | number: '1.0-1' }}h</div>
+                </div>
+              </div>
+
+              <div class="counts">
+                @for (count of counts(); track count.key) {
+                  <div class="count-row">
+                    <span class="swatch" [class]="count.tone"></span>
+                    <span class="spacer">{{ count.label }}</span>
+                    <span class="mono">{{ count.value }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="empty">
+              <app-icon name="clock" style="--icon-size: 26px" [strokeWidth]="1.5" />
+              <strong>No attendance yet</strong>
+              <p>Nothing has been recorded for this person in the last 30 days.</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

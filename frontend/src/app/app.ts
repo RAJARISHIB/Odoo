@@ -4,6 +4,7 @@ import { filter } from 'rxjs';
 
 import { Auth } from './core/services/auth';
 import { Realtime } from './core/services/realtime';
+import { Theme } from './core/services/theme';
 import { ToastHost } from './shared/toast-host/toast-host';
 
 /**
@@ -22,6 +23,9 @@ export class App {
   private readonly router = inject(Router);
   private readonly realtime = inject(Realtime);
   private readonly auth = inject(Auth);
+  /** Injected here so the theme applies on boot, including on the auth pages
+      where the topbar (and its toggle) never renders. */
+  private readonly theme = inject(Theme);
 
   constructor() {
     this.router.events

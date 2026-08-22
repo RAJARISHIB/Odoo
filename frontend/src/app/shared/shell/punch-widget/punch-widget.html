@@ -1,0 +1,29 @@
+@if (loaded()) {
+  <div class="punch" [class.is-in]="checkedIn()">
+    <span class="dot" [attr.aria-hidden]="true"></span>
+
+    @if (checkedIn()) {
+      <span class="readout">
+        <span class="elapsed mono">{{ elapsed() }}</span>
+        <span class="since">since {{ sinceLabel() }}</span>
+      </span>
+    } @else {
+      <span class="readout">
+        <span class="elapsed off">Not checked in</span>
+        <span class="since">Start your day</span>
+      </span>
+    }
+
+    <button
+      class="punch-btn"
+      type="button"
+      [disabled]="busy()"
+      (click)="punch()"
+      [attr.aria-label]="checkedIn() ? 'Check out' : 'Check in'"
+      [title]="checkedIn() ? 'Check out' : 'Check in'"
+    >
+      <app-icon [name]="checkedIn() ? 'logout' : 'login'" [strokeWidth]="2" />
+      <span class="punch-label">{{ checkedIn() ? 'Check out' : 'Check in' }}</span>
+    </button>
+  </div>
+}

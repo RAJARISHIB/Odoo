@@ -95,7 +95,7 @@
                     [class.org]="h.type === 'organization'"
                     [title]="h.name + (h.description ? ' - ' + h.description : '')"
                   >
-                    <span class="event-icon">{{ h.type === 'government' ? '🏛️' : '🏢' }}</span>
+                    <app-icon class="event-icon" [name]="h.type === 'government' ? 'building' : 'briefcase'" />
                     <span class="event-title">{{ h.name }}</span>
                   </div>
                 }
@@ -108,7 +108,7 @@
                     [class.approved]="l.status === 'APPROVED'"
                     [title]="'Leave: ' + l.reason + ' (' + l.status + ')'"
                   >
-                    <span class="event-icon">📝</span>
+                    <app-icon class="event-icon" name="calendar" />
                     <span class="event-title">Leave ({{ l.status }})</span>
                   </div>
                 }

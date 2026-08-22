@@ -1,12 +1,18 @@
 <div class="page">
   <div class="page-head">
     <div>
-      <h1>Employees</h1>
-      <p>{{ meta().total }} people in your organization.</p>
+      <h1>People</h1>
+      <p>Roles, status and credentials for {{ meta().total }} people.</p>
     </div>
-    <button class="btn" type="button" (click)="toggleForm()">
-      {{ showForm() ? 'Cancel' : '+ Add employee' }}
-    </button>
+    <div class="actions">
+      <a class="btn ghost" routerLink="/employees">
+        <app-icon name="people" />Directory
+      </a>
+      <button class="btn" type="button" (click)="toggleForm()">
+        <app-icon [name]="showForm() ? 'x' : 'plus'" [strokeWidth]="2" />
+        {{ showForm() ? 'Cancel' : 'Add employee' }}
+      </button>
+    </div>
   </div>
 
   @if (issuedCredentials(); as issued) {

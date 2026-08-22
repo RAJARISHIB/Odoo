@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiErrorBody } from '../../core/models/api.model';
 import { Auth } from '../../core/services/auth';
 import { Toast } from '../../core/services/toast';
+import { Icon } from '../../shared/icon/icon';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
@@ -17,7 +18,7 @@ const MAX_LOGO_BYTES = 2 * 1024 * 1024;
  */
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './register.html',
   styleUrl: './auth-form.scss',

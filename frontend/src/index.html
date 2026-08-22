@@ -2,9 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Frontend</title>
+  <title>HRMS Portal</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Attendance, people and time off for your organization.">
+  <meta name="color-scheme" content="light dark">
+
+  <script>
+    /* Applies the stored theme before first paint, so a pinned dark theme does
+       not flash light on every load. Keep 'hrms.theme' in sync with STORAGE_KEY
+       in src/app/core/services/theme.ts. */
+    (function () {
+      try {
+        var t = localStorage.getItem('hrms.theme');
+        if (t === 'dark' || t === 'light') {
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.style.colorScheme = t;
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- crossorigin is required even same-origin: fonts are always fetched in
+       CORS mode, and omitting it downloads the file twice. -->
+  <link rel="preload" href="/fonts/plex-sans-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/plex-mono-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>

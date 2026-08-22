@@ -1,5 +1,4 @@
 <div class="auth-card wide">
-  <div class="logo-slot">App/Web Logo</div>
 
   <header>
     <h1>Create your organization</h1>
@@ -13,7 +12,7 @@
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <!-- Company name + logo upload -->
     <div class="field">
-      <label for="organization_name">Company Name :-</label>
+      <label for="organization_name">Company name</label>
       <div class="input-with-action">
         <input
           id="organization_name"
@@ -25,7 +24,7 @@
           @if (logoPreview()) {
             <img [src]="logoPreview()!" alt="Logo preview" />
           } @else {
-            <span>⬆</span>
+            <app-icon name="upload" />
           }
           <input type="file" accept="image/*" (change)="pickLogo($event)" hidden />
         </label>
@@ -50,7 +49,7 @@
     </div>
 
     <div class="field">
-      <label for="name">Name :-</label>
+      <label for="name">Full name</label>
       <input
         id="name"
         formControlName="name"
@@ -68,7 +67,7 @@
     </div>
 
     <div class="field">
-      <label for="email">Email :-</label>
+      <label for="email">Work email</label>
       <input
         id="email"
         type="email"
@@ -85,7 +84,7 @@
     </div>
 
     <div class="field">
-      <label for="phone">Phone :-</label>
+      <label for="phone">Phone</label>
       <input id="phone" formControlName="phone" placeholder="+91 90000 00000" />
       @if (fieldErrors()['phone']) {
         <div class="error">{{ fieldErrors()['phone'] }}</div>
@@ -93,7 +92,7 @@
     </div>
 
     <div class="field">
-      <label for="password">Password :-</label>
+      <label for="password">Password</label>
       <div class="input-with-action">
         <input
           id="password"
@@ -109,7 +108,7 @@
           (click)="togglePassword()"
           [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
         >
-          {{ showPassword() ? '🙈' : '👁' }}
+          <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
         </button>
       </div>
       @if (invalid('password')) {
@@ -120,7 +119,7 @@
     </div>
 
     <div class="field">
-      <label for="confirm_password">Confirm Password :-</label>
+      <label for="confirm_password">Confirm password</label>
       <div class="input-with-action">
         <input
           id="confirm_password"
@@ -136,7 +135,7 @@
           (click)="toggleConfirm()"
           [attr.aria-label]="showConfirm() ? 'Hide password' : 'Show password'"
         >
-          {{ showConfirm() ? '🙈' : '👁' }}
+          <app-icon [name]="showConfirm() ? 'eye-off' : 'eye'" />
         </button>
       </div>
       @if (mismatch) {
@@ -147,7 +146,7 @@
     </div>
 
     <button class="btn block" type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Creating…' : 'Sign Up' }}
+      {{ submitting() ? 'Creating…' : 'Create organization' }}
     </button>
   </form>
 

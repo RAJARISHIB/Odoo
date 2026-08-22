@@ -1,0 +1,132 @@
+:host {
+  display: inline-flex;
+}
+
+.punch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  transition: border-color var(--dur-med) var(--ease-out);
+}
+
+.punch.is-in {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: var(--success-soft);
+}
+
+/* Red until the day has an open session, green once checked in - the
+   wireframe's status marker. */
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  transition: background var(--dur-med) var(--ease-out);
+}
+
+.punch.is-in .dot {
+  background: var(--success);
+  animation: pulse-dot 2s infinite;
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.elapsed {
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.elapsed.off {
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.since {
+  font-size: 10.5px;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.punch.is-in .since {
+  color: color-mix(in srgb, var(--success) 70%, var(--text-muted));
+}
+
+.punch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  --icon-size: 15px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.punch-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.punch-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.punch-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.punch.is-in .punch-btn {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.punch.is-in .punch-btn:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+
+/* Below the breakpoint the label goes and the control becomes icon-only,
+   but the target stays 44px. */
+@media (max-width: 1100px) {
+  .readout {
+    display: none;
+  }
+
+  .punch {
+    padding: 4px;
+    gap: 6px;
+    padding-inline-start: 10px;
+  }
+
+  .punch-label {
+    display: none;
+  }
+
+  .punch-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
