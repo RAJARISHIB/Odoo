@@ -157,7 +157,7 @@ class LeaveAdminRequestController(BaseController):
     """Organization-wide leave requests: /api/v1/admin/leaves/requests"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         queryset = services.admin_list_leave_requests(
             self.user.organization,
             status=self.param("status"), leave_type_id=self.param("leave_type_id"),
@@ -167,19 +167,19 @@ class LeaveAdminRequestController(BaseController):
         return self.paginated(queryset, serializer=self._with_employee)
 
     def retrieve(self, request_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         request = services.get_leave_request_in_org(self.user.organization, request_id)
         return self.ok(self._with_employee(request))
 
     def approve(self, request_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         request = services.approve_leave_request(
             self.user.organization, request_id, self.user, leave_type_id=self.field("leave_type_id")
         )
         return self._announce(request, "Leave request approved.")
 
     def reject(self, request_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         request = services.reject_leave_request(self.user.organization, request_id, self.user, self.field("comment"))
         return self._announce(request, "Leave request rejected.")
 
@@ -209,7 +209,7 @@ class LeaveAllocationController(BaseController):
     """Role-based allocation rules + accrual generation: /api/v1/admin/leaves/allocation-rules"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         rules = services.list_allocation_rules(
             self.user.organization, leave_type_id=self.param("leave_type_id"), role=self.param("role"),
         )
@@ -259,7 +259,7 @@ class LeaveAdjustmentController(BaseController):
     """Manual, audited balance corrections: /api/v1/admin/leaves/adjustments"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         target_user = get_user_in_org(self.user.organization, self.param("user_id")) if self.param("user_id") else None
         leave_type = services.get_leave_type(self.user.organization, self.param("leave_type_id")) if self.param("leave_type_id") else None
         adjustments = services.list_adjustments(self.user.organization, user=target_user, leave_type=leave_type)
@@ -291,7 +291,7 @@ class LeaveDashboardController(BaseController):
     """Balances + org-wide analytics."""
 
     def admin_balances(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         rows = services.list_org_balances(
             self.user.organization, year,
@@ -301,7 +301,7 @@ class LeaveDashboardController(BaseController):
         return self.ok(rows, meta={"total": len(rows), "year": year})
 
     def dashboard(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         summary = services.dashboard_summary(
             self.user.organization, year,
@@ -311,7 +311,7 @@ class LeaveDashboardController(BaseController):
         return self.ok(summary)
 
     def employee_summary(self, user_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         target_user = get_user_in_org(self.user.organization, user_id)
         return self.ok(services.employee_summary(self.user.organization, target_user, year))
