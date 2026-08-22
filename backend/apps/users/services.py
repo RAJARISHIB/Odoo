@@ -202,7 +202,7 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
     for r_slug, r_name, perms in [
         (RoleEnum.SUPER_ADMIN, "Super Admin", list(Permissions.ALL)),
         (RoleEnum.ADMIN, "Admin", list(Permissions.ALL)),
-        (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN)]),
+        (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN, Permissions.CLAIMS_VIEW_ALL, Permissions.CLAIMS_MANAGE)]),
         (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW]),
         (RoleEnum.EMPLOYEE, "Employee", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.ORG_VIEW])
     ]:
@@ -459,9 +459,11 @@ def search_users(organization: Organization, *, search: str = None, role: str = 
             }
         )
     if role:
-        role_doc = Role.objects.filter(organization=organization, id=role).first()
+        role_doc = get_role(organization, role)
         if role_doc:
             queryset = queryset.filter(role=role_doc)
+        else:
+            return queryset.none()
     if status:
         queryset = queryset.filter(status=validate_choice(status, UserStatus.ALL, "status"))
     if department_id:
