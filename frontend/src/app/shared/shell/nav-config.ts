@@ -58,6 +58,8 @@ export const NAV: readonly NavSection[] = [
       { label: 'People', path: '/settings/people', icon: 'briefcase', requires: ['can_manage_users'] },
       { label: 'Leave policy', path: '/settings/leave-policy', icon: 'settings', requires: ['can_manage_organization'] },
       { label: 'Holidays', path: '/settings/holidays', icon: 'calendar', requires: ['can_manage_organization'] },
+      { label: 'Departments', path: '/settings/departments', icon: 'filter', requires: ['can_manage_organization'] },
+      { label: 'Work policy', path: '/settings/work-policy', icon: 'clock', requires: ['can_manage_organization'] },
       { label: 'Organization', path: '/settings/organization', icon: 'building', requires: ['can_manage_organization'] },
     ],
   },

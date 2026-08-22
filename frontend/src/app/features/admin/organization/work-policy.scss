@@ -1,0 +1,52 @@
+/* Seven day toggles that read as one control rather than seven buttons. */
+.day-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.day {
+  min-width: 58px;
+  padding: 9px var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.day:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.day.is-on {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.day:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.alert app-icon {
+  flex: none;
+  --icon-size: 18px;
+  color: var(--warning);
+}
+
+@media (max-width: 520px) {
+  .day {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

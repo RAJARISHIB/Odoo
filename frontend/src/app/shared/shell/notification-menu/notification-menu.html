@@ -1,0 +1,69 @@
+<button
+  class="tool"
+  type="button"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="unread() ? unread() + ' new notifications' : 'Notifications'"
+  title="Notifications"
+  (click)="toggle($event)"
+>
+  <app-icon name="bell" />
+  @if (unread(); as count) {
+    <span class="count">{{ count > 9 ? '9+' : count }}</span>
+  }
+</button>
+
+@if (open()) {
+  <div class="panel" role="menu">
+    <div class="panel-head">
+      <strong>Notifications</strong>
+      @if (items().length) {
+        <button class="link" type="button" (click)="clear()">Clear all</button>
+      }
+    </div>
+
+    <ul class="list">
+      @for (item of items(); track item.id) {
+        <li>
+          <!-- A row with nowhere to go is a <div>, not a dead button: an
+               affordance that does nothing is worse than no affordance. -->
+          @if (item.link) {
+            <button class="row" type="button" role="menuitem" (click)="go(item)">
+              <span class="mark" [class]="item.tone"><app-icon [name]="item.icon" /></span>
+              <span class="text">
+                <strong>{{ item.title }}</strong>
+                @if (item.detail) {
+                  <span class="truncate">{{ item.detail }}</span>
+                }
+              </span>
+              @if (item.at) {
+                <time class="when">{{ item.at | date: 'shortTime' }}</time>
+              }
+            </button>
+          } @else {
+            <div class="row is-static">
+              <span class="mark" [class]="item.tone"><app-icon [name]="item.icon" /></span>
+              <span class="text">
+                <strong>{{ item.title }}</strong>
+                @if (item.detail) {
+                  <span class="truncate">{{ item.detail }}</span>
+                }
+              </span>
+              @if (item.at) {
+                <time class="when">{{ item.at | date: 'shortTime' }}</time>
+              }
+            </div>
+          }
+        </li>
+      } @empty {
+        <li class="empty-note">
+          <strong>Nothing yet</strong>
+          <span>
+            Check-ins, leave requests and account changes appear here as they
+            happen. The list starts fresh each time you sign in.
+          </span>
+        </li>
+      }
+    </ul>
+  </div>
+}

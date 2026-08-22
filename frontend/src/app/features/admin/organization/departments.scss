@@ -1,0 +1,130 @@
+/* Name and code side by side, the button on the same baseline as the inputs.
+   `align-items: end` rather than a margin: the fields carry labels of
+   different heights and a fixed offset would drift the moment one wraps. */
+.add-form {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.add-form .field {
+  margin-bottom: 0;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.add-form .field:last-of-type {
+  flex: 0 1 140px;
+}
+
+/* ---------- list ---------- */
+.dept-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dept {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.dept:last-child {
+  border-bottom: none;
+}
+
+.dept-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dept-name strong {
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+}
+
+.dept-name code {
+  font-size: var(--text-2xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.dept-count {
+  flex: none;
+  font-size: var(--text-sm);
+}
+
+.dept-actions {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+  --icon-size: 14px;
+}
+
+/* ---------- inline rename ---------- */
+.edit-form {
+  flex: 1;
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.edit-form .field {
+  margin-bottom: 0;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.edit-form .field:nth-of-type(2) {
+  flex: 0 1 120px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .add-form,
+  .edit-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-form .field,
+  .add-form .field:last-of-type,
+  .edit-form .field,
+  .edit-form .field:nth-of-type(2) {
+    flex: 1 1 auto;
+  }
+
+  /* Name on its own line, headcount and actions beneath it. */
+  .dept {
+    flex-wrap: wrap;
+    padding-inline: var(--space-4);
+  }
+
+  .dept-name {
+    flex: 1 1 100%;
+  }
+
+  .dept-actions {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .edit-actions .btn {
+    flex: 1;
+  }
+}

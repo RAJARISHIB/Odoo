@@ -19,23 +19,12 @@
 
 <span class="spacer"></span>
 
-<label class="search">
-  <app-icon name="search" />
-  <input type="search" placeholder="Search people, records…" aria-label="Search" />
-  <kbd>/</kbd>
-</label>
+<app-global-search />
 
 <div class="tools">
   <app-punch-widget />
 
-  <app-realtime-indicator class="hide-sm" />
-
-  <button class="tool" type="button" aria-label="Notifications">
-    <app-icon name="bell" />
-    @if (eventCount(); as count) {
-      <span class="count">{{ count > 9 ? '9+' : count }}</span>
-    }
-  </button>
+  <app-notification-menu />
 
   <app-theme-toggle class="hide-sm" />
 

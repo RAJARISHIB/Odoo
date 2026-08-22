@@ -30,10 +30,41 @@ export class PunchWidget {
   /** Ticks every second so the elapsed readout stays live. */
   private readonly now = signal(Date.now());
 
-  protected readonly sinceLabel = computed(() => {
-    const iso = this.since();
-    return iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+  /** Hours banked today across every closed session. */
+  protected readonly todayHours = signal(0);
+  /** When the last completed session ended, for the "since" line. */
+  protected readonly lastOut = signal<string | null>(null);
+
+  /**
+   * The day has a finished session but none open — the user checked in earlier
+   * and has checked out again.
+   *
+   * Worth its own state because "Not checked in / Start your day" is actively
+   * wrong here: it reads as though the day has not begun, when in fact it is
+   * done, and it invites a second check-in the user did not mean to make.
+   */
+  protected readonly doneForNow = computed(() => !this.checkedIn() && this.lastOut() !== null);
+
+  /** "Check in" once a day is already banked would misdescribe the action. */
+  protected readonly buttonLabel = computed(() => {
+    if (this.checkedIn()) return 'Check out';
+    return this.doneForNow() ? 'Check in again' : 'Check in';
   });
+
+  protected readonly sinceLabel = computed(() => this.clock(this.since()));
+  protected readonly lastOutLabel = computed(() => this.clock(this.lastOut()));
+
+  /** Banked time as `7h 45m`, which reads better than a decimal at a glance. */
+  protected readonly todayLabel = computed(() => {
+    const hours = this.todayHours();
+    const whole = Math.floor(hours);
+    const minutes = Math.round((hours - whole) * 60);
+    return whole ? `${whole}h ${String(minutes).padStart(2, '0')}m` : `${minutes}m`;
+  });
+
+  private clock(iso: string | null): string | null {
+    return iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+  }
 
   protected readonly elapsed = computed(() => {
     const iso = this.since();
@@ -72,9 +103,16 @@ export class PunchWidget {
   private refresh(): void {
     this.attendance.status().subscribe({
       next: (state) => {
-        const open = state.sessions?.find((session) => session.is_open) ?? null;
+        const sessions = state.sessions ?? [];
+        const open = sessions.find((session) => session.is_open) ?? null;
+        // Last *completed* session, so a reopened day still reports the right
+        // finish time rather than the first check-out of the morning.
+        const closed = sessions.filter((session) => !session.is_open && session.check_out);
+
         this.checkedIn.set(state.is_checked_in);
         this.since.set(open?.check_in ?? null);
+        this.lastOut.set(closed.at(-1)?.check_out ?? null);
+        this.todayHours.set(state.total_hours ?? 0);
         this.now.set(Date.now());
         this.loaded.set(true);
       },

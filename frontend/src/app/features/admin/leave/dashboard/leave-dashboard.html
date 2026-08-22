@@ -33,7 +33,7 @@
       <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
         <div class="field">
           <label>Year</label>
-          <input type="number" formControlName="year" style="width: 100px" />
+          <input type="number" formControlName="year" class="narrow" placeholder="2026" />
         </div>
         <div class="field">
           <label>Leave type</label>
@@ -149,7 +149,7 @@
                             </div>
                             <div class="field">
                               <label>Amount (+/-)</label>
-                              <input type="number" step="0.5" formControlName="amount" />
+                              <input type="number" step="0.5" formControlName="amount" placeholder="+1.5 or -0.5" />
                               @if (adjustErrors()['amount']) { <div class="error">{{ adjustErrors()['amount'] }}</div> }
                             </div>
                             <div class="field">

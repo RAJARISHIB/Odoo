@@ -34,11 +34,11 @@
       <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
         <div class="field">
           <label>From</label>
-          <input type="date" formControlName="date_from" />
+          <input type="date" formControlName="date_from" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>To</label>
-          <input type="date" formControlName="date_to" />
+          <input type="date" formControlName="date_to" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>Status</label>

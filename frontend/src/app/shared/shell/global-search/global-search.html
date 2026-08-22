@@ -1,0 +1,74 @@
+<!-- Compact: the field would crowd the punch control out of a phone topbar, so
+     it collapses to a trigger and expands into a full-width bar. Hiding search
+     outright below the breakpoint is the wrong trade — a phone is exactly
+     where you want to look someone up rather than browse to them. -->
+@if (layout.isCompact() && !expanded()) {
+  <button class="tool" type="button" aria-label="Search" title="Search" (click)="expand()">
+    <app-icon name="search" />
+  </button>
+} @else {
+  <div class="field-wrap" [class.is-overlay]="layout.isCompact()">
+    <label class="search">
+      <app-icon name="search" />
+      <input
+        #field
+        type="search"
+        role="combobox"
+        aria-label="Search people, leave and settings"
+        [attr.aria-expanded]="showPanel()"
+        aria-autocomplete="list"
+        aria-controls="global-search-results"
+        placeholder="Search people, leave, settings…"
+        [formControl]="term"
+        (focus)="onFocus()"
+        (keydown)="onKeydown($event)"
+      />
+      @if (loading()) {
+        <span class="spinner" aria-hidden="true"></span>
+      } @else if (!layout.isCompact()) {
+        <kbd>/</kbd>
+      }
+    </label>
+
+    @if (layout.isCompact()) {
+      <button class="cancel" type="button" (click)="collapse()">Cancel</button>
+    }
+  </div>
+}
+
+@if (showPanel()) {
+  <div class="results" id="global-search-results" role="listbox">
+    @for (section of sections(); track section.group) {
+      <div class="group">
+        <span class="section-label">{{ section.label }}</span>
+        @for (hit of section.hits; track hit.id) {
+          <button
+            class="hit"
+            type="button"
+            role="option"
+            [attr.aria-selected]="isActive(hit)"
+            [class.is-active]="isActive(hit)"
+            (click)="go(hit)"
+          >
+            <span class="hit-icon"><app-icon [name]="hit.icon" /></span>
+            <span class="hit-text">
+              <strong class="truncate">{{ hit.title }}</strong>
+              @if (hit.subtitle) {
+                <span class="truncate">{{ hit.subtitle }}</span>
+              }
+            </span>
+          </button>
+        }
+      </div>
+    } @empty {
+      <div class="no-results">
+        @if (loading()) {
+          <span>Searching…</span>
+        } @else {
+          <strong>No matches for “{{ value() }}”</strong>
+          <span>Try a name, a login ID, or what you want to do — “approve”, “holidays”, “add employee”.</span>
+        }
+      </div>
+    }
+  </div>
+}

@@ -245,6 +245,63 @@
   font-size: var(--text-xs);
 }
 
+/* ---------- checkboxes -----------------------------------------------------
+   A checkbox is not a text input and must not inherit `width: 100%` from the
+   rule above. Every one in the app was carrying an inline `style="width:auto"`
+   to undo that; this makes the undo unnecessary. */
+.field input[type='checkbox'],
+.field input[type='radio'] {
+  width: auto;
+  min-height: 0;
+}
+
+/* The label IS the hit target — clicking the word toggles the box, and the
+   whole row clears the 24px minimum rather than just the 13px control. */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  user-select: none;
+}
+
+.check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 0;
+  cursor: pointer;
+  /* One line instead of a hand-built faux checkbox: keeps the native control,
+     its keyboard behaviour and its indeterminate state, just in brand teal. */
+  accent-color: var(--primary);
+}
+
+.check input[type='checkbox']:focus-visible {
+  outline: none;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--focus-ring);
+}
+
+.check:hover {
+  color: var(--primary);
+}
+
+.check .subtle {
+  font-weight: 400;
+}
+
+/* Related switches read as one decision, so they share a row and a label. */
+.check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-1) 0;
+}
+
 .filters {
   display: flex;
   gap: var(--space-3);

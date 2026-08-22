@@ -1,0 +1,274 @@
+:host {
+  position: relative;
+  display: block;
+  width: 300px;
+  flex: none;
+}
+
+/* ---------- field ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-subtle);
+  --icon-size: 15px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.search:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--text-subtle);
+}
+
+/* The native clear button sits where the `/` hint goes and duplicates Escape. */
+.search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.search kbd {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+}
+
+.spinner {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: search-spin 0.6s linear infinite;
+}
+
+@keyframes search-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* ---------- results ---------- */
+.results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  /* Wider than the field: result subtitles carry an email or a date range and
+     truncating them to a 300px column defeats the point of showing them. */
+  min-width: 380px;
+  max-height: min(70vh, 460px);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-menu);
+  animation: menu-in var(--dur-fast) var(--ease-out);
+}
+
+.group + .group {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.group .section-label {
+  display: block;
+  padding: 6px 10px 4px;
+}
+
+.hit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* One highlight for both hover and keyboard, so the two never disagree about
+   which row Enter would open. */
+.hit:hover,
+.hit.is-active {
+  background: var(--primary-soft);
+}
+
+.hit.is-active strong {
+  color: var(--primary);
+}
+
+.hit-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  --icon-size: 15px;
+}
+
+.hit.is-active .hit-icon,
+.hit:hover .hit-icon {
+  background: var(--surface);
+  color: var(--primary);
+}
+
+.hit-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hit-text strong {
+  font-size: 13.5px;
+  font-weight: var(--weight-medium);
+}
+
+.hit-text span {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.no-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.no-results strong {
+  font-size: 13.5px;
+}
+
+.no-results span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+
+/* ---------- compact ---------- */
+.field-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The collapsed trigger, matching the topbar's other icon buttons. */
+.tool {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  --icon-size: 19px;
+}
+
+.tool:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+/* Expanded on a phone: the bar takes the whole topbar rather than sharing it,
+   because a 120px search field is not worth the space it costs. */
+.field-wrap.is-overlay {
+  position: fixed;
+  inset-inline: var(--space-3);
+  top: calc((var(--topbar-h) - 36px) / 2);
+  z-index: var(--z-menu);
+}
+
+.field-wrap.is-overlay .search {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+.field-wrap.is-overlay .search input {
+  /* Below 16px iOS Safari zooms the viewport on focus and never zooms back. */
+  font-size: 16px;
+}
+
+.cancel {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  :host {
+    width: 200px;
+  }
+
+  .search kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 880px) {
+  :host {
+    width: auto;
+  }
+
+  .results {
+    position: fixed;
+    top: calc(var(--topbar-h) + 6px);
+    inset-inline: var(--space-3);
+    left: var(--space-3);
+    right: var(--space-3);
+    min-width: 0;
+  }
+}

@@ -1,0 +1,192 @@
+<div class="page">
+  <a class="back" routerLink="/settings/people">
+    <app-icon name="chevron" class="rot-180" />Back to People
+  </a>
+
+  @if (loading()) {
+    <section class="card">
+      <div class="card-body stack">
+        <span class="skeleton" style="width: 40%; height: 20px"></span>
+        <span class="skeleton" style="width: 60%"></span>
+      </div>
+    </section>
+  } @else if (notFound()) {
+    <section class="card">
+      <div class="empty">
+        <app-icon name="people" style="--icon-size: 28px" [strokeWidth]="1.5" />
+        <strong>We couldn't find that person</strong>
+        <p>They may have been removed. Try the directory again.</p>
+        <a class="btn ghost sm" routerLink="/settings/people">Back to People</a>
+      </div>
+    </section>
+  } @else if (user(); as person) {
+    <div class="page-head">
+      <div class="who">
+        @if (person.avatar_url) {
+          <img class="avatar lg" [src]="person.avatar_url" alt="" />
+        } @else {
+          <span class="avatar lg">{{ initials() }}</span>
+        }
+        <div>
+          <h1>{{ person.full_name }}</h1>
+          <p>
+            <code class="mono">{{ person.login_id }}</code>
+            <span class="badge" [class]="person.status">{{ person.status }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" [routerLink]="['/employees', person.id]">
+          <app-icon name="eye" />View public profile
+        </a>
+      </div>
+    </div>
+
+    @if (issuedPassword(); as password) {
+      <div class="card temp-password mb-4">
+        <div class="card-body">
+          <span class="spacer">
+            <strong>New sign-in details for {{ person.email }}</strong>
+            <div class="creds">
+              Login ID <code>{{ person.login_id }}</code>
+              Password <code>{{ password }}</code>
+            </div>
+            <span class="subtle">
+              Shown once — share securely. They must change it on next sign-in.
+            </span>
+          </span>
+          <button class="btn ghost sm" type="button" (click)="dismissPassword()">Dismiss</button>
+        </div>
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <section class="card mb-4">
+        <div class="card-head"><h3>Personal details</h3></div>
+        <div class="card-body">
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="e_first">First name</label>
+              <input id="e_first" formControlName="first_name" placeholder="Aisha" />
+              @if (formErrors()['first_name']) { <div class="error">{{ formErrors()['first_name'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_last">Last name</label>
+              <input id="e_last" formControlName="last_name" placeholder="Kapoor" />
+              @if (formErrors()['last_name']) { <div class="error">{{ formErrors()['last_name'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_phone">Phone</label>
+              <input id="e_phone" formControlName="phone" placeholder="+91 98765 43210" />
+              @if (formErrors()['phone']) { <div class="error">{{ formErrors()['phone'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_dob">Date of birth</label>
+              <input id="e_dob" type="date" formControlName="date_of_birth" placeholder="YYYY-MM-DD" />
+              @if (formErrors()['date_of_birth']) { <div class="error">{{ formErrors()['date_of_birth'] }}</div> }
+            </div>
+          </div>
+
+          <div class="field readonly-field">
+            <label>Email</label>
+            <div class="readonly-value">{{ person.email }}</div>
+            <div class="hint">
+              Email is the sign-in identifier and cannot be changed here.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card mb-4">
+        <div class="card-head"><h3>Role &amp; placement</h3></div>
+        <div class="card-body">
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="e_designation">Designation</label>
+              <input id="e_designation" formControlName="designation" placeholder="Software Engineer" />
+              @if (formErrors()['designation']) { <div class="error">{{ formErrors()['designation'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_employee_id">Employee ID</label>
+              <input id="e_employee_id" formControlName="employee_id" placeholder="EMP007" />
+              @if (formErrors()['employee_id']) { <div class="error">{{ formErrors()['employee_id'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_department">Department</label>
+              <select id="e_department" formControlName="department_id">
+                <option value="">No department</option>
+                @for (department of departments(); track department.id) {
+                  <option [value]="department.id">{{ department.name }}</option>
+                }
+              </select>
+              @if (formErrors()['department_id']) { <div class="error">{{ formErrors()['department_id'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="e_role">Role</label>
+              <select id="e_role" formControlName="role">
+                @for (role of roles; track role) {
+                  <option [value]="role">{{ role.replace('_', ' ') }}</option>
+                }
+              </select>
+              @if (isSelf()) {
+                <div class="hint">You cannot change your own role.</div>
+              } @else {
+                <div class="hint">Decides which admin screens they can reach.</div>
+              }
+              @if (formErrors()['role']) { <div class="error">{{ formErrors()['role'] }}</div> }
+            </div>
+          </div>
+        </div>
+
+        <div class="card-foot">
+          <button class="btn" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </section>
+    </form>
+
+    <section class="card danger-zone">
+      <div class="card-head"><h3>Account actions</h3></div>
+      <div class="card-body stack">
+        <div class="action">
+          <span>
+            <strong>Reset password</strong>
+            <span class="subtle">Issues a temporary password and forces a change at next sign-in.</span>
+          </span>
+          <button class="btn ghost sm" type="button" (click)="resetPassword()">
+            <app-icon name="lock" />Reset
+          </button>
+        </div>
+
+        <div class="action">
+          <span>
+            <strong>{{ person.status === 'active' ? 'Suspend access' : 'Restore access' }}</strong>
+            <span class="subtle">
+              {{
+                person.status === 'active'
+                  ? 'They stay in the directory but can no longer sign in.'
+                  : 'They can sign in again with their existing password.'
+              }}
+            </span>
+          </span>
+          <button class="btn ghost sm" type="button" (click)="toggleStatus()">
+            {{ person.status === 'active' ? 'Suspend' : 'Activate' }}
+          </button>
+        </div>
+
+        @if (!isSelf()) {
+          <div class="action is-danger">
+            <span>
+              <strong>Remove from the organization</strong>
+              <span class="subtle">Their attendance and leave history is kept.</span>
+            </span>
+            <button class="btn danger sm" type="button" (click)="remove()">
+              <app-icon name="trash" />Remove
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

@@ -40,16 +40,16 @@
         <div class="grid cols-3">
           <div class="field">
             <label for="first_name">First name</label>
-            <input id="first_name" formControlName="first_name" />
+            <input id="first_name" formControlName="first_name" placeholder="Aisha" />
             @if (formErrors()['first_name']) { <div class="error">{{ formErrors()['first_name'] }}</div> }
           </div>
           <div class="field">
             <label for="last_name">Last name</label>
-            <input id="last_name" formControlName="last_name" />
+            <input id="last_name" formControlName="last_name" placeholder="Kapoor" />
           </div>
           <div class="field">
             <label for="new_email">Email</label>
-            <input id="new_email" type="email" formControlName="email" />
+            <input id="new_email" type="email" formControlName="email" placeholder="aisha@acme.com" />
             @if (formErrors()['email']) { <div class="error">{{ formErrors()['email'] }}</div> }
           </div>
           <div class="field">
@@ -125,13 +125,13 @@
           @for (user of rows(); track user.id) {
             <tr>
               <td data-primary>
-                <div class="row" style="flex-wrap: nowrap">
+                <a class="person-link" [routerLink]="['/settings/people', user.id]">
                   <span class="avatar">{{ initials(user) }}</span>
-                  <span>
+                  <span class="person-text">
                     <strong>{{ user.full_name }}</strong>
-                    <div class="subtle">{{ user.email }}</div>
+                    <span class="subtle truncate">{{ user.email }}</span>
                   </span>
-                </div>
+                </a>
               </td>
               <td data-label="Login ID"><code class="mono">{{ user.login_id }}</code></td>
               <td data-label="Role"><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
@@ -139,13 +139,12 @@
               <td data-label="Status"><span class="badge" [class]="user.status">{{ user.status }}</span></td>
               <td class="subtle" data-label="Last login">{{ user.last_login_at ? (user.last_login_at | slice: 0 : 10) : 'Never' }}</td>
               <td class="col-actions">
-                <button class="btn ghost sm" type="button" (click)="resetPassword(user)">Reset</button>
-                <button class="btn ghost sm" type="button" (click)="toggleStatus(user)">
-                  {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
-                </button>
-                @if (user.id !== auth.user()?.id) {
-                  <button class="btn ghost sm" type="button" (click)="remove(user)">Remove</button>
-                }
+                <!-- Reset / Suspend / Remove moved to the edit page: they were
+                     three consequential controls on every row, pressed without
+                     ever opening the record they applied to. -->
+                <a class="btn ghost sm" [routerLink]="['/settings/people', user.id]">
+                  <app-icon name="edit" />Edit
+                </a>
               </td>
             </tr>
           } @empty {

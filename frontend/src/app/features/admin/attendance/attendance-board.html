@@ -33,7 +33,7 @@
           </div>
           <div class="field">
             <label for="entry_date">Date</label>
-            <input id="entry_date" type="date" formControlName="date" />
+            <input id="entry_date" type="date" formControlName="date" placeholder="YYYY-MM-DD" />
             @if (formErrors()['date']) { <div class="error">{{ formErrors()['date'] }}</div> }
           </div>
           <div class="field">
@@ -46,11 +46,11 @@
           </div>
           <div class="field">
             <label for="entry_in">Check in</label>
-            <input id="entry_in" type="datetime-local" formControlName="check_in" />
+            <input id="entry_in" type="datetime-local" formControlName="check_in" placeholder="YYYY-MM-DD HH:MM" />
           </div>
           <div class="field">
             <label for="entry_out">Check out</label>
-            <input id="entry_out" type="datetime-local" formControlName="check_out" />
+            <input id="entry_out" type="datetime-local" formControlName="check_out" placeholder="YYYY-MM-DD HH:MM" />
             @if (formErrors()['check_out']) { <div class="error">{{ formErrors()['check_out'] }}</div> }
           </div>
           <div class="field">
@@ -79,11 +79,11 @@
         </div>
         <div class="field">
           <label>From</label>
-          <input type="date" formControlName="date_from" />
+          <input type="date" formControlName="date_from" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>To</label>
-          <input type="date" formControlName="date_to" />
+          <input type="date" formControlName="date_to" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>Status</label>

@@ -259,6 +259,7 @@
                 id="start_date"
                 type="date"
                 formControlName="start_date"
+                placeholder="YYYY-MM-DD"
                 [class.invalid]="applyForm.get('start_date')?.touched && (applyForm.get('start_date')?.invalid || formErrors()['start_date'])"
               />
               @if (formErrors()['start_date']) {
@@ -272,6 +273,7 @@
                 id="end_date"
                 type="date"
                 formControlName="end_date"
+                placeholder="YYYY-MM-DD"
                 [class.invalid]="applyForm.get('end_date')?.touched && (applyForm.get('end_date')?.invalid || formErrors()['end_date'])"
               />
               @if (formErrors()['end_date']) {

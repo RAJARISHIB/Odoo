@@ -143,33 +143,8 @@ export class Employees {
     });
   }
 
-  // -- row actions -------------------------------------------------------
-  protected toggleStatus(user: User): void {
-    const status = user.status === 'active' ? 'suspended' : 'active';
-    this.users.update(user.id, { status }).subscribe((updated) => {
-      this.rows.update((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
-      this.toast.success(`${updated.full_name} is now ${status}.`);
-    });
-  }
-
-  protected resetPassword(user: User): void {
-    this.users.resetPassword(user.id).subscribe((result) => {
-      this.issuedCredentials.set({
-        loginId: user.login_id,
-        email: user.email,
-        password: result.temporary_password,
-      });
-      this.toast.success('Password reset. Share the temporary password below.');
-    });
-  }
-
-  protected remove(user: User): void {
-    if (!confirm(`Remove ${user.full_name}? Their attendance history is kept.`)) return;
-    this.users.remove(user.id).subscribe(() => {
-      this.toast.success(`${user.full_name} removed.`);
-      this.load(this.meta().page);
-    });
-  }
+  // Reset password, suspend and remove now live on the edit page
+  // (features/admin/employees/employee-edit.ts), reached from the row.
 
   protected initials(user: User): string {
     return `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase() || 'U';

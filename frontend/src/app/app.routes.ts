@@ -209,20 +209,49 @@ export const routes: Routes = [
           },
           {
             path: 'people',
-            title: 'People',
             data: { breadcrumb: 'People' },
             canActivate: [capabilityGuard('can_manage_users')],
-            loadComponent: () => import('./features/admin/employees/employees').then((m) => m.Employees),
+            children: [
+              {
+                path: '',
+                title: 'People',
+                loadComponent: () =>
+                  import('./features/admin/employees/employees').then((m) => m.Employees),
+              },
+              {
+                path: ':id',
+                title: 'Edit employee',
+                data: { breadcrumb: 'Edit' },
+                loadComponent: () =>
+                  import('./features/admin/employees/employee-edit').then((m) => m.EmployeeEdit),
+              },
+            ],
           },
           {
             path: 'organization',
-            title: 'Organization',
+            title: 'Organization profile',
             data: { breadcrumb: 'Organization' },
             canActivate: [capabilityGuard('can_manage_organization')],
             loadComponent: () =>
               import('./features/admin/organization/organization-settings').then(
                 (m) => m.OrganizationSettings,
               ),
+          },
+          {
+            path: 'work-policy',
+            title: 'Work policy',
+            data: { breadcrumb: 'Work policy' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/organization/work-policy').then((m) => m.WorkPolicy),
+          },
+          {
+            path: 'departments',
+            title: 'Departments',
+            data: { breadcrumb: 'Departments' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/organization/departments').then((m) => m.Departments),
           },
           {
             path: 'leave-insights',

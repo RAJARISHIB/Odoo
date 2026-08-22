@@ -1,0 +1,91 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Work policy</h1>
+      <p>The shift, the grace period and the day lengths every attendance record is graded against.</p>
+    </div>
+  </div>
+
+  <div class="alert warning mb-4">
+    <app-icon name="warning" />
+    <span>
+      These values are applied when a record is read, not when it is written —
+      so changing them re-grades days that have already happened.
+    </span>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <section class="card mb-4">
+      <div class="card-head"><h3>Shift</h3></div>
+      <div class="card-body">
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="start">Shift start</label>
+            <input id="start" type="time" formControlName="work_start_time" placeholder="09:30" />
+            @if (formErrors()['work_start_time']) { <div class="error">{{ formErrors()['work_start_time'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="end">Shift end</label>
+            <input id="end" type="time" formControlName="work_end_time" placeholder="18:30" />
+            @if (formErrors()['work_end_time']) { <div class="error">{{ formErrors()['work_end_time'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="grace">Late grace</label>
+            <input id="grace" type="number" min="0" formControlName="late_grace_minutes" placeholder="15" />
+            <div class="hint">Minutes after shift start before a check-in counts as late.</div>
+            @if (formErrors()['late_grace_minutes']) { <div class="error">{{ formErrors()['late_grace_minutes'] }}</div> }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card mb-4">
+      <div class="card-head"><h3>Day lengths</h3></div>
+      <div class="card-body">
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="full_day">Full day</label>
+            <input id="full_day" type="number" min="1" max="24" formControlName="full_day_hours" placeholder="8" />
+            <div class="hint">Hours logged to count the day as present.</div>
+            @if (formErrors()['full_day_hours']) { <div class="error">{{ formErrors()['full_day_hours'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="half_day">Half day</label>
+            <input id="half_day" type="number" min="1" max="24" formControlName="half_day_hours" placeholder="4" />
+            <div class="hint">Below this, the day is marked absent instead.</div>
+            @if (formErrors()['half_day_hours']) { <div class="error">{{ formErrors()['half_day_hours'] }}</div> }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>Working days</h3></div>
+      <div class="card-body">
+        <!-- Toggle buttons rather than checkboxes: seven of them read as one
+             control, and aria-pressed carries the state a checkbox would. -->
+        <div class="day-toggles">
+          @for (day of weekdays; track $index) {
+            <button
+              type="button"
+              class="day"
+              [class.is-on]="isWorking($index)"
+              [attr.aria-pressed]="isWorking($index)"
+              (click)="toggleDay($index)"
+            >
+              {{ day }}
+            </button>
+          }
+        </div>
+        <p class="hint">Days outside this set are never counted as absent.</p>
+        @if (formErrors()['working_days']) { <div class="error">{{ formErrors()['working_days'] }}</div> }
+      </div>
+
+      <div class="card-foot">
+        <button class="btn" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save work policy' }}
+        </button>
+      </div>
+    </section>
+  </form>
+</div>

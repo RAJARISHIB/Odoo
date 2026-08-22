@@ -1,0 +1,148 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  --icon-size: 15px;
+}
+
+.back:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* ---------- head ---------- */
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.who h1 {
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+}
+
+.who p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: var(--space-1) 0 0;
+}
+
+.who code {
+  font-size: var(--text-xs);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.who .badge {
+  text-transform: capitalize;
+}
+
+/* ---------- read-only field ---------- */
+.readonly-field {
+  max-width: 420px;
+}
+
+/* ---------- issued credentials ---------- */
+.temp-password {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.temp-password .card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.creds {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+}
+
+.temp-password code {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  margin-inline-start: 4px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- account actions ----------
+   Not a literal "danger zone" box: only one of the three is destructive, and
+   framing a password reset as dangerous trains people to ignore the framing. */
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  --icon-size: 14px;
+}
+
+.action:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.action > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.action strong {
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
+}
+
+.action .subtle {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.action.is-danger strong {
+  color: var(--danger);
+}
+
+.action .btn {
+  flex: none;
+}
+
+@media (max-width: 720px) {
+  .who {
+    gap: var(--space-3);
+  }
+
+  .temp-password .card-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .action .btn {
+    width: 100%;
+  }
+}

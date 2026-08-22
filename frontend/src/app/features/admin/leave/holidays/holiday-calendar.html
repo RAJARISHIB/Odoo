@@ -26,7 +26,7 @@
           </div>
           <div class="field">
             <label for="h_date">Date</label>
-            <input id="h_date" type="date" formControlName="date" />
+            <input id="h_date" type="date" formControlName="date" placeholder="YYYY-MM-DD" />
             @if (formErrors()['date']) { <div class="error">{{ formErrors()['date'] }}</div> }
           </div>
           <div class="field">
@@ -39,7 +39,7 @@
           </div>
           <div class="field" style="grid-column: span 3">
             <label for="h_desc">Description</label>
-            <input id="h_desc" formControlName="description" />
+            <input id="h_desc" formControlName="description" placeholder="Shown to employees on the calendar" />
           </div>
         </div>
         <button class="btn" type="submit" [disabled]="saving()">

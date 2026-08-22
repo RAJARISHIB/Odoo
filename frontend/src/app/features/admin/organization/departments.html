@@ -1,0 +1,89 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Departments</h1>
+      <p>Group people for the directory filter and the headcount breakdown.</p>
+    </div>
+  </div>
+
+  <section class="card mb-4">
+    <div class="card-head"><h3>Add a department</h3></div>
+    <form class="card-body add-form" [formGroup]="form" (ngSubmit)="add()" novalidate>
+      <div class="field">
+        <label for="dept_name">Name</label>
+        <input id="dept_name" formControlName="name" placeholder="Engineering" />
+        @if (formErrors()['name']) { <div class="error">{{ formErrors()['name'] }}</div> }
+      </div>
+      <div class="field">
+        <label for="dept_code">Code <span class="subtle">(optional)</span></label>
+        <input id="dept_code" formControlName="code" placeholder="ENG" />
+        @if (formErrors()['code']) { <div class="error">{{ formErrors()['code'] }}</div> }
+      </div>
+      <button class="btn" type="submit" [disabled]="saving()">
+        <app-icon name="plus" [strokeWidth]="2" />
+        {{ saving() ? 'Saving…' : 'Add department' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>All departments</h3>
+      <span class="subtle">{{ departments().length }} total</span>
+    </div>
+
+    <ul class="dept-list">
+      @for (department of departments(); track department.id) {
+        <li class="dept">
+          @if (editingId() === department.id) {
+            <form class="edit-form" [formGroup]="editForm" (ngSubmit)="saveEdit(department)" novalidate>
+              <div class="field">
+                <label [for]="'edit_name_' + department.id">Name</label>
+                <input [id]="'edit_name_' + department.id" formControlName="name" placeholder="Engineering" />
+                @if (formErrors()['name']) { <div class="error">{{ formErrors()['name'] }}</div> }
+              </div>
+              <div class="field">
+                <label [for]="'edit_code_' + department.id">Code</label>
+                <input [id]="'edit_code_' + department.id" formControlName="code" placeholder="ENG" />
+              </div>
+              <div class="edit-actions">
+                <button class="btn sm" type="submit" [disabled]="saving()">Save</button>
+                <button class="btn ghost sm" type="button" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <span class="dept-name">
+              <strong>{{ department.name }}</strong>
+              @if (department.code) {
+                <code>{{ department.code }}</code>
+              }
+            </span>
+
+            <span class="dept-count subtle">
+              {{ countFor(department) }} {{ countFor(department) === 1 ? 'person' : 'people' }}
+            </span>
+
+            <span class="dept-actions">
+              <button class="btn ghost sm" type="button" (click)="startEdit(department)">
+                <app-icon name="edit" />Rename
+              </button>
+              <button class="btn ghost sm" type="button" (click)="remove(department)">
+                <app-icon name="trash" />Remove
+              </button>
+            </span>
+          }
+        </li>
+      } @empty {
+        <li>
+          <div class="empty">
+            <app-icon name="briefcase" style="--icon-size: 26px" [strokeWidth]="1.5" />
+            <strong>{{ loading() ? 'Loading…' : 'No departments yet' }}</strong>
+            @if (!loading()) {
+              <p>Add the first one above — people can then be filtered by it in the directory.</p>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+</div>

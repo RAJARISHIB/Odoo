@@ -19,6 +19,8 @@ export interface User {
   employee_id?: string | null;
   designation?: string | null;
   date_of_joining?: string | null;
+  /** YYYY-MM-DD, or null. Editable by an admin from the user's edit page. */
+  date_of_birth?: string | null;
   role: Role;
   status: UserStatus;
   panel: Panel;
