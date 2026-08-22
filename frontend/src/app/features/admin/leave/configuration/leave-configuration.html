@@ -18,7 +18,7 @@
     </div>
 
     @if (showTypeForm()) {
-      <section class="card" style="margin-bottom: 16px">
+      <section class="card mb-4">
         <div class="card-head"><h3>{{ editingTypeId() ? 'Edit leave type' : 'New leave type' }}</h3></div>
         <form class="card-body" [formGroup]="typeForm" (ngSubmit)="saveType()" novalidate>
           <div class="grid cols-3">
@@ -106,28 +106,28 @@
               <th>Approval</th>
               <th>Carry forward</th>
               <th>Status</th>
-              <th style="text-align: right">Actions</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (type of types(); track type.id) {
               <tr>
-                <td><strong>{{ type.name }}</strong></td>
-                <td><code class="mono">{{ type.code }}</code></td>
-                <td>{{ type.is_paid ? 'Yes' : 'No' }}</td>
-                <td>{{ type.allow_fractional ? 'Yes' : 'No' }}</td>
-                <td class="mono">{{ type.min_unit }}</td>
-                <td class="mono">{{ type.max_days_per_request ?? '—' }}</td>
-                <td>{{ type.requires_approval ? 'Required' : 'Auto' }}</td>
-                <td>
+                <td data-primary><strong>{{ type.name }}</strong></td>
+                <td data-label="Code"><code class="mono">{{ type.code }}</code></td>
+                <td data-label="Paid">{{ type.is_paid ? 'Yes' : 'No' }}</td>
+                <td data-label="Fractional">{{ type.allow_fractional ? 'Yes' : 'No' }}</td>
+                <td class="mono" data-label="Min unit">{{ type.min_unit }}</td>
+                <td class="mono" data-label="Max/request">{{ type.max_days_per_request ?? '—' }}</td>
+                <td data-label="Approval">{{ type.requires_approval ? 'Required' : 'Auto' }}</td>
+                <td data-label="Carry forward">
                   @if (type.allow_carry_forward) {
                     <span class="badge info">{{ type.carry_forward_percentage }}% / {{ type.carry_forward_frequency }}</span>
                   } @else {
                     <span class="subtle">—</span>
                   }
                 </td>
-                <td><span class="badge" [class]="type.is_active ? 'active' : 'suspended'">{{ type.is_active ? 'Active' : 'Inactive' }}</span></td>
-                <td style="text-align: right; white-space: nowrap">
+                <td data-label="Status"><span class="badge" [class]="type.is_active ? 'active' : 'suspended'">{{ type.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td class="col-actions">
                   <button class="btn ghost sm" type="button" (click)="toggleTypeForm(type)">Edit</button>
                   <button class="btn ghost sm" type="button" (click)="toggleTypeActive(type)">
                     {{ type.is_active ? 'Deactivate' : 'Activate' }}
@@ -151,7 +151,7 @@
   }
 
   @if (tab() === 'rules') {
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>Generate accrual</h3></div>
       <form class="card-body row" [formGroup]="generateForm" (ngSubmit)="generate()" style="align-items: flex-end">
         <div class="field">
@@ -182,7 +182,7 @@
       </form>
     </section>
 
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>Carry forward</h3></div>
       <form class="card-body" [formGroup]="carryForwardForm" (ngSubmit)="carryForward()" novalidate>
         <div class="row" style="align-items: flex-end">
@@ -239,7 +239,7 @@
     </div>
 
     @if (showRuleForm()) {
-      <section class="card" style="margin-bottom: 16px">
+      <section class="card mb-4">
         <div class="card-head"><h3>New allocation rule</h3></div>
         <form class="card-body" [formGroup]="ruleForm" (ngSubmit)="saveRule()" novalidate>
           <div class="grid cols-3">
@@ -298,20 +298,20 @@
               <th>Effective from</th>
               <th>Effective to</th>
               <th>Status</th>
-              <th style="text-align: right">Actions</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (rule of rules(); track rule.id) {
               <tr>
-                <td>{{ typeName(rule.leave_type_id) }}</td>
-                <td><span class="badge primary">{{ rule.role.replace('_', ' ') }}</span></td>
-                <td class="mono">{{ rule.amount }}</td>
-                <td>{{ rule.frequency }}</td>
-                <td class="mono">{{ rule.effective_from | date: 'mediumDate' }}</td>
-                <td class="mono">{{ rule.effective_to ? (rule.effective_to | date: 'mediumDate') : '—' }}</td>
-                <td><span class="badge" [class]="rule.is_active ? 'active' : 'suspended'">{{ rule.is_active ? 'Active' : 'Inactive' }}</span></td>
-                <td style="text-align: right">
+                <td data-primary>{{ typeName(rule.leave_type_id) }}</td>
+                <td data-label="Role"><span class="badge primary">{{ rule.role.replace('_', ' ') }}</span></td>
+                <td class="mono" data-label="Amount">{{ rule.amount }}</td>
+                <td data-label="Frequency">{{ rule.frequency }}</td>
+                <td class="mono" data-label="Effective from">{{ rule.effective_from | date: 'mediumDate' }}</td>
+                <td class="mono" data-label="Effective to">{{ rule.effective_to ? (rule.effective_to | date: 'mediumDate') : '—' }}</td>
+                <td data-label="Status"><span class="badge" [class]="rule.is_active ? 'active' : 'suspended'">{{ rule.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td class="col-actions">
                   <button class="btn ghost sm" type="button" (click)="toggleRuleActive(rule)">
                     {{ rule.is_active ? 'Deactivate' : 'Activate' }}
                   </button>

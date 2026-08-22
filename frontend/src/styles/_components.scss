@@ -69,6 +69,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+.stat .value.primary {
+  color: var(--primary);
+}
 .stat .value.success {
   color: var(--success);
 }
@@ -303,6 +306,14 @@ table.data tbody tr:hover {
 
 table.data tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* The trailing action column. A class rather than an inline style so the
+   responsive layer can turn it into a button row without fighting an inline
+   `white-space: nowrap` it would need !important to beat. */
+table.data .col-actions {
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* ---------- badges ---------- */
@@ -602,4 +613,37 @@ table.data tbody tr:last-child td {
 .alert.success {
   background: var(--success-soft);
   color: var(--text);
+}
+
+/* ---------- modal ----------------------------------------------------------
+   Hand-built rather than CDK: the app has no @angular/cdk dependency and this
+   is the only overlay pattern it needs. Lives here rather than in the one
+   component that uses it today because the manual-attendance and new-employee
+   forms are the next things that should become dialogs instead of inline
+   cards that push the page down. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-menu);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+  animation: scrim-in var(--dur-fast) var(--ease-out);
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - var(--space-8));
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: menu-in var(--dur-med) var(--ease-out);
+}
+
+.modal-foot {
+  justify-content: flex-end;
+  gap: var(--space-2);
 }

@@ -34,7 +34,7 @@
   }
 
   @if (showForm()) {
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>New employee</h3></div>
       <form class="card-body" [formGroup]="form" (ngSubmit)="create()" novalidate>
         <div class="grid cols-3">
@@ -118,13 +118,13 @@
             <th>Designation</th>
             <th>Status</th>
             <th>Last login</th>
-            <th style="text-align: right">Actions</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (user of rows(); track user.id) {
             <tr>
-              <td>
+              <td data-primary>
                 <div class="row" style="flex-wrap: nowrap">
                   <span class="avatar">{{ initials(user) }}</span>
                   <span>
@@ -133,12 +133,12 @@
                   </span>
                 </div>
               </td>
-              <td><code class="mono">{{ user.login_id }}</code></td>
-              <td><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
-              <td>{{ user.designation || '—' }}</td>
-              <td><span class="badge" [class]="user.status">{{ user.status }}</span></td>
-              <td class="subtle">{{ user.last_login_at ? (user.last_login_at | slice: 0 : 10) : 'Never' }}</td>
-              <td style="text-align: right; white-space: nowrap">
+              <td data-label="Login ID"><code class="mono">{{ user.login_id }}</code></td>
+              <td data-label="Role"><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
+              <td data-label="Designation">{{ user.designation || '—' }}</td>
+              <td data-label="Status"><span class="badge" [class]="user.status">{{ user.status }}</span></td>
+              <td class="subtle" data-label="Last login">{{ user.last_login_at ? (user.last_login_at | slice: 0 : 10) : 'Never' }}</td>
+              <td class="col-actions">
                 <button class="btn ghost sm" type="button" (click)="resetPassword(user)">Reset</button>
                 <button class="btn ghost sm" type="button" (click)="toggleStatus(user)">
                   {{ user.status === 'active' ? 'Suspend' : 'Activate' }}

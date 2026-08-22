@@ -189,3 +189,10 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Bottom-sheet entrance - see the modal block in _responsive.scss. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}

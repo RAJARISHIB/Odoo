@@ -44,38 +44,38 @@
             <th>Reason</th>
             <th>Status</th>
             <th>Requested</th>
-            <th style="text-align: right">Actions</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (request of rows(); track request.id) {
             <tr>
-              <td>
+              <td data-primary>
                 <strong>{{ request.employee_info?.name ?? '—' }}</strong>
                 <div class="subtle">{{ request.employee_info?.employee_id || request.employee_info?.email }}</div>
               </td>
-              <td>
+              <td data-label="Leave type">
                 @if (request.leave_type_name) {
                   <span class="badge primary">{{ request.leave_type_name }}</span>
                 } @else {
                   <span class="subtle">Unspecified</span>
                 }
               </td>
-              <td class="mono">{{ request.start_date }} &rarr; {{ request.end_date }}</td>
-              <td class="mono">{{ request.total_days }}</td>
-              <td>{{ request.reason || '—' }}</td>
-              <td>
+              <td class="mono" data-label="Period">{{ request.start_date }} &rarr; {{ request.end_date }}</td>
+              <td class="mono" data-label="Days">{{ request.total_days }}</td>
+              <td data-label="Reason">{{ request.reason || '—' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class]="request.status.toLowerCase()">{{ statusLabels[request.status] }}</span>
                 @if (request.status === 'REJECTED' && request.review_comment) {
                   <div class="subtle">{{ request.review_comment }}</div>
                 }
               </td>
-              <td class="subtle">{{ request.created_at | date: 'mediumDate' }}</td>
-              <td style="text-align: right; white-space: nowrap">
+              <td class="subtle" data-label="Requested">{{ request.created_at | date: 'mediumDate' }}</td>
+              <td class="col-actions">
                 @if (request.status === 'PENDING') {
                   <select
-                    class="mono"
-                    style="display: inline-block; width: auto; padding: 5px 8px; margin-right: 6px"
+                    class="mono approve-type"
+                    aria-label="Leave type to approve as"
                     [value]="request.leave_type_id ?? ''"
                     (change)="setApproveType(request.id, $any($event.target).value)"
                   >

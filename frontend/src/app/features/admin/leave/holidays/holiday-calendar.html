@@ -15,7 +15,7 @@
   </div>
 
   @if (showForm()) {
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>{{ editingId() ? 'Edit holiday' : 'New holiday' }}</h3></div>
       <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
         <div class="grid cols-3">
@@ -58,17 +58,17 @@
             <th>Date</th>
             <th>Type</th>
             <th>Description</th>
-            <th style="text-align: right">Action</th>
+            <th class="col-actions">Action</th>
           </tr>
         </thead>
         <tbody>
           @for (holiday of holidays(); track holiday.id) {
             <tr>
-              <td><strong>{{ holiday.name }}</strong></td>
-              <td class="mono">{{ holiday.date | date: 'mediumDate' }}</td>
-              <td><span class="badge info">{{ typeLabels[holiday.type] }}</span></td>
-              <td class="subtle">{{ holiday.description || '—' }}</td>
-              <td style="text-align: right">
+              <td data-primary><strong>{{ holiday.name }}</strong></td>
+              <td class="mono" data-label="Date">{{ holiday.date | date: 'mediumDate' }}</td>
+              <td data-label="Type"><span class="badge info">{{ typeLabels[holiday.type] }}</span></td>
+              <td class="subtle" data-label="Description">{{ holiday.description || '—' }}</td>
+              <td class="col-actions">
                 @if (isPast(holiday)) {
                   <span class="subtle" title="Past holidays are protected">Locked</span>
                 } @else {

@@ -185,3 +185,31 @@
     display: none;
   }
 }
+
+@media (max-width: 560px) {
+  :host {
+    padding-inline: var(--space-3);
+    gap: 6px;
+  }
+
+  /* The page title is the first thing to give up room: the punch control and
+     the avatar menu are actions and must stay reachable, the heading only
+     tells you where you are - and the breadcrumb already did that. */
+  .crumbs {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .crumbs h1 {
+    font-size: var(--text-base);
+  }
+
+  .tools {
+    gap: 2px;
+  }
+
+  .tool {
+    width: 32px;
+    height: 32px;
+  }
+}

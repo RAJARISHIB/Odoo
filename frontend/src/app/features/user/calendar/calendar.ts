@@ -27,6 +27,19 @@ import {
 import { Leaves } from '../../../core/services/leaves';
 import { Toast } from '../../../core/services/toast';
 import { Icon } from '../../../shared/icon/icon';
+import type { IconName } from '../../../shared/icon/icons';
+
+/** One line in the small-screen agenda beneath the month grid. */
+export interface AgendaEntry {
+  key: string;
+  date: Date;
+  isToday: boolean;
+  /** Matches the grid's event-badge modifiers, so both read the same colour. */
+  kind: 'govt' | 'org' | 'approved' | 'pending';
+  icon: IconName;
+  title: string;
+  detail: string;
+}
 
 export interface CalendarDay {
   date: Date;
@@ -114,6 +127,47 @@ export class UserCalendar implements OnInit {
   protected readonly balance = computed<LeaveBalance | null>(() => {
     return this.calendarFeed()?.balance ?? null;
   });
+
+  /**
+   * Flat, date-ordered list of everything happening in the visible month.
+   *
+   * The month grid is the primary view, but seven columns in a 375px viewport
+   * leave a ~45px day cell — too narrow for an event's name, and `title`
+   * tooltips do not exist on touch, so the grid alone would hide holidays
+   * behind a coloured dot with no way to read them. Below the table
+   * breakpoint the grid shows dots and this list carries the detail.
+   *
+   * Derived from `calendarDays()` rather than the raw feed so it inherits the
+   * same current-month filtering and stays in step with what the grid marks.
+   */
+  protected readonly agenda = computed<AgendaEntry[]>(() =>
+    this.calendarDays()
+      .filter((day) => day.isCurrentMonth && (day.holidays.length || day.leaves.length))
+      .flatMap((day) => [
+        ...day.holidays.map(
+          (holiday): AgendaEntry => ({
+            key: `h-${holiday.id}`,
+            date: day.date,
+            isToday: day.isToday,
+            kind: holiday.type === 'government' ? 'govt' : 'org',
+            icon: holiday.type === 'government' ? 'building' : 'briefcase',
+            title: holiday.name,
+            detail: holiday.description ?? '',
+          }),
+        ),
+        ...day.leaves.map(
+          (leave): AgendaEntry => ({
+            key: `l-${leave.id}-${day.dateStr}`,
+            date: day.date,
+            isToday: day.isToday,
+            kind: leave.status === 'APPROVED' ? 'approved' : 'pending',
+            icon: 'calendar',
+            title: `Leave (${leave.status})`,
+            detail: leave.reason ?? '',
+          }),
+        ),
+      ]),
+  );
 
   // Derived Calendar Days Matrix (42 days for 6-week grid)
   protected readonly calendarDays = computed<CalendarDay[]>(() => {

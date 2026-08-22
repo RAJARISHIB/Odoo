@@ -7,7 +7,7 @@
   </div>
 
   @if (summary(); as stats) {
-    <div class="grid cols-4" style="margin-bottom: 16px">
+    <div class="grid cols-4 mb-4">
       <div class="stat">
         <div class="label">Days recorded</div>
         <div class="value">{{ stats.days_recorded }}</div>
@@ -69,21 +69,21 @@
         <tbody>
           @for (record of rows(); track record.id) {
             <tr>
-              <td class="mono">{{ record.date | date: 'EEE, d MMM y' }}</td>
-              <td>
+              <td class="mono" data-primary>{{ record.date | date: 'EEE, d MMM y' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class]="record.status">{{ statusLabels[record.status] }}</span>
                 @if (record.late_minutes) { <span class="subtle"> +{{ record.late_minutes }}m</span> }
               </td>
-              <td class="mono">{{ record.first_check_in ? (record.first_check_in | date: 'shortTime') : '—' }}</td>
-              <td class="mono">
+              <td class="mono" data-label="First in">{{ record.first_check_in ? (record.first_check_in | date: 'shortTime') : '—' }}</td>
+              <td class="mono" data-label="Last out">
                 @if (record.is_checked_in) {
                   <span class="badge success">Running</span>
                 } @else {
                   {{ record.last_check_out ? (record.last_check_out | date: 'shortTime') : '—' }}
                 }
               </td>
-              <td>{{ record.sessions.length }}</td>
-              <td class="mono">{{ record.total_hours }}</td>
+              <td data-label="Sessions">{{ record.sessions.length }}</td>
+              <td class="mono" data-label="Hours">{{ record.total_hours }}</td>
             </tr>
           } @empty {
             <tr>

@@ -1,0 +1,32 @@
+/* The leave type an approval is booked against, chosen inline in the row.
+
+   Was an inline `width: auto` style; as a class it can go full-width once the
+   actions cell becomes a stacked button row, where an intrinsically-sized
+   select sits awkwardly beside two equal-width buttons. */
+.approve-type {
+  display: inline-block;
+  width: auto;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.approve-type:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 720px) {
+  .approve-type {
+    flex: 1 1 100%;
+    width: 100%;
+    min-height: 42px;
+    /* Below 16px iOS Safari zooms on focus and never zooms back out. */
+    font-size: 16px;
+  }
+}
