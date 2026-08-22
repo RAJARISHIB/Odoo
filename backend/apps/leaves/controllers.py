@@ -74,8 +74,8 @@ class LeaveController(BaseController):
             "leave_request": record.to_dict(),
             "user": {"id": str(user.id), "name": user.full_name, "email": user.email},
         }
-        self.emit_to_user(user.id, getattr(RealtimeEvent, "LEAVE_CREATED", "leave.created"), payload)
-        self.emit_to_admins(getattr(RealtimeEvent, "LEAVE_CREATED", "leave.created"), payload)
+        self.emit_to_user(user.id, RealtimeEvent.LEAVE_REQUEST_CREATED, payload)
+        self.emit_to_admins(RealtimeEvent.LEAVE_REQUEST_CREATED, payload)
 
         return self.created(record.to_dict(), "Leave request submitted successfully.")
 

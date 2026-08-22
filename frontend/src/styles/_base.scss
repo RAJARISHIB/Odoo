@@ -62,8 +62,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Set while the mobile drawer is open, so the page behind it cannot scroll. */
-body.drawer-open {
+/* Set while the mobile drawer, or the global search palette, is open - so the
+   page behind either cannot scroll. */
+body.drawer-open,
+body.search-open {
   overflow: hidden;
 }
 

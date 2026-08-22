@@ -78,6 +78,34 @@ const DESTINATIONS: Destination[] = [
     keywords: 'profile account password me settings personal',
   },
   {
+    title: 'My Team',
+    subtitle: 'Your team roster and availability',
+    icon: 'people',
+    link: '/teams',
+    keywords: 'team roster availability birthdays colleagues my',
+  },
+  {
+    title: 'Claims',
+    subtitle: 'Submit and track expense claims',
+    icon: 'file',
+    link: '/claims',
+    keywords: 'claims expenses reimbursement my submit',
+  },
+  {
+    title: 'Fines',
+    subtitle: 'Your fines and their status',
+    icon: 'warning',
+    link: '/fines',
+    keywords: 'fines penalty deduction my',
+  },
+  {
+    title: 'Requests',
+    subtitle: 'Your submitted requests',
+    icon: 'mail',
+    link: '/requests',
+    keywords: 'requests my submitted status',
+  },
+  {
     title: 'Leave approvals',
     subtitle: 'Approve or reject requests',
     icon: 'check',
@@ -102,6 +130,38 @@ const DESTINATIONS: Destination[] = [
     keywords: 'dashboard overview today summary stats admin',
   },
   {
+    title: 'Teams setup',
+    subtitle: 'Team hierarchy and membership',
+    icon: 'people',
+    link: '/settings/teams',
+    requires: 'can_manage_organization',
+    keywords: 'teams setup hierarchy members manage groups admin',
+  },
+  {
+    title: 'Claim approvals',
+    subtitle: 'Approve or reject expense claims',
+    icon: 'file',
+    link: '/settings/claims-approvals',
+    requires: 'can_manage_organization',
+    keywords: 'claim approvals expenses reimbursement approve reject review admin',
+  },
+  {
+    title: 'Fines setup',
+    subtitle: 'Manage fines and deductions',
+    icon: 'warning',
+    link: '/settings/fines-management',
+    requires: 'can_manage_users',
+    keywords: 'fines setup penalty deduction manage admin',
+  },
+  {
+    title: 'Incoming requests',
+    subtitle: 'Requests awaiting a decision',
+    icon: 'mail',
+    link: '/settings/incoming-requests',
+    requires: 'can_manage_organization',
+    keywords: 'incoming requests approve reject pending review admin',
+  },
+  {
     title: 'Leave insights',
     subtitle: 'Utilisation by employee',
     icon: 'plane',
@@ -110,12 +170,12 @@ const DESTINATIONS: Destination[] = [
     keywords: 'leave insights balance utilisation utilization report allocation',
   },
   {
-    title: 'People',
-    subtitle: 'Manage roles and access',
+    title: 'Manage people',
+    subtitle: 'Roles, access and account status',
     icon: 'briefcase',
     link: '/settings/people',
     requires: 'can_manage_users',
-    keywords: 'manage users roles access accounts admin staff employees',
+    keywords: 'manage users people roles access accounts admin staff employees',
   },
   {
     title: 'Add an employee',
@@ -175,10 +235,6 @@ const DESTINATIONS: Destination[] = [
  * destinations. They are combined with `forkJoin`, and every remote source
  * carries its own `catchError` returning an empty array — one endpoint being
  * unreachable should cost you that group's results, not the whole dropdown.
- *
- * Teams are deliberately absent. The `teams/*` endpoints exist and return real
- * data, but nothing in the app renders a team, so a team hit would have
- * nowhere to navigate to. Add them here once a Teams screen exists.
  */
 @Injectable({ providedIn: 'root' })
 export class Search {
@@ -202,15 +258,24 @@ export class Search {
     }).pipe(map((groups) => [...groups.go, ...groups.people, ...groups.leave, ...groups.holidays]));
   }
 
+  /**
+   * A fixed set of common destinations, shown before the visitor has typed
+   * anything - so the palette has content the instant it opens rather than
+   * a blank field waiting for two characters.
+   */
+  quickLinks(): SearchHit[] {
+    return this.destinations('', 6);
+  }
+
   // -- destinations --------------------------------------------------------
-  private destinations(needle: string): SearchHit[] {
+  private destinations(needle: string, limit = 5): SearchHit[] {
     const permissions = this.auth.permissions();
 
     return DESTINATIONS.filter((destination) => {
       if (destination.requires && !permissions?.[destination.requires]) return false;
       return `${destination.title} ${destination.keywords}`.toLowerCase().includes(needle);
     })
-      .slice(0, 5)
+      .slice(0, limit)
       .map((destination) => ({
         id: `go:${destination.link}:${destination.title}`,
         group: 'go' as const,

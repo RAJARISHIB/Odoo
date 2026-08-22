@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -29,22 +30,21 @@ interface Section {
   hits: SearchHit[];
 }
 
+const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '');
+
 /**
- * Global search in the topbar.
+ * Global search: a topbar trigger that opens a command-palette overlay.
  *
- * Replaces a placeholder-only input that had a `/` hint, no handler and no
- * results — an affordance that promised a feature the app did not have.
- *
- * Keyboard is the point of a search like this: `/` from anywhere focuses it,
- * arrows walk the flattened result list across group boundaries, Enter opens
- * the highlighted row and Escape hands focus back to the page.
+ * `Ctrl+K` (`Cmd+K` on macOS) opens it from anywhere in the app, the way it
+ * does in most tools with a command palette. Arrow keys walk the flattened
+ * result list across group boundaries, Enter opens the highlighted row and
+ * Escape hands focus back to the page.
  */
 @Component({
   selector: 'app-global-search',
   imports: [ReactiveFormsModule, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(document:click)': 'onDocumentClick($event)',
     '(document:keydown)': 'onDocumentKeydown($event)',
   },
   templateUrl: './global-search.html',
@@ -54,16 +54,20 @@ export class GlobalSearch {
   private readonly search = inject(Search);
   private readonly router = inject(Router);
   protected readonly layout = inject(Layout);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
+
+  protected readonly shortcutKey = MAC ? '⌘K' : 'Ctrl K';
 
   protected readonly term = new FormControl('', { nonNullable: true });
   protected readonly open = signal(false);
-  /** Compact only: whether the collapsed trigger has been swapped for the bar. */
-  protected readonly expanded = signal(false);
   protected readonly loading = signal(false);
   /** Index into `flat()`, or -1 when nothing is highlighted. */
   protected readonly cursor = signal(-1);
+
+  constructor() {
+    // The overlay covers the page, so the page behind it must not scroll.
+    effect(() => document.body.classList.toggle('search-open', this.open()));
+  }
 
   /**
    * The live query as a signal.
@@ -75,6 +79,8 @@ export class GlobalSearch {
   protected readonly value = toSignal(this.term.valueChanges, {
     initialValue: this.term.value,
   });
+
+  protected readonly hasQuery = computed(() => this.value().trim().length >= 2);
 
   private readonly hits = toSignal(
     this.term.valueChanges.pipe(
@@ -96,6 +102,11 @@ export class GlobalSearch {
   );
 
   protected readonly sections = computed<Section[]>(() => {
+    if (!this.hasQuery()) {
+      const quick = this.search.quickLinks();
+      return quick.length ? [{ group: 'go' as const, label: 'Quick links', hits: quick }] : [];
+    }
+
     const all = this.hits();
     return GROUP_ORDER.map((group) => ({
       group,
@@ -107,19 +118,16 @@ export class GlobalSearch {
   /** The same hits in render order, so one index can walk every group. */
   protected readonly flat = computed(() => this.sections().flatMap((section) => section.hits));
 
-  protected readonly hasQuery = computed(() => this.value().trim().length >= 2);
-
-  protected readonly showPanel = computed(
-    () => this.open() && (this.hasQuery() || this.flat().length > 0),
-  );
-
   protected isActive(hit: SearchHit): boolean {
     return this.flat()[this.cursor()]?.id === hit.id;
   }
 
   // -- open / close --------------------------------------------------------
-  protected onFocus(): void {
+  protected openPalette(): void {
     this.open.set(true);
+    // The field only renders once the overlay is in the DOM, so focusing it
+    // has to wait for that render rather than happening in this frame.
+    queueMicrotask(() => this.field()?.nativeElement.focus());
   }
 
   protected close(): void {
@@ -127,47 +135,21 @@ export class GlobalSearch {
     this.cursor.set(-1);
   }
 
-  /** Compact: swap the trigger for the bar and focus it once it exists. */
-  protected expand(): void {
-    this.expanded.set(true);
-    this.open.set(true);
-    // The input is created by this same change, so focusing has to wait for
-    // the render rather than happening in this frame.
-    queueMicrotask(() => this.field()?.nativeElement.focus());
+  protected onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.close();
   }
 
-  protected collapse(): void {
-    this.expanded.set(false);
-    this.term.setValue('');
-    this.close();
-  }
-
-  protected onDocumentClick(event: MouseEvent): void {
-    if (!this.open() && !this.expanded()) return;
-    if (this.host.nativeElement.contains(event.target as Node)) return;
-    this.close();
-    // On compact the bar covers the topbar, so an outside tap has to put the
-    // trigger back as well as dismiss the results.
-    if (this.layout.isCompact()) this.collapse();
-  }
-
-  /**
-   * `/` focuses the field from anywhere, the way it does in most tools with a
-   * search box — but only when the user is not already typing into something,
-   * otherwise it would swallow the character.
-   */
+  /** `Ctrl+K` / `Cmd+K` toggles the palette from anywhere in the app. */
   protected onDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
-
-    const target = event.target as HTMLElement | null;
-    const tag = target?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
-      return;
-    }
+    const mod = MAC ? event.metaKey : event.ctrlKey;
+    if (!mod || event.key.toLowerCase() !== 'k') return;
 
     event.preventDefault();
-    this.field()?.nativeElement.focus();
-    this.open.set(true);
+    if (this.open()) {
+      this.close();
+    } else {
+      this.openPalette();
+    }
   }
 
   // -- keyboard within the field -------------------------------------------
@@ -178,7 +160,6 @@ export class GlobalSearch {
       case 'ArrowDown':
         if (!results.length) return;
         event.preventDefault();
-        this.open.set(true);
         this.cursor.update((i) => (i + 1) % results.length);
         break;
 
@@ -200,13 +181,12 @@ export class GlobalSearch {
 
       case 'Escape':
         event.preventDefault();
+        // First keystroke clears the query, mirroring the native `<search>`
+        // cancel button; the second closes the whole palette.
         if (this.term.value) {
           this.term.setValue('');
-        } else if (this.layout.isCompact()) {
-          this.collapse();
         } else {
           this.close();
-          this.field()?.nativeElement.blur();
         }
         break;
     }
@@ -214,7 +194,6 @@ export class GlobalSearch {
 
   protected go(hit: SearchHit): void {
     this.close();
-    this.expanded.set(false);
     this.term.setValue('');
     this.router.navigate([hit.link], { queryParams: hit.queryParams });
   }

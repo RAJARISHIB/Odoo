@@ -50,12 +50,16 @@ export const NAV: readonly NavSection[] = [
     label: 'Administration',
     items: [
       { label: 'Overview', path: '/settings/overview', icon: 'dashboard', requires: ['can_view_all_attendance'] },
+      { label: 'Team attendance', path: '/attendance/team', icon: 'clock', requires: ['can_view_all_attendance'] },
       { label: 'Teams setup', path: '/settings/teams', icon: 'people', requires: ['can_manage_organization'] },
       { label: 'Claim approvals', path: '/settings/claims-approvals', icon: 'file', requires: ['can_manage_organization'] },
       { label: 'Fines setup', path: '/settings/fines-management', icon: 'warning', requires: ['can_manage_users'] },
       { label: 'Incoming requests', path: '/settings/incoming-requests', icon: 'mail', requires: ['can_manage_organization'] },
       { label: 'Leave insights', path: '/settings/leave-insights', icon: 'plane', requires: ['can_view_all_attendance'] },
-      { label: 'People', path: '/settings/people', icon: 'briefcase', requires: ['can_manage_users'] },
+      /* Was "People" - indistinguishable from the "Employees" item above at a
+         glance. This is account administration (roles, invites, deactivation);
+         the Workspace section's "Employees" is the read-only directory. */
+      { label: 'Manage people', path: '/settings/people', icon: 'briefcase', requires: ['can_manage_users'] },
       { label: 'Leave policy', path: '/settings/leave-policy', icon: 'settings', requires: ['can_manage_organization'] },
       { label: 'Holidays', path: '/settings/holidays', icon: 'calendar', requires: ['can_manage_organization'] },
       { label: 'Departments', path: '/settings/departments', icon: 'filter', requires: ['can_manage_organization'] },

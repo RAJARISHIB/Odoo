@@ -47,7 +47,7 @@
         @if (isSelf()) {
           <a class="btn" routerLink="/me"><app-icon name="edit" />Edit my profile</a>
         } @else if (canManage()) {
-          <a class="btn ghost" routerLink="/settings/people">
+          <a class="btn ghost" [routerLink]="['/settings/people', p.id]">
             <app-icon name="edit" />Manage in People
           </a>
         }

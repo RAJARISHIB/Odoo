@@ -1,74 +1,82 @@
-<!-- Compact: the field would crowd the punch control out of a phone topbar, so
-     it collapses to a trigger and expands into a full-width bar. Hiding search
-     outright below the breakpoint is the wrong trade — a phone is exactly
-     where you want to look someone up rather than browse to them. -->
-@if (layout.isCompact() && !expanded()) {
-  <button class="tool" type="button" aria-label="Search" title="Search" (click)="expand()">
-    <app-icon name="search" />
-  </button>
-} @else {
-  <div class="field-wrap" [class.is-overlay]="layout.isCompact()">
-    <label class="search">
-      <app-icon name="search" />
-      <input
-        #field
-        type="search"
-        role="combobox"
-        aria-label="Search people, leave and settings"
-        [attr.aria-expanded]="showPanel()"
-        aria-autocomplete="list"
-        aria-controls="global-search-results"
-        placeholder="Search people, leave, settings…"
-        [formControl]="term"
-        (focus)="onFocus()"
-        (keydown)="onKeydown($event)"
-      />
-      @if (loading()) {
-        <span class="spinner" aria-hidden="true"></span>
-      } @else if (!layout.isCompact()) {
-        <kbd>/</kbd>
-      }
-    </label>
+<button
+  class="trigger"
+  type="button"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="open()"
+  aria-label="Search"
+  (click)="openPalette()"
+>
+  <app-icon name="search" />
+  <span class="trigger-label hide-sm">Search…</span>
+  <kbd class="trigger-kbd hide-sm">{{ shortcutKey }}</kbd>
+</button>
 
-    @if (layout.isCompact()) {
-      <button class="cancel" type="button" (click)="collapse()">Cancel</button>
-    }
-  </div>
-}
-
-@if (showPanel()) {
-  <div class="results" id="global-search-results" role="listbox">
-    @for (section of sections(); track section.group) {
-      <div class="group">
-        <span class="section-label">{{ section.label }}</span>
-        @for (hit of section.hits; track hit.id) {
-          <button
-            class="hit"
-            type="button"
-            role="option"
-            [attr.aria-selected]="isActive(hit)"
-            [class.is-active]="isActive(hit)"
-            (click)="go(hit)"
-          >
-            <span class="hit-icon"><app-icon [name]="hit.icon" /></span>
-            <span class="hit-text">
-              <strong class="truncate">{{ hit.title }}</strong>
-              @if (hit.subtitle) {
-                <span class="truncate">{{ hit.subtitle }}</span>
-              }
-            </span>
-          </button>
-        }
-      </div>
-    } @empty {
-      <div class="no-results">
+@if (open()) {
+  <div class="palette-backdrop" (click)="onBackdropClick($event)">
+    <div class="palette" role="dialog" aria-modal="true" aria-label="Search">
+      <label class="palette-field">
+        <app-icon name="search" />
+        <input
+          #field
+          type="search"
+          role="combobox"
+          aria-label="Search people, leave and settings"
+          aria-expanded="true"
+          aria-autocomplete="list"
+          aria-controls="global-search-results"
+          placeholder="Search people, leave, settings…"
+          [formControl]="term"
+          (keydown)="onKeydown($event)"
+        />
         @if (loading()) {
-          <span>Searching…</span>
-        } @else {
-          <strong>No matches for “{{ value() }}”</strong>
-          <span>Try a name, a login ID, or what you want to do — “approve”, “holidays”, “add employee”.</span>
+          <span class="spinner" aria-hidden="true"></span>
+        }
+        <button class="palette-close" type="button" aria-label="Close search" (click)="close()">
+          <app-icon name="x" />
+        </button>
+      </label>
+
+      <div class="palette-results" id="global-search-results" role="listbox">
+        @for (section of sections(); track section.group) {
+          <div class="group">
+            <span class="section-label">{{ section.label }}</span>
+            @for (hit of section.hits; track hit.id) {
+              <button
+                class="hit"
+                type="button"
+                role="option"
+                [attr.aria-selected]="isActive(hit)"
+                [class.is-active]="isActive(hit)"
+                (click)="go(hit)"
+              >
+                <span class="hit-icon"><app-icon [name]="hit.icon" /></span>
+                <span class="hit-text">
+                  <strong class="truncate">{{ hit.title }}</strong>
+                  @if (hit.subtitle) {
+                    <span class="truncate">{{ hit.subtitle }}</span>
+                  }
+                </span>
+                <app-icon name="arrow-up-right" class="hit-go" />
+              </button>
+            }
+          </div>
+        } @empty {
+          <div class="no-results">
+            @if (loading()) {
+              <span>Searching…</span>
+            } @else {
+              <strong>No matches for “{{ value() }}”</strong>
+              <span>Try a name, a login ID, or what you want to do — “approve”, “holidays”, “add employee”.</span>
+            }
+          </div>
         }
       </div>
-    }
+
+      <div class="palette-foot">
+        <span class="hint"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span class="hint"><kbd>↵</kbd> Open</span>
+        <span class="hint"><kbd>Esc</kbd> Close</span>
+      </div>
+    </div>
   </div>
 }
