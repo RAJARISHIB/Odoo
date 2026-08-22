@@ -29,6 +29,12 @@ def balance(request):
     return LeaveController(request).balance()
 
 
+@api_view("GET")
+@auth_required
+def type_balances(request):
+    return LeaveController(request).type_balances()
+
+
 @api_view("GET", "POST")
 @auth_required
 def requests(request):
@@ -127,6 +133,12 @@ def allocation_rule_detail(request, rule_id):
 @admin_required
 def allocation_generate(request):
     return LeaveAllocationController(request).generate()
+
+
+@api_view("POST")
+@admin_required
+def allocation_carry_forward(request):
+    return LeaveAllocationController(request).carry_forward()
 
 
 @api_view("GET", "POST")

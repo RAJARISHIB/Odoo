@@ -7,6 +7,7 @@ import { ApiErrorBody } from '../../../../core/models/api.model';
 import { Role } from '../../../../core/models/user.model';
 import {
   AllocationGenerateResult,
+  CarryForwardResult,
   LeaveAllocationRule,
   LeaveType,
 } from '../../../../core/models/leaves.model';
@@ -51,6 +52,10 @@ export class LeaveConfiguration {
   protected readonly generating = signal(false);
   protected readonly lastGenerated = signal<AllocationGenerateResult | null>(null);
 
+  protected readonly carryingForward = signal(false);
+  protected readonly lastCarryForward = signal<CarryForwardResult | null>(null);
+  protected readonly carryForwardErrors = signal<Record<string, string>>({});
+
   protected readonly typeForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
     code: ['', Validators.required],
@@ -60,6 +65,9 @@ export class LeaveConfiguration {
     min_unit: [0.5, Validators.required],
     max_days_per_request: [null as number | null],
     requires_approval: [true],
+    allow_carry_forward: [false],
+    carry_forward_percentage: [0, [Validators.min(0), Validators.max(100)]],
+    carry_forward_frequency: ['yearly' as 'monthly' | 'yearly'],
   });
 
   protected readonly ruleForm = this.fb.nonNullable.group({
@@ -74,6 +82,13 @@ export class LeaveConfiguration {
     year: [new Date().getFullYear(), Validators.required],
     month: [new Date().getMonth() + 1, Validators.required],
     frequency: ['monthly' as 'monthly' | 'yearly'],
+  });
+
+  protected readonly carryForwardForm = this.fb.nonNullable.group({
+    leave_type_id: ['', Validators.required],
+    year: [new Date().getFullYear(), Validators.required],
+    month: [null as number | null],
+    frequency: ['yearly' as 'monthly' | 'yearly'],
   });
 
   constructor() {
@@ -118,11 +133,17 @@ export class LeaveConfiguration {
         min_unit: type.min_unit,
         max_days_per_request: type.max_days_per_request ?? null,
         requires_approval: type.requires_approval,
+        allow_carry_forward: type.allow_carry_forward,
+        carry_forward_percentage: type.carry_forward_percentage,
+        carry_forward_frequency: type.carry_forward_frequency,
       });
       this.showTypeForm.set(true);
     } else {
       this.editingTypeId.set(null);
-      this.typeForm.reset({ is_paid: true, allow_fractional: true, min_unit: 0.5, requires_approval: true });
+      this.typeForm.reset({
+        is_paid: true, allow_fractional: true, min_unit: 0.5, requires_approval: true,
+        allow_carry_forward: false, carry_forward_percentage: 0, carry_forward_frequency: 'yearly',
+      });
       this.showTypeForm.update((open) => !open);
     }
   }
@@ -222,6 +243,39 @@ export class LeaveConfiguration {
           this.toast.success(`Credited ${result.created} allocation(s) for ${result.period}.`);
         },
         error: () => this.generating.set(false),
+      });
+  }
+
+  // -- carry forward -----------------------------------------------------
+  protected selectedCarryForwardType(): LeaveType | undefined {
+    return this.types().find((type) => type.id === this.carryForwardForm.getRawValue().leave_type_id);
+  }
+
+  protected carryForward(): void {
+    if (this.carryForwardForm.invalid || this.carryingForward()) {
+      this.carryForwardForm.markAllAsTouched();
+      return;
+    }
+
+    this.carryingForward.set(true);
+    this.carryForwardErrors.set({});
+    const value = this.carryForwardForm.getRawValue();
+    this.leaves
+      .carryForward({
+        leave_type_id: value.leave_type_id,
+        year: value.year,
+        month: value.frequency === 'monthly' ? value.month ?? undefined : undefined,
+      })
+      .subscribe({
+        next: (result) => {
+          this.carryingForward.set(false);
+          this.lastCarryForward.set(result);
+          this.toast.success(`Carried forward ${result.created} employee balance(s) into ${result.target_year}.`);
+        },
+        error: (error: ApiErrorBody) => {
+          this.carryingForward.set(false);
+          this.carryForwardErrors.set(error.details ?? { leave_type_id: error.message });
+        },
       });
   }
 }

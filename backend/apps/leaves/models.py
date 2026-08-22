@@ -172,6 +172,14 @@ class LeaveType(BaseDocument):
     #: UI accent, e.g. "#4f46e5" - purely cosmetic.
     color = StringField(max_length=20, default="")
 
+    #: Carry-forward: what % of an employee's unused balance for a period
+    #: rolls into the next one when `services.carry_forward` runs.
+    allow_carry_forward = BooleanField(default=False)
+    carry_forward_percentage = FloatField(default=0)
+    carry_forward_frequency = StringField(
+        choices=LeaveAllocationFrequency.ALL, default=LeaveAllocationFrequency.YEARLY
+    )
+
     meta = {
         "collection": "leave_types",
         "indexes": [
@@ -272,6 +280,10 @@ class LeaveAdjustment(BaseDocument):
     amount = FloatField(required=True)
     reason = StringField(required=True, max_length=500)
     created_by = ReferenceField("User", required=True)
+    #: The balance-year this adjustment counts toward.  Explicit rather than
+    #: inferred from `created_at` so a carry-forward run today can credit next
+    #: year's balance, not this one's.
+    year = IntField(null=True)
 
     meta = {
         "collection": "leave_adjustments",

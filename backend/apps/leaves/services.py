@@ -118,8 +118,22 @@ def get_leave_balance(organization, employee, target_date=None):
 
 
 def create_leave_request(organization, employee, data: dict) -> LeaveRequest:
-    """Validate and create a new leave request in PENDING status."""
-    require_fields(data, ["start_date", "end_date", "reason"])
+    """Validate and create a new leave request in PENDING status.
+
+    Balance is enforced against the leave type the employee picks (section:
+    admin leave module) rather than the flat `monthly_leave_entitlement`
+    setting - `get_balance` below is the same function the admin dashboard
+    and approval flow use, so what an employee sees while applying, what
+    blocks the submission, and what the dashboard reports are always the
+    same number.
+    """
+    require_fields(data, ["start_date", "end_date", "reason", "leave_type_id"])
+
+    leave_type = get_leave_type(organization, data["leave_type_id"])
+    if not leave_type.is_active:
+        raise ValidationError(
+            "This leave type is not active.", details={"leave_type_id": "Choose an active leave type."}
+        )
 
     start_d = parse_date(data["start_date"], "start_date")
     end_d = parse_date(data["end_date"], "end_date")
@@ -177,18 +191,29 @@ def create_leave_request(organization, employee, data: dict) -> LeaveRequest:
             )},
         )
 
-    # 3. Leave Balance Validation
+    # 3. Per-request cap, if the leave type sets one.
     requested_days = (end_d - start_d).days + 1
-    balance = get_leave_balance(organization, employee, target_date=start_d)
-    remaining = balance["remaining_leave"]
-
-    if requested_days > remaining:
+    if leave_type.max_days_per_request and requested_days > leave_type.max_days_per_request:
         raise ValidationError(
-            "Requested leave ({} days) exceeds your available remaining leave balance ({} days).".format(
-                requested_days, remaining
-            ),
-            details={"end_date": "Insufficient leave balance available."},
+            "This request exceeds the maximum allowed for {}.".format(leave_type.name),
+            details={"end_date": "Maximum {} day(s) per request for {}.".format(
+                leave_type.max_days_per_request, leave_type.name
+            )},
         )
+
+    # 4. Leave Balance Validation - against this specific leave type's
+    #    configured allocation, not a flat organization-wide number.  Unpaid
+    #    leave types are exempt: there is nothing to run out of.
+    if leave_type.is_paid:
+        balance = get_balance(organization, employee, leave_type, start_d.year)
+        remaining = balance["remaining"]
+        if requested_days > remaining + 1e-9:
+            raise ValidationError(
+                "Requested leave ({} day(s)) exceeds your remaining {} balance ({} day(s)).".format(
+                    requested_days, leave_type.name, remaining
+                ),
+                details={"end_date": "Only {} day(s) of {} remaining.".format(remaining, leave_type.name)},
+            )
 
     # Create leave request with initial status PENDING
     leave_req = LeaveRequest(
@@ -198,6 +223,7 @@ def create_leave_request(organization, employee, data: dict) -> LeaveRequest:
         end_date=end_dt,
         reason=reason,
         status=LeaveRequest.STATUS_PENDING,
+        leave_type=leave_type,
     )
     return leave_req.save()
 
@@ -367,6 +393,16 @@ def _validate_min_unit(value) -> float:
     return unit
 
 
+def _validate_carry_forward_percentage(value) -> float:
+    pct = float(value)
+    if not (0 <= pct <= 100):
+        raise ValidationError(
+            "Carry-forward percentage must be between 0 and 100.",
+            details={"carry_forward_percentage": "Must be between 0 and 100."},
+        )
+    return pct
+
+
 def create_leave_type(organization, data: dict) -> LeaveType:
     name = (data.get("name") or "").strip()
     code = (data.get("code") or "").strip().upper()
@@ -391,6 +427,12 @@ def create_leave_type(organization, data: dict) -> LeaveType:
         max_days_per_request=float(max_days) if max_days not in (None, "") else None,
         requires_approval=parse_bool(data.get("requires_approval", True), True),
         color=data.get("color", ""),
+        allow_carry_forward=parse_bool(data.get("allow_carry_forward", False), False),
+        carry_forward_percentage=_validate_carry_forward_percentage(data.get("carry_forward_percentage", 0)),
+        carry_forward_frequency=validate_choice(
+            data.get("carry_forward_frequency", LeaveAllocationFrequency.YEARLY),
+            LeaveAllocationFrequency.ALL, "carry_forward_frequency",
+        ),
     ).save()
     return leave_type
 
@@ -429,6 +471,14 @@ def update_leave_type(leave_type: LeaveType, data: dict) -> LeaveType:
         leave_type.is_active = parse_bool(data["is_active"])
     if "color" in data:
         leave_type.color = data["color"]
+    if "allow_carry_forward" in data:
+        leave_type.allow_carry_forward = parse_bool(data["allow_carry_forward"])
+    if "carry_forward_percentage" in data:
+        leave_type.carry_forward_percentage = _validate_carry_forward_percentage(data["carry_forward_percentage"])
+    if "carry_forward_frequency" in data:
+        leave_type.carry_forward_frequency = validate_choice(
+            data["carry_forward_frequency"], LeaveAllocationFrequency.ALL, "carry_forward_frequency"
+        )
 
     leave_type.save()
     return leave_type
@@ -654,6 +704,84 @@ def generate_allocations(organization, year: int, month: int = None) -> dict:
     return {"period": period_key, "frequency": frequency, "created": created, "skipped": skipped}
 
 
+def carry_forward(organization, leave_type: LeaveType, *, from_year: int, from_month: int = None,
+                  created_by=None) -> dict:
+    """Credit `leave_type.carry_forward_percentage`% of one period's unused
+    balance into the next period, as an audited `LeaveAdjustment`.
+
+    Idempotent per (user, leave_type, source period): a run is recognisable by
+    its `reason` text, so re-running the same period is a no-op rather than a
+    double credit - the same guarantee `generate_allocations` gives for
+    accrual.
+
+    `from_month` given  -> monthly: unused = that month's accrual minus
+                            approved usage inside that month.
+    `from_month` absent -> yearly: unused = the whole year's remaining balance.
+    """
+    if not leave_type.allow_carry_forward or leave_type.carry_forward_percentage <= 0:
+        raise ValidationError(
+            "Carry-forward is not enabled for this leave type.",
+            details={"leave_type_id": "Turn on carry-forward and set a percentage first."},
+        )
+
+    from apps.users.models import User
+
+    if from_month:
+        period_key = "{:04d}-{:02d}".format(from_year, from_month)
+        marker = "Carry-forward from {}".format(period_key)
+        to_year = from_year + 1 if from_month == 12 else from_year
+        month_start = _to_dt(date(from_year, from_month, 1))
+        _, last_day = calendar.monthrange(from_year, from_month)
+        month_end = _to_dt(date(from_year, from_month, last_day)) + timedelta(hours=23, minutes=59, seconds=59)
+    else:
+        period_key = "{:04d}".format(from_year)
+        marker = "Carry-forward from {}".format(period_key)
+        to_year = from_year + 1
+
+    users = User.objects.filter(organization=organization, is_deleted=False, status="active")
+    created, skipped = 0, 0
+
+    for user in users:
+        already = LeaveAdjustment.objects.filter(
+            organization=organization, user=user, leave_type=leave_type, reason=marker
+        ).first()
+        if already:
+            skipped += 1
+            continue
+
+        if from_month:
+            allocation = LeaveAllocation.objects.filter(
+                user=user, leave_type=leave_type, period_key=period_key
+            ).first()
+            allocated = allocation.amount if allocation else 0.0
+            used = round_leave(sum(
+                r.total_days for r in LeaveRequest.objects.filter(
+                    organization=organization, employee=user, leave_type=leave_type, is_deleted=False,
+                    status=LeaveRequest.STATUS_APPROVED, start_date__gte=month_start, start_date__lte=month_end,
+                )
+            ))
+            unused = max(0.0, round_leave(allocated - used))
+        else:
+            unused = max(0.0, get_balance(organization, user, leave_type, from_year)["remaining"])
+
+        carried = round_leave(unused * leave_type.carry_forward_percentage / 100.0)
+        if carried <= 0:
+            skipped += 1
+            continue
+
+        LeaveAdjustment(
+            organization=organization, user=user, leave_type=leave_type, amount=carried,
+            reason=marker, created_by=created_by, year=to_year,
+        ).save()
+        created += 1
+
+    logger.info(
+        "Carry-forward for %s (%s, %s): %d credited, %d skipped",
+        period_key, organization.slug, leave_type.code, created, skipped,
+    )
+    return {"period": period_key, "target_year": to_year, "created": created, "skipped": skipped}
+
+
 # ---------------------------------------------------------------------------
 # Adjustments
 # ---------------------------------------------------------------------------
@@ -669,9 +797,12 @@ def create_adjustment(organization, user, leave_type: LeaveType, data: dict, *, 
     if not reason:
         raise ValidationError("A reason is required.", details={"reason": "This field is required."})
 
+    year = data.get("year")
+    year = int(year) if year not in (None, "") else date.today().year
+
     return LeaveAdjustment(
         organization=organization, user=user, leave_type=leave_type,
-        amount=amount, reason=reason, created_by=created_by,
+        amount=amount, reason=reason, created_by=created_by, year=year,
     ).save()
 
 
@@ -693,6 +824,14 @@ def list_adjustments(organization, *, user=None, leave_type=None):
 # what has been tagged (via `approve_leave_request(..., leave_type_id=...)`)
 # and never hides the rest.
 # ---------------------------------------------------------------------------
+def _adjustment_year(adjustment) -> int:
+    """The balance-year an adjustment counts toward.  Explicit `year` wins;
+    older-style rows fall back to when they were recorded."""
+    if adjustment.year is not None:
+        return adjustment.year
+    return adjustment.created_at.year if adjustment.created_at else None
+
+
 def _row_totals(organization, user, year: int) -> tuple:
     year_start, year_end = _year_bounds(year)
     requests = LeaveRequest.objects.filter(
@@ -713,7 +852,7 @@ def get_balance(organization, user, leave_type: LeaveType, year: int) -> dict:
     adjustments = LeaveAdjustment.objects.filter(
         organization=organization, user=user, leave_type=leave_type, is_deleted=False
     )
-    allocated += sum(a.amount for a in adjustments if a.created_at and a.created_at.year == year)
+    allocated += sum(a.amount for a in adjustments if _adjustment_year(a) == year)
     allocated = round_leave(allocated)
 
     year_start, year_end = _year_bounds(year)
@@ -796,7 +935,7 @@ def list_org_balances(organization, year: int, *, leave_type_id: str = None, dep
     for adjustment in LeaveAdjustment.objects.filter(
         organization=organization, user__in=user_ids, leave_type__in=lt_ids, is_deleted=False
     ):
-        if adjustment.created_at and adjustment.created_at.year == year:
+        if _adjustment_year(adjustment) == year:
             alloc_map[(str(adjustment.user.id), str(adjustment.leave_type.id))] += adjustment.amount
 
     year_start, year_end = _year_bounds(year)

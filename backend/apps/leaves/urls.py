@@ -11,6 +11,7 @@ urlpatterns = [
     path("leaves/calendar", views.calendar, name="leaves-calendar"),
     path("leaves/holidays", views.holidays, name="leaves-holidays"),
     path("leaves/balance", views.balance, name="leaves-balance"),
+    path("leaves/type-balances", views.type_balances, name="leaves-type-balances"),
     path("leaves/requests", views.requests, name="leaves-requests"),
     path("leaves/requests/<str:request_id>/cancel", views.cancel_request, name="leaves-cancel-request"),
 
@@ -33,6 +34,7 @@ admin_urlpatterns = [
 
     path("leaves/allocation-rules", views.allocation_rule_collection, name="admin-leaves-allocation-rule-collection"),
     path("leaves/allocation-rules/generate", views.allocation_generate, name="admin-leaves-allocation-generate"),
+    path("leaves/allocation-rules/carry-forward", views.allocation_carry_forward, name="admin-leaves-carry-forward"),
     path("leaves/allocation-rules/<str:rule_id>", views.allocation_rule_detail, name="admin-leaves-allocation-rule-detail"),
 
     path("leaves/adjustments", views.adjustment_collection, name="admin-leaves-adjustment-collection"),

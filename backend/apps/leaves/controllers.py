@@ -41,6 +41,14 @@ class LeaveController(BaseController):
         )
         return self.ok(data)
 
+    def type_balances(self):
+        """Per-leave-type balance for the signed-in employee - what the apply
+        form shows/checks against, and the same numbers the admin dashboard
+        and approval flow use."""
+        user = self.require_user()
+        year = int(self.param("year") or date.today().year)
+        return self.ok(services.list_user_balances(user.organization, user, year))
+
     def my_requests(self):
         """Get signed-in user's leave requests."""
         user = self.require_user()
@@ -227,6 +235,19 @@ class LeaveAllocationController(BaseController):
         result = services.generate_allocations(self.user.organization, year, month)
         self.emit_to_admins(RealtimeEvent.LEAVE_ALLOCATION_UPDATED, result)
         return self.ok(result, "Generated allocations for {}.".format(result["period"]))
+
+    def carry_forward(self):
+        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require("leave_type_id", "year")
+        leave_type = services.get_leave_type(self.user.organization, self.field("leave_type_id"))
+        year = parse_int(self.field("year"), None, "year")
+        month = parse_int(self.field("month"), None, "month")
+
+        result = services.carry_forward(
+            self.user.organization, leave_type, from_year=year, from_month=month, created_by=self.user
+        )
+        self.emit_to_admins(RealtimeEvent.LEAVE_BALANCE_UPDATED, result)
+        return self.ok(result, "Carried forward {} adjustment(s) into {}.".format(result["created"], result["target_year"]))
 
 
 class LeaveAdjustmentController(BaseController):

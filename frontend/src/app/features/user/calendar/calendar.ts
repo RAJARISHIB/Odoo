@@ -7,6 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormBuilder,
   FormGroup,
@@ -14,7 +15,15 @@ import {
   Validators,
 } from '@angular/forms';
 
-import { CalendarFeed, Holiday, LeaveBalance, LeaveRequest } from '../../../core/models/leaves.model';
+import { ApiErrorBody } from '../../../core/models/api.model';
+import {
+  CalendarFeed,
+  Holiday,
+  LeaveBalance,
+  LeaveRequest,
+  LeaveType,
+  LeaveTypeBalance,
+} from '../../../core/models/leaves.model';
 import { Leaves } from '../../../core/services/leaves';
 import { Toast } from '../../../core/services/toast';
 
@@ -50,10 +59,46 @@ export class UserCalendar implements OnInit {
   protected readonly showModal = signal<boolean>(false);
   protected readonly formErrors = signal<Record<string, string>>({});
 
+  /** Leave types + this employee's own per-type balance - loaded once so the
+   * apply modal can show "you have X days left" before submitting, and block
+   * obviously-too-large requests client-side (the backend remains the
+   * authority; this is a preview). */
+  protected readonly leaveTypes = signal<LeaveType[]>([]);
+  protected readonly typeBalances = signal<LeaveTypeBalance[]>([]);
+
   protected readonly applyForm: FormGroup = this.fb.group({
+    leave_type_id: ['', Validators.required],
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
     reason: ['', [Validators.required, Validators.maxLength(1000)]],
+  });
+
+  private readonly applyFormValue = toSignal(this.applyForm.valueChanges, {
+    initialValue: this.applyForm.getRawValue(),
+  });
+
+  /** The remaining balance for whichever leave type is currently selected. */
+  protected readonly selectedTypeBalance = computed<LeaveTypeBalance | null>(() => {
+    const typeId = this.applyFormValue()?.leave_type_id;
+    if (!typeId) return null;
+    return this.typeBalances().find((b) => b.leave_type_id === typeId) ?? null;
+  });
+
+  /** Calendar-day span of the currently entered dates - a client-side preview
+   * only; the backend is always the authority on the final day count. */
+  protected readonly requestedDays = computed<number>(() => {
+    const value = this.applyFormValue();
+    if (!value?.start_date || !value?.end_date) return 0;
+    const start = new Date(value.start_date);
+    const end = new Date(value.end_date);
+    if (end < start) return 0;
+    return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  });
+
+  protected readonly exceedsBalance = computed<boolean>(() => {
+    const balance = this.selectedTypeBalance();
+    if (!balance) return false;
+    return this.requestedDays() > balance.remaining;
   });
 
   // Derived Month Title (e.g. "August 2026")
@@ -130,6 +175,12 @@ export class UserCalendar implements OnInit {
 
   ngOnInit(): void {
     this.loadCalendar();
+    this.leavesService.types({ active_only: 'true' }).subscribe((types) => this.leaveTypes.set(types));
+    this.loadTypeBalances();
+  }
+
+  private loadTypeBalances(): void {
+    this.leavesService.getTypeBalances().subscribe((balances) => this.typeBalances.set(balances));
   }
 
   protected prevMonth(): void {
@@ -154,6 +205,7 @@ export class UserCalendar implements OnInit {
     const initialDate = dateStr ?? this.formatDateStr(new Date());
 
     this.applyForm.reset({
+      leave_type_id: '',
       start_date: initialDate,
       end_date: initialDate,
       reason: '',
@@ -184,6 +236,7 @@ export class UserCalendar implements OnInit {
     const val = this.applyForm.value;
 
     this.leavesService.applyLeave({
+      leave_type_id: val.leave_type_id,
       start_date: val.start_date,
       end_date: val.end_date,
       reason: val.reason,
@@ -193,11 +246,15 @@ export class UserCalendar implements OnInit {
         this.toast.success(`Leave request submitted (${res.status}).`);
         this.closeApplyModal();
         this.loadCalendar();
+        this.loadTypeBalances();
       },
-      error: (err) => {
+      error: (err: ApiErrorBody) => {
         this.submitting.set(false);
-        const details = err.error?.error?.details || {};
-        const mainMsg = err.error?.error?.message || 'Failed to submit leave request.';
+        // The interceptor normalises every HTTP failure into `ApiErrorBody`,
+        // so the per-field messages (e.g. "insufficient balance" on
+        // `end_date`) are already flat here - no `.error.error` nesting.
+        const details = err.details || {};
+        const mainMsg = err.message || 'Failed to submit leave request.';
         this.formErrors.set({ ...details, general: mainMsg });
         this.toast.error(mainMsg);
       },
@@ -214,9 +271,8 @@ export class UserCalendar implements OnInit {
         this.toast.success('Leave request cancelled.');
         this.loadCalendar();
       },
-      error: (err) => {
-        const msg = err.error?.error?.message || 'Failed to cancel leave request.';
-        this.toast.error(msg);
+      error: (err: ApiErrorBody) => {
+        this.toast.error(err.message || 'Failed to cancel leave request.');
       },
     });
   }

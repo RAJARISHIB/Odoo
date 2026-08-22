@@ -79,6 +79,10 @@ export interface LeaveType {
   max_days_per_request?: number | null;
   requires_approval: boolean;
   color?: string | null;
+  /** What % of unused balance rolls into the next period when carry-forward runs. */
+  allow_carry_forward: boolean;
+  carry_forward_percentage: number;
+  carry_forward_frequency: LeaveAllocationFrequency;
 }
 
 export interface LeaveAllocationRule {
@@ -176,4 +180,14 @@ export interface CreateLeavePayload {
   start_date: string;
   end_date: string;
   reason: string;
+  /** Which configured leave type this request draws down - required so the
+   * balance check below has something to check against. */
+  leave_type_id: string;
+}
+
+export interface CarryForwardResult {
+  period: string;
+  target_year: number;
+  created: number;
+  skipped: number;
 }

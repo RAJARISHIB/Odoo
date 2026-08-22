@@ -202,6 +202,32 @@
             </div>
           }
 
+          <div class="field">
+            <label for="leave_type_id">Leave type</label>
+            <select
+              id="leave_type_id"
+              formControlName="leave_type_id"
+              [class.invalid]="applyForm.get('leave_type_id')?.touched && (applyForm.get('leave_type_id')?.invalid || formErrors()['leave_type_id'])"
+            >
+              <option value="">Select a leave type</option>
+              @for (type of leaveTypes(); track type.id) {
+                <option [value]="type.id">{{ type.name }}</option>
+              }
+            </select>
+            @if (formErrors()['leave_type_id']) {
+              <div class="error">{{ formErrors()['leave_type_id'] }}</div>
+            }
+            @if (selectedTypeBalance(); as bal) {
+              <div class="subtle" [class.error]="exceedsBalance()">
+                {{ bal.remaining }} of {{ bal.allocated }} day(s) remaining for {{ bal.leave_type_name }}
+                @if (requestedDays() > 0) {
+                  &middot; this request is {{ requestedDays() }} day(s)
+                  @if (exceedsBalance()) { &mdash; exceeds your remaining balance }
+                }
+              </div>
+            }
+          </div>
+
           <div class="grid cols-2">
             <div class="field">
               <label for="start_date">Start Date</label>
@@ -251,8 +277,8 @@
           <button class="btn ghost" type="button" (click)="closeApplyModal()" [disabled]="submitting()">
             Cancel
           </button>
-          <button class="btn primary" type="submit" [disabled]="submitting()">
-            {{ submitting() ? 'Submitting...' : 'Submit Request' }}
+          <button class="btn primary" type="submit" [disabled]="submitting() || exceedsBalance()" [title]="exceedsBalance() ? 'This request exceeds your remaining balance for this leave type.' : ''">
+            {{ submitting() ? 'Submitting...' : exceedsBalance() ? 'Insufficient balance' : 'Submit Request' }}
           </button>
         </div>
       </form>

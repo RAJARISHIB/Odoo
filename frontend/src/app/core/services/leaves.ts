@@ -5,6 +5,7 @@ import { Api, QueryParams } from './api';
 import {
   AllocationGenerateResult,
   CalendarFeed,
+  CarryForwardResult,
   CreateLeavePayload,
   EmployeeLeaveBalanceRow,
   EmployeeLeaveSummary,
@@ -15,6 +16,7 @@ import {
   LeaveDashboardSummary,
   LeaveRequest,
   LeaveType,
+  LeaveTypeBalance,
 } from '../models/leaves.model';
 import { Page } from '../models/api.model';
 
@@ -32,6 +34,12 @@ export class Leaves {
 
   getBalance(params: QueryParams = {}): Observable<LeaveBalance> {
     return this.api.get<LeaveBalance>('leaves/balance', params);
+  }
+
+  /** Per-leave-type balance for the signed-in employee - what the apply form
+   * shows and checks against before submitting. */
+  getTypeBalances(params: QueryParams = {}): Observable<LeaveTypeBalance[]> {
+    return this.api.get<LeaveTypeBalance[]>('leaves/type-balances', params);
   }
 
   getMyRequests(params: QueryParams = {}): Observable<Page<LeaveRequest>> {
@@ -109,6 +117,10 @@ export class Leaves {
 
   generateAllocations(payload: { year: number; month?: number; frequency?: 'monthly' | 'yearly' }): Observable<AllocationGenerateResult> {
     return this.api.post<AllocationGenerateResult>('admin/leaves/allocation-rules/generate', payload);
+  }
+
+  carryForward(payload: { leave_type_id: string; year: number; month?: number }): Observable<CarryForwardResult> {
+    return this.api.post<CarryForwardResult>('admin/leaves/allocation-rules/carry-forward', payload);
   }
 
   // -- admin: adjustments ---------------------------------------------------
