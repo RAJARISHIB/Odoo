@@ -33,6 +33,10 @@
 
         <div class="row readonly">
           <div>
+            <div class="label subtle">Login ID</div>
+            <strong class="mono">{{ auth.user()?.login_id }}</strong>
+          </div>
+          <div>
             <div class="label subtle">Email</div>
             <strong>{{ auth.user()?.email }}</strong>
           </div>

@@ -12,6 +12,7 @@ from django.conf import settings
 from apps.organization.models import Organization
 from apps.users.models import RefreshToken, User
 from core.constants import Role, UserStatus
+from core.identifiers import generate_login_id, organization_code, split_full_name
 from core.exceptions import AuthenticationError, Conflict, NotFound, ValidationError
 from core.security import (
     TOKEN_TYPE_REFRESH,
@@ -19,8 +20,10 @@ from core.security import (
     create_refresh_token,
     decode_token,
 )
+from core.storage import save_image
 from core.utils import random_password, slugify
 from core.validators import (
+    parse_datetime,
     validate_choice,
     validate_email,
     validate_password,
@@ -55,17 +58,33 @@ def issue_token_pair(user: User, *, ip_address: str = "", user_agent: str = "") 
     }
 
 
-def authenticate(email: str, password: str) -> User:
+def find_by_identifier(identifier: str) -> User:
+    """Look a user up by login ID or email address.
+
+    The sign-in form has one field for both, so anything containing "@" is
+    treated as an email and everything else as a login ID.
+    """
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+    if "@" in identifier:
+        return User.objects.filter(email=identifier.lower(), is_deleted=False).first()
+    return User.objects.filter(login_id=identifier.upper(), is_deleted=False).first()
+
+
+def authenticate(identifier: str, password: str) -> User:
     """Verify credentials.  The failure message is deliberately identical for
-    unknown-email and wrong-password so the endpoint cannot enumerate users."""
-    email = validate_email(email)
-    user = User.objects.filter(email=email, is_deleted=False).first()
+    an unknown account and a wrong password so the endpoint cannot enumerate
+    users."""
+    user = find_by_identifier(identifier)
 
     if not user or not user.check_password(password):
         if user:
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
             user.save()
-        raise AuthenticationError("Invalid email or password.", code="invalid_credentials")
+        raise AuthenticationError(
+            "Invalid login ID / email or password.", code="invalid_credentials"
+        )
 
     if user.status != UserStatus.ACTIVE:
         raise AuthenticationError(
@@ -75,8 +94,8 @@ def authenticate(email: str, password: str) -> User:
     return user
 
 
-def login(email: str, password: str, *, ip_address: str = "", user_agent: str = "") -> dict:
-    user = authenticate(email, password)
+def login(identifier: str, password: str, *, ip_address: str = "", user_agent: str = "") -> dict:
+    user = authenticate(identifier, password)
     user.mark_logged_in()
     tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent)
     return {"user": user.to_dict(), "tokens": tokens}
@@ -128,14 +147,25 @@ def list_sessions(user: User):
 # ---------------------------------------------------------------------------
 # Registration / provisioning
 # ---------------------------------------------------------------------------
-def register_organization(data: dict, *, ip_address: str = "", user_agent: str = "") -> dict:
+def register_organization(data: dict, *, logo=None, ip_address: str = "", user_agent: str = "") -> dict:
     """Bootstrap signup: create an organization plus its first super admin.
 
     This is the only way an account comes into existence without an invite -
-    everyone else is created by an admin through `create_user`.
+    every other user is created by an HR officer or admin via `create_user`.
+    The owner receives a generated login ID just like everybody else.
     """
     email = validate_email(data.get("email"))
-    validate_password(data.get("password"))
+    password = data.get("password")
+    validate_password(password)
+
+    # The form asks for the password twice; only enforce it when the client
+    # actually sent the confirmation.
+    confirm = data.get("confirm_password")
+    if confirm is not None and confirm != password:
+        raise ValidationError(
+            "Passwords do not match.",
+            details={"confirm_password": "Does not match the password."},
+        )
 
     if User.objects.filter(email=email).first():
         raise Conflict("An account with this email already exists.", code="email_taken")
@@ -147,29 +177,65 @@ def register_organization(data: dict, *, ip_address: str = "", user_agent: str =
             details={"organization_name": "This field is required."},
         )
 
-    slug = _unique_org_slug(org_name)
+    # The form has a single "Name" field, but a login ID needs both halves.
+    first_name, last_name = _resolve_name(data)
+    if not first_name:
+        raise ValidationError("Your name is required.", details={"name": "This field is required."})
+
     organization = Organization(
         name=org_name,
-        slug=slug,
+        slug=_unique_org_slug(org_name),
+        code=_unique_org_code(org_name),
         email=email,
         phone=validate_phone(data.get("phone", "")),
     ).save()
 
+    if logo is not None:
+        organization.logo_url = save_image(logo, "logos/{}".format(organization.id))
+        organization.save()
+
+    joined_at = datetime.now(timezone.utc)
     user = User(
         organization=organization,
+        login_id=generate_login_id(organization, first_name, last_name, joined_at),
         email=email,
-        first_name=(data.get("first_name") or "").strip() or org_name,
-        last_name=(data.get("last_name") or "").strip(),
+        first_name=first_name,
+        last_name=last_name,
         phone=data.get("phone", ""),
         role=Role.SUPER_ADMIN,
         status=UserStatus.ACTIVE,
+        date_of_joining=joined_at,
     )
-    user.set_password(data["password"])
+    user.set_password(password)
     user.save()
 
-    logger.info("Registered organization %s with owner %s", organization.slug, user.email)
+    logger.info(
+        "Registered organization %s (%s) with owner %s",
+        organization.slug, organization.code, user.login_id,
+    )
     tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent)
     return {"user": user.to_dict(), "organization": organization.to_dict(), "tokens": tokens}
+
+
+def _resolve_name(data: dict) -> tuple:
+    """Accept either a single `name` or separate `first_name`/`last_name`."""
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    if not first_name and data.get("name"):
+        first_name, last_name = split_full_name(data["name"])
+    return first_name, last_name
+
+
+def _unique_org_code(name: str) -> str:
+    """Two-letter organization code, suffixed with a digit only on collision."""
+    base = organization_code(name)
+    if not Organization.objects.filter(code=base).first():
+        return base
+    for suffix in range(1, 100):
+        candidate = "{}{}".format(base, suffix)
+        if not Organization.objects.filter(code=candidate).first():
+            return candidate
+    raise Conflict("Could not allocate an organization code.", code="code_exhausted")
 
 
 def _unique_org_slug(name: str) -> str:
@@ -182,7 +248,11 @@ def _unique_org_slug(name: str) -> str:
 
 
 def create_user(organization: Organization, data: dict, *, created_by: User = None) -> tuple:
-    """Admin-side user provisioning.
+    """Admin-side user provisioning - the only way an employee account is born.
+
+    The employee chooses nothing: the system allocates their login ID and, when
+    no password is supplied, a first-time password too.  They sign in with those
+    and are then required to set their own password.
 
     Returns `(user, temporary_password)`; the temporary password is `None` when
     the caller supplied one.
@@ -190,6 +260,12 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
     email = validate_email(data.get("email"))
     if User.objects.filter(email=email).first():
         raise Conflict("An account with this email already exists.", code="email_taken")
+
+    first_name, last_name = _resolve_name(data)
+    if not first_name:
+        raise ValidationError(
+            "The employee's name is required.", details={"first_name": "This field is required."}
+        )
 
     raw_password = data.get("password")
     temporary_password = None
@@ -199,15 +275,18 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
         raw_password = temporary_password = random_password()
 
     role = validate_choice(data.get("role", Role.EMPLOYEE), Role.ALL, "role")
+    joined_at = parse_datetime(data.get("date_of_joining")) or datetime.now(timezone.utc)
 
     user = User(
         organization=organization,
+        login_id=generate_login_id(organization, first_name, last_name, joined_at),
         email=email,
-        first_name=(data.get("first_name") or "").strip(),
-        last_name=(data.get("last_name") or "").strip(),
+        first_name=first_name,
+        last_name=last_name,
         phone=validate_phone(data.get("phone", "")),
         employee_id=data.get("employee_id"),
         designation=data.get("designation"),
+        date_of_joining=joined_at,
         role=role,
         status=data.get("status", UserStatus.ACTIVE),
         must_change_password=temporary_password is not None,
@@ -221,8 +300,9 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
     user.save()
 
     logger.info(
-        "User %s created in org %s by %s",
-        user.email, organization.slug, created_by.email if created_by else "system",
+        "User %s (%s) created in org %s by %s",
+        user.login_id, user.email, organization.slug,
+        created_by.login_id if created_by else "system",
     )
     return user, temporary_password
 
@@ -301,6 +381,7 @@ def search_users(organization: Organization, *, search: str = None, role: str = 
                     {"last_name": {"$regex": search, "$options": "i"}},
                     {"email": {"$regex": search, "$options": "i"}},
                     {"employee_id": {"$regex": search, "$options": "i"}},
+                    {"login_id": {"$regex": search, "$options": "i"}},
                 ]
             }
         )

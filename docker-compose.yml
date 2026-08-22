@@ -9,5 +9,18 @@ services:
     volumes:
       - hrms-mongo-data:/data/db
 
+  # Uploaded logos live on a plain directory (backend/media by default), so the
+  # API container mounts this volume at MEDIA_ROOT when it is containerised:
+  #
+  #   api:
+  #     build: ./backend
+  #     environment:
+  #       MEDIA_ROOT: /var/lib/hrms/media
+  #       MONGO_URI: mongodb://mongo:27017
+  #     volumes:
+  #       - hrms-media:/var/lib/hrms/media
+  #     depends_on: [mongo]
+
 volumes:
   hrms-mongo-data:
+  hrms-media:

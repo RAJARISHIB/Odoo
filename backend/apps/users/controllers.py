@@ -16,16 +16,34 @@ class AuthController(BaseController):
     """Public authentication surface: /api/v1/auth/*"""
 
     def register(self):
-        """Bootstrap an organization and its first super admin."""
+        """Bootstrap an organization and its first super admin.
+
+        Accepts JSON, or multipart when the signup form carries a company logo.
+        """
         self.require("organization_name", "email", "password")
-        result = services.register_organization(self.data, **self._session_meta())
-        return self.created(result, "Organization registered. You are signed in.")
+        result = services.register_organization(
+            self.data, logo=self.file("logo"), **self._session_meta()
+        )
+        return self.created(
+            result,
+            "Organization registered. Your login ID is {}.".format(result["user"]["login_id"]),
+        )
 
     def login(self):
-        self.require("email", "password")
-        result = services.login(
-            self.field("email"), self.field("password"), **self._session_meta()
-        )
+        """Sign in with either a login ID or an email address.
+
+        The form has one field for both; `identifier` is what the UI sends, and
+        `login_id` / `email` are accepted as aliases.
+        """
+        identifier = self.field("identifier") or self.field("login_id") or self.field("email")
+        if not identifier:
+            raise ValidationError(
+                "Enter your login ID or email.",
+                details={"identifier": "This field is required."},
+            )
+        self.require("password")
+
+        result = services.login(identifier, self.field("password"), **self._session_meta())
         result["realtime"] = self._realtime_hints(result["user"])
         return self.ok(result, "Signed in successfully.")
 
@@ -88,6 +106,8 @@ class AuthController(BaseController):
         """Coarse capability flags the Angular guards and menus read."""
         return {
             "panel": user.panel,
+            # True until a system-generated password has been replaced.
+            "must_change_password": bool(user.must_change_password),
             "can_manage_users": user.role in (Role.SUPER_ADMIN, Role.ADMIN, Role.HR),
             "can_manage_organization": user.role in (Role.SUPER_ADMIN, Role.ADMIN),
             "can_view_all_attendance": user.role in Role.ADMIN_PANEL,
@@ -119,8 +139,19 @@ class UserController(BaseController):
         return self.paginated(queryset)
 
     def create(self):
+        """Provision an employee.
+
+        The system allocates the login ID, and a first-time password too unless
+        the admin supplied one - a normal user never registers themselves.
+        """
         self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
-        self.require("email", "first_name")
+        self.require("email")
+        # The form may send a single "name" or separate first/last names.
+        if not self.field("name") and not self.field("first_name"):
+            raise ValidationError(
+                "The employee's name is required.", details={"name": "This field is required."}
+            )
+
         user, temporary_password = services.create_user(
             self.user.organization, self.data, created_by=self.user
         )
@@ -131,7 +162,9 @@ class UserController(BaseController):
             payload["temporary_password"] = temporary_password
 
         self.emit_to_admins(RealtimeEvent.USER_CREATED, {"user": user.to_dict()})
-        return self.created(payload, "Employee created.")
+        return self.created(
+            payload, "Employee created. Login ID: {}.".format(user.login_id)
+        )
 
     def retrieve(self, user_id):
         self.assert_self_or_admin(user_id)

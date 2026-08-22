@@ -12,6 +12,12 @@ def organization(request):
     return controller.update()
 
 
+@api_view("POST")
+@admin_required
+def organization_logo(request):
+    return OrganizationController(request).upload_logo()
+
+
 @api_view("GET")
 @admin_required
 def organization_overview(request):

@@ -8,6 +8,8 @@ export const ADMIN_ROLES: Role[] = ['super_admin', 'admin', 'hr', 'manager'];
 
 export interface User {
   id: string;
+  /** System-generated sign-in ID, e.g. OIJODO20220001. Never editable. */
+  login_id: string;
   email: string;
   first_name: string;
   last_name: string;
@@ -40,6 +42,8 @@ export interface AuthTokens {
 
 export interface Permissions {
   panel: Panel;
+  /** True until the user replaces a system-generated password. */
+  must_change_password: boolean;
   can_manage_users: boolean;
   can_manage_organization: boolean;
   can_view_all_attendance: boolean;
@@ -63,6 +67,9 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  /** Two-letter prefix of every login ID issued here ("Odoo India" -> "OI"). */
+  code: string;
+  logo_url?: string | null;
   email: string;
   phone?: string | null;
   city?: string | null;

@@ -21,6 +21,22 @@ class OrganizationController(BaseController):
         self.emit_to_org(RealtimeEvent.ORG_UPDATED, {"organization": organization.to_dict()})
         return self.ok(organization.to_dict(), "Organization updated.")
 
+    def upload_logo(self):
+        """Replace the company logo.
+
+        Multipart, field name `logo`.  The old file is deleted once the new one
+        is safely stored - see `core.storage`.
+        """
+        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN)
+        organization = services.get_organization(self.organization_id)
+        organization = services.set_logo(organization, self.file("logo", required=True))
+
+        self.emit_to_org(RealtimeEvent.ORG_UPDATED, {"organization": organization.to_dict()})
+        return self.ok(
+            {"logo_url": organization.logo_url, "organization": organization.to_dict()},
+            "Logo updated.",
+        )
+
     def overview(self):
         """Small aggregate used by the admin dashboard header."""
         self.require_admin()

@@ -35,6 +35,13 @@ export class Auth {
   readonly permissions = this.permissionsSignal.asReadonly();
 
   readonly isAuthenticated = computed(() => !!this.userSignal() && !!this.storage.accessToken);
+  /**
+   * True while the user is still on a system-generated password.  Employees are
+   * created by an admin, sign in with an issued password, and must replace it.
+   */
+  readonly mustChangePassword = computed(
+    () => this.permissionsSignal()?.must_change_password ?? this.userSignal()?.must_change_password ?? false,
+  );
   readonly isAdmin = computed(() => {
     const user = this.userSignal();
     return !!user && ADMIN_ROLES.includes(user.role);
@@ -46,23 +53,28 @@ export class Auth {
   // -----------------------------------------------------------------
   // Session lifecycle
   // -----------------------------------------------------------------
-  login(email: string, password: string): Observable<LoginResponse> {
-    return this.api.post<LoginResponse>('auth/login', { email, password }).pipe(
+  /**
+   * Sign in with a login ID (OIJODO20220001) or an email address - the form has
+   * one field for both, and the API decides which it received.
+   */
+  login(identifier: string, password: string): Observable<LoginResponse> {
+    return this.api.post<LoginResponse>('auth/login', { identifier, password }).pipe(
       tap((result) => this.startSession(result.tokens, result.user)),
     );
   }
 
-  /** Bootstrap signup: creates the organization and its first super admin. */
-  register(payload: {
-    organization_name: string;
-    email: string;
-    password: string;
-    first_name?: string;
-    last_name?: string;
-  }): Observable<LoginResponse> {
-    return this.api.post<LoginResponse>('auth/register', payload).pipe(
-      tap((result) => this.startSession(result.tokens, result.user)),
-    );
+  /**
+   * Bootstrap signup: creates the organization and its first super admin, who
+   * receives a generated login ID like everybody else.
+   *
+   * Posted as multipart when a logo was chosen, plain JSON otherwise.
+   */
+  register(payload: RegistrationPayload, logo?: File | null): Observable<LoginResponse> {
+    const request = logo
+      ? this.api.postForm<LoginResponse>('auth/register', toFormData(payload, logo))
+      : this.api.post<LoginResponse>('auth/register', payload);
+
+    return request.pipe(tap((result) => this.startSession(result.tokens, result.user)));
   }
 
   /** Re-read the session from the server - used by the app initialiser. */
@@ -96,6 +108,9 @@ export class Auth {
       new_password: newPassword,
     });
   }
+
+  /** The signed-in user's login ID, for display. */
+  readonly loginId = computed(() => this.userSignal()?.login_id ?? null);
 
   // -----------------------------------------------------------------
   // Tokens
@@ -153,4 +168,24 @@ export class Auth {
     this.permissionsSignal.set(null);
     this.realtime.disconnect();
   }
+}
+
+
+export interface RegistrationPayload {
+  organization_name: string;
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  confirm_password?: string;
+}
+
+/** Flatten a payload plus the logo file into multipart form data. */
+function toFormData(payload: RegistrationPayload, logo: File): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== null && value !== undefined && value !== '') form.append(key, String(value));
+  }
+  form.append('logo', logo, logo.name);
+  return form;
 }

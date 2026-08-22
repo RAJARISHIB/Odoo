@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["backend/manage.py", "runserver", "8000", "--noreload"],
+      "port": 8000
+    },
+    {
+      "name": "realtime",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["realtime/src/index.js"],
+      "port": 4000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "start"],
+      "port": 4200
+    }
+  ]
+}

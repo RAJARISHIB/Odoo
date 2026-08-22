@@ -1,6 +1,12 @@
 import { Routes } from '@angular/router';
 
-import { adminGuard, authGuard, guestGuard, rootRedirectGuard } from './core/guards/auth.guard';
+import {
+  adminGuard,
+  authGuard,
+  guestGuard,
+  passwordChangeGuard,
+  rootRedirectGuard,
+} from './core/guards/auth.guard';
 
 /**
  * Two panels behind one login:
@@ -31,8 +37,17 @@ export const routes: Routes = [
   },
 
   {
+    // Forced first-login password change. Outside both panels: a user who has
+    // not set their own password yet is not allowed into either.
+    path: 'change-password',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/auth/change-password').then((m) => m.ChangePassword),
+  },
+
+  {
     path: 'admin',
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, passwordChangeGuard],
     loadComponent: () => import('./features/admin/admin-shell').then((m) => m.AdminShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -57,7 +72,7 @@ export const routes: Routes = [
 
   {
     path: 'app',
-    canActivate: [authGuard],
+    canActivate: [authGuard, passwordChangeGuard],
     loadComponent: () => import('./features/user/user-shell').then((m) => m.UserShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },

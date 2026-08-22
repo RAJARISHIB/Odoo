@@ -9,15 +9,20 @@
     </button>
   </div>
 
-  @if (lastTempPassword(); as temp) {
+  @if (issuedCredentials(); as issued) {
     <div class="card temp-password">
       <div class="card-body row">
         <span class="spacer">
-          <strong>Temporary password for {{ temp.email }}:</strong>
-          <code>{{ temp.password }}</code>
-          <span class="subtle"> — shown once, share it securely.</span>
+          <strong>Sign-in details for {{ issued.email }}</strong>
+          <div style="margin-top: 6px">
+            Login ID <code>{{ issued.loginId }}</code>
+            &nbsp;Password <code>{{ issued.password }}</code>
+          </div>
+          <span class="subtle">
+            Shown once — share securely. They must change the password on first sign-in.
+          </span>
         </span>
-        <button class="btn ghost sm" type="button" (click)="dismissTempPassword()">Dismiss</button>
+        <button class="btn ghost sm" type="button" (click)="dismissCredentials()">Dismiss</button>
       </div>
     </div>
   }
@@ -74,7 +79,7 @@
     <div class="card-head">
       <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
         <div class="field">
-          <input formControlName="search" placeholder="Search name, email or ID" />
+          <input formControlName="search" placeholder="Search name, email or login ID" />
         </div>
         <div class="field">
           <select formControlName="role">
@@ -102,6 +107,7 @@
         <thead>
           <tr>
             <th>Employee</th>
+            <th>Login ID</th>
             <th>Role</th>
             <th>Designation</th>
             <th>Status</th>
@@ -121,6 +127,7 @@
                   </span>
                 </div>
               </td>
+              <td><code class="mono">{{ user.login_id }}</code></td>
               <td><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
               <td>{{ user.designation || '—' }}</td>
               <td><span class="badge" [class]="user.status">{{ user.status }}</span></td>
@@ -137,7 +144,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6">
+              <td colspan="7">
                 <div class="empty">
                   <strong>{{ loading() ? 'Loading…' : 'No employees found' }}</strong>
                   @if (!loading()) { Try clearing the filters, or add someone. }

@@ -19,7 +19,7 @@ from django.conf import settings
 
 from core import realtime, responses
 from core.constants import Role
-from core.exceptions import AuthenticationError, NotFound, PermissionDenied
+from core.exceptions import AuthenticationError, NotFound, PermissionDenied, ValidationError
 from core.pagination import paginate
 from core.utils import client_ip, parse_json_body, user_agent
 from core.validators import parse_int, require_fields, validate_object_id
@@ -49,10 +49,31 @@ class BaseController:
     # -----------------------------------------------------------------
     @property
     def data(self) -> dict:
-        """Parsed JSON body (cached).  Empty dict when there is no body."""
+        """The request body as a dict (cached).
+
+        Handles both content types the UI sends: JSON for ordinary calls, and
+        multipart form data when a file rides along (the signup form posts the
+        company logo this way).  Controllers never need to know which arrived.
+        """
         if self._body_cache is None:
-            self._body_cache = parse_json_body(self.request)
+            if self.is_multipart:
+                self._body_cache = self.request.POST.dict()
+            else:
+                self._body_cache = parse_json_body(self.request)
         return self._body_cache
+
+    @property
+    def is_multipart(self) -> bool:
+        return self.request.content_type.startswith("multipart/form-data")
+
+    def file(self, name: str, required: bool = False):
+        """One uploaded file, or None.  See `core.storage` for validation."""
+        uploaded = self.request.FILES.get(name)
+        if required and not uploaded:
+            raise ValidationError(
+                "A file is required.", details={name: "This field is required."}
+            )
+        return uploaded
 
     @property
     def query(self):

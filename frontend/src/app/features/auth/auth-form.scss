@@ -1,4 +1,4 @@
-/* Shared by the login and register cards. */
+/* Shared by the login, register and change-password cards. */
 .auth-card {
   width: min(400px, 100%);
   background: var(--surface);
@@ -6,6 +6,24 @@
   border-radius: 14px;
   box-shadow: var(--shadow);
   padding: 32px;
+}
+
+.auth-card.wide {
+  width: min(520px, 100%);
+}
+
+/* The "App/Web Logo" placeholder at the top of each card. */
+.logo-slot {
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: var(--text-subtle);
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  margin-bottom: 22px;
 }
 
 header {
@@ -25,8 +43,83 @@ header p {
   font-size: 13px;
 }
 
+.notice {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+/* An input with a trailing button: the password eye, the logo upload. */
+.input-with-action {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.input-with-action input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reveal,
+.upload {
+  flex: none;
+  width: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.reveal:hover,
+.upload:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.upload {
+  background: var(--primary-soft);
+  color: var(--primary);
+  overflow: hidden;
+}
+
+.upload img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hint-row {
+  margin-top: 6px;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.hint-row .subtle {
+  flex: 1;
+}
+
+code {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
 button[type='submit'] {
   margin-top: 6px;
+  letter-spacing: 0.04em;
 }
 
 .demo {

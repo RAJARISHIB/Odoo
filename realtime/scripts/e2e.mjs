@@ -32,14 +32,31 @@ check('panel resolves to admin', adminLogin.json.data?.user?.panel === 'admin');
 const adminToken = adminLogin.json.data?.tokens?.access_token;
 const adminRefresh = adminLogin.json.data?.tokens?.refresh_token;
 
+check('login ID is issued and formatted', /^[A-Z]{2,4}[A-Z]{4}\d{8}$/.test(
+  adminLogin.json.data?.user?.login_id ?? ''), adminLogin.json.data?.user?.login_id);
+
+// The sign-in form has one field for both; the ID must work as well as the email.
+const byLoginId = await call('/auth/login', {
+  method: 'POST',
+  body: { identifier: adminLogin.json.data.user.login_id, password: 'Password123' },
+});
+check('login by login ID works', byLoginId.status === 200, byLoginId.status);
+check('same account either way',
+  byLoginId.json.data?.user?.id === adminLogin.json.data.user.id);
+
+const unknownId = await call('/auth/login', {
+  method: 'POST', body: { identifier: 'ZZZZZZ99999999', password: 'Password123' },
+});
+check('unknown login ID rejected with 401', unknownId.status === 401, unknownId.status);
+
 const badLogin = await call('/auth/login', {
-  method: 'POST', body: { email: 'admin@acme.test', password: 'wrong-password' },
+  method: 'POST', body: { identifier: 'admin@acme.test', password: 'wrong-password' },
 });
 check('wrong password rejected with 401', badLogin.status === 401, badLogin.status);
 check('error envelope has a code', badLogin.json.error?.code === 'invalid_credentials');
 
 const empLogin = await call('/auth/login', {
-  method: 'POST', body: { email: 'dev@acme.test', password: 'Password123' },
+  method: 'POST', body: { identifier: 'dev@acme.test', password: 'Password123' },
 });
 check('employee login returns 200', empLogin.status === 200, empLogin.status);
 check('employee panel resolves to user', empLogin.json.data?.user?.panel === 'user');
@@ -124,7 +141,45 @@ check('admin overview returns headcount', typeof overview.json.data?.headcount =
 const mySummary = await call('/attendance/me/summary', { token: empToken });
 check('employee summary computes hours', typeof mySummary.json.data?.total_hours === 'number');
 
-console.log('\n5. Token refresh + logout');
+console.log('\n5. Provisioning: generated login ID + first-time password');
+const stamp = Date.now();
+const provisioned = await call('/users', {
+  method: 'POST', token: adminToken,
+  body: { email: `e2e-${stamp}@acme.test`, name: 'Test Person', role: 'employee' },
+});
+check('admin can provision an employee', provisioned.status === 201, provisioned.status);
+
+const issued = provisioned.json.data ?? {};
+check('login ID generated for the employee', /^AC[A-Z]{4}\d{8}$/.test(issued.login_id ?? ''),
+  issued.login_id);
+check('name segment derives from first + last name',
+  issued.login_id?.slice(2, 6) === 'TEPE', issued.login_id);
+check('first-time password generated', typeof issued.temporary_password === 'string');
+check('flagged to change password', issued.must_change_password === true);
+
+const firstLogin = await call('/auth/login', {
+  method: 'POST',
+  body: { identifier: issued.login_id, password: issued.temporary_password },
+});
+check('employee signs in with the issued credentials', firstLogin.status === 200, firstLogin.status);
+
+const changed = await call('/auth/change-password', {
+  method: 'POST', token: firstLogin.json.data.tokens.access_token,
+  body: { current_password: issued.temporary_password, new_password: 'ChosenPass123' },
+});
+check('employee replaces the system password', changed.status === 200, changed.status);
+
+const afterChange = await call('/auth/login', {
+  method: 'POST', body: { identifier: issued.login_id, password: 'ChosenPass123' },
+});
+check('flag clears after the change',
+  afterChange.json.data?.user?.must_change_password === false);
+
+// Leave the demo organization as we found it - this runs on every invocation.
+const cleaned = await call(`/users/${issued.id}`, { method: 'DELETE', token: adminToken });
+check('provisioned test account removed', cleaned.status === 200, cleaned.status);
+
+console.log('\n6. Token refresh + logout');
 const refreshed = await call('/auth/refresh', { method: 'POST', body: { refresh_token: adminRefresh } });
 check('refresh issues a new pair', refreshed.status === 200 && !!refreshed.json.data?.tokens?.access_token);
 
@@ -145,6 +200,20 @@ const badPatch = await call('/organization', {
 });
 check('invalid time returns 422 with field details',
   badPatch.status === 422 && !!badPatch.json.error?.details?.work_start_time, badPatch.status);
+
+console.log('\n7. Public entry points');
+const rootJson = await fetch('http://localhost:8000/', { headers: { Accept: 'application/json' } });
+check('API root answers JSON clients', rootJson.status === 200, rootJson.status);
+
+const rootHtml = await fetch('http://localhost:8000/', {
+  headers: { Accept: 'text/html' }, redirect: 'manual',
+});
+check('API root redirects a browser to the sign-in page',
+  rootHtml.status === 302 && (rootHtml.headers.get('location') ?? '').includes('/auth/login'),
+  `${rootHtml.status} ${rootHtml.headers.get('location')}`);
+
+const unknownPath = await fetch('http://localhost:8000/api/v1/does-not-exist');
+check('unknown API path returns the JSON 404 envelope', unknownPath.status === 404, unknownPath.status);
 
 socket.close();
 console.log(`\n${pass} passed, ${fail} failed\n`);

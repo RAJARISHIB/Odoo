@@ -3,6 +3,7 @@ import logging
 
 from apps.organization.models import Department, Organization
 from core.exceptions import Conflict, NotFound, ValidationError
+from core.storage import delete_file, save_image
 from core.utils import deep_merge
 from core.validators import pick, validate_email, validate_phone
 
@@ -71,6 +72,16 @@ def _validate_hhmm(value: str, field: str) -> str:
     if not valid:
         raise ValidationError("Invalid time.", details={field: "Use 24-hour HH:MM."})
     return "{:02d}:{:02d}".format(int(parts[0]), int(parts[1]))
+
+
+def set_logo(organization: Organization, uploaded_file) -> Organization:
+    """Store a new logo and drop the previous file."""
+    previous = organization.logo_url
+    organization.logo_url = save_image(uploaded_file, "logos/{}".format(organization.id))
+    organization.save()
+    if previous and previous != organization.logo_url:
+        delete_file(previous)
+    return organization
 
 
 # ---------------------------------------------------------------------------

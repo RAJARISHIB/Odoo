@@ -15,6 +15,7 @@ from apps.attendance.models import Attendance, WorkSession
 from apps.organization.models import Department, Organization
 from apps.users.models import RefreshToken, User
 from core.constants import AttendanceSource, AttendanceStatus, Role, UserStatus
+from core.identifiers import generate_login_id, organization_code
 
 DEMO_SLUG = "acme-corp"
 DEMO_PASSWORD = "Password123"
@@ -46,13 +47,15 @@ class Command(BaseCommand):
         self._attendance(organization, [owner] + users, options["days"])
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
-        self.stdout.write("  Organization : {} ({})".format(organization.name, organization.slug))
+        self.stdout.write("  Organization : {} ({}, code {})".format(
+            organization.name, organization.slug, organization.code))
         self.stdout.write("  Password     : {}\n".format(DEMO_PASSWORD))
-        self.stdout.write("  Sign in as:")
-        self.stdout.write("    owner@acme.test    super_admin  -> admin panel")
-        for email, _, _, role, _, _ in DEMO_PEOPLE:
-            panel = "admin panel" if role in Role.ADMIN_PANEL else "user panel"
-            self.stdout.write("    {:<18} {:<12} -> {}".format(email, role, panel))
+        self.stdout.write("  Sign in with either the login ID or the email:")
+        self.stdout.write("    {:<16} {:<20} {:<12} {}".format("LOGIN ID", "EMAIL", "ROLE", "PANEL"))
+        for user in [owner] + users:
+            panel = "admin panel" if user.role in Role.ADMIN_PANEL else "user panel"
+            self.stdout.write("    {:<16} {:<20} {:<12} {}".format(
+                user.login_id, user.email, user.role, panel))
 
     # -- steps -------------------------------------------------------------
     def _reset(self):
@@ -75,6 +78,7 @@ class Command(BaseCommand):
         return Organization(
             name="Acme Corp",
             slug=DEMO_SLUG,
+            code=organization_code("Acme Corp"),
             email="hello@acme.test",
             phone="+91 98000 00000",
             city="Bengaluru",
@@ -95,8 +99,10 @@ class Command(BaseCommand):
         owner = User.objects.filter(email="owner@acme.test").first()
         if owner:
             return owner
+        joined_at = datetime.now(timezone.utc) - timedelta(days=900)
         owner = User(
             organization=organization,
+            login_id=generate_login_id(organization, "Owner", "Acme", joined_at),
             email="owner@acme.test",
             first_name="Owner",
             last_name="Acme",
@@ -104,6 +110,7 @@ class Command(BaseCommand):
             status=UserStatus.ACTIVE,
             designation="Founder",
             employee_id="EMP001",
+            date_of_joining=joined_at,
         )
         owner.set_password(DEMO_PASSWORD)
         return owner.save()
@@ -113,9 +120,11 @@ class Command(BaseCommand):
         for index, (email, first, last, role, department, designation) in enumerate(DEMO_PEOPLE, start=2):
             user = User.objects.filter(email=email).first()
             if not user:
+                joined_at = datetime.now(timezone.utc) - timedelta(days=120 + index * 10)
                 user = User(
                     organization=organization,
                     department=departments.get(department),
+                    login_id=generate_login_id(organization, first, last, joined_at),
                     email=email,
                     first_name=first,
                     last_name=last,
@@ -123,7 +132,7 @@ class Command(BaseCommand):
                     status=UserStatus.ACTIVE,
                     designation=designation,
                     employee_id="EMP{:03d}".format(index),
-                    date_of_joining=datetime.now(timezone.utc) - timedelta(days=120 + index * 10),
+                    date_of_joining=joined_at,
                 )
                 user.set_password(DEMO_PASSWORD)
                 user.save()

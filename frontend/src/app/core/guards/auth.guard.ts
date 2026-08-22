@@ -58,6 +58,23 @@ export function roleGuard(roles: Role[]): CanActivateFn {
   };
 }
 
+/**
+ * Block the panels while the user is still on a system-generated password.
+ *
+ * HR creates an employee, the system issues their password, and they must
+ * replace it before reaching anything else.
+ */
+export const passwordChangeGuard: CanActivateFn = (route, state) => {
+  const auth = inject(Auth);
+  const router = inject(Router);
+
+  const allowed = authGuard(route, state);
+  if (allowed !== true) return allowed;
+
+  if (!auth.mustChangePassword()) return true;
+  return router.createUrlTree(['/change-password']);
+};
+
 /** Root path: send visitors to their panel, or to login if signed out. */
 export const rootRedirectGuard: CanActivateFn = () => {
   const auth = inject(Auth);

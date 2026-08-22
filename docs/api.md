@@ -31,31 +31,57 @@ List endpoints accept `?page=` and `?page_size=` (max 100) and return
 
 ### `POST /auth/register` — public
 
-Bootstrap: creates an organization plus its first `super_admin`, and signs them in.
+Bootstrap: creates an organization plus its first `super_admin`, and signs them
+in. The owner is issued a login ID like everybody else.
 
 ```json
 {
-  "organization_name": "Acme Corp",
-  "email": "owner@acme.test",
+  "organization_name": "Odoo India",
+  "name": "John Doe",
+  "email": "john@odooindia.test",
+  "phone": "+91 90000 11111",
   "password": "Password123",
-  "first_name": "Owner",
-  "last_name": "Acme"
+  "confirm_password": "Password123"
 }
 ```
 
-Returns `{ user, organization, tokens }`.
+`name` is split into first and last name (both halves feed the login ID);
+`first_name` / `last_name` are accepted instead. `confirm_password` is checked
+only when sent.
+
+**With a company logo**, post the same fields as `multipart/form-data` with the
+file under `logo` (PNG/JPEG/GIF/WebP/SVG, max 2 MB):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/register -F "organization_name=Odoo India" -F "name=John Doe" -F "email=john@odooindia.test" -F "password=Password123" -F "logo=@logo.png"
+```
+
+Returns `{ user, organization, tokens }`, where `user.login_id` is the generated
+ID (`OIJODO20260001`) and `organization.code` its two-letter prefix (`OI`).
 
 ### `POST /auth/login` — public
 
+One field takes either the login ID or the email address:
+
 ```json
-{ "email": "admin@acme.test", "password": "Password123" }
+{ "identifier": "OIJODO20220001", "password": "Password123" }
+{ "identifier": "admin@acme.test", "password": "Password123" }
 ```
+
+`login_id` and `email` are accepted as aliases for `identifier`.
 
 ```jsonc
 {
   "success": true,
   "data": {
-    "user": { "id": "…", "full_name": "Aisha Kapoor", "role": "admin", "panel": "admin", … },
+    "user": {
+      "id": "…",
+      "login_id": "ACAIKA20260001",
+      "full_name": "Aisha Kapoor",
+      "role": "admin",
+      "panel": "admin",
+      "must_change_password": false
+    },
     "tokens": {
       "access_token": "eyJ…",
       "refresh_token": "eyJ…",
@@ -83,7 +109,9 @@ session. Succeeds even with an expired access token.
 ### `GET /auth/me`
 
 Returns `{ user, organization, permissions, realtime }`. `permissions` carries
-the capability flags the UI menus and guards read.
+the capability flags the UI menus and guards read, including
+`must_change_password` - true while the user is still on a system-generated
+password, which is what sends them to the forced change-password screen.
 
 ### `GET /auth/sessions`
 
@@ -122,22 +150,31 @@ Requires an admin-panel role. Create/reset additionally require
 | `DELETE` | `/users/{id}`                 | Soft delete; attendance history is kept  |
 | `POST`   | `/users/{id}/reset-password`  | Returns a temporary password             |
 
-`POST /users`:
+`POST /users` - the only way an employee account is created; they cannot
+register themselves:
 
 ```json
 {
   "email": "new@acme.test",
-  "first_name": "Riya",
-  "last_name": "Nair",
+  "name": "Riya Nair",
   "role": "employee",
   "designation": "Software Engineer",
-  "employee_id": "EMP007"
+  "employee_id": "EMP007",
+  "date_of_joining": "2026-04-01T00:00:00Z"
 }
 ```
 
-Omit `password` and the API generates one, returning it **once** as
-`data.temporary_password`. Nobody can change their own role, and nobody can
-delete their own account.
+The response carries `login_id`, generated from the organization code, the
+name, the joining year and that year's serial. Omit `password` and the API
+generates one too, returning it **once** as `data.temporary_password` and
+setting `must_change_password` - the employee signs in with those and is
+required to choose their own password before anything else opens.
+
+`name` may be sent as `first_name` / `last_name` instead. `date_of_joining`
+defaults to now and decides the year segment of the ID. Nobody can change their
+own role, and nobody can delete their own account.
+
+`?search=` matches name, email, employee ID and login ID.
 
 ---
 
@@ -147,6 +184,7 @@ delete their own account.
 | ------------- | -------------------------- | ----------------------- |
 | `GET`         | `/organization`            | Any signed-in user      |
 | `PATCH`/`PUT` | `/organization`            | `super_admin`, `admin`  |
+| `POST`        | `/organization/logo`       | `super_admin`, `admin`  |
 | `GET`         | `/organization/overview`   | Admin panel             |
 | `GET`         | `/departments`             | Any signed-in user      |
 | `POST`        | `/departments`             | `super_admin`/`admin`/`hr` |
@@ -169,6 +207,12 @@ The working-hours fields drive attendance grading:
 ```
 
 `settings` is merged, not replaced, so a partial update cannot wipe flags.
+
+`POST /organization/logo` is `multipart/form-data` with the image under `logo`.
+It replaces the previous file and returns `{ logo_url, organization }`.
+`logo_url` is absolute (built from `API_PUBLIC_URL`) so the UI can load it from
+its own origin. Read-only fields: `code` is fixed at signup, because every login
+ID in the organization is built on it.
 
 ---
 
@@ -225,6 +269,8 @@ List rows inline the employee as `record.user`, so the table needs no second cal
 
 | Method | Path                                | Auth              |
 | ------ | ----------------------------------- | ----------------- |
-| `GET`  | `/`                                 | Public - route map |
+| `GET`  | `/` (API host root)                 | Public - redirects a browser to the sign-in page, returns the route map to JSON clients |
+| `GET`  | `/api/v1/`                          | Public - route map |
+| `GET`  | `/media/...`                        | Public - uploaded logos (dev; nginx or object storage in production) |
 | `GET`  | `/health`                           | Public - Mongo + hub status (503 when Mongo is down) |
 | `POST` | `/internal/realtime/presence`       | `x-internal-key` - the hub reports connect/disconnect |

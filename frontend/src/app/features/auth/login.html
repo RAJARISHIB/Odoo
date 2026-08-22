@@ -1,7 +1,9 @@
 <div class="auth-card">
+  <div class="logo-slot">App/Web Logo</div>
+
   <header>
     <h1>Welcome back</h1>
-    <p class="muted">Sign in to your HRMS portal.</p>
+    <p class="muted">Sign in with your login ID or email.</p>
   </header>
 
   @if (errorMessage()) {
@@ -10,39 +12,49 @@
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <div class="field">
-      <label for="email">Work email</label>
+      <label for="identifier">Login Id / Email :-</label>
       <input
-        id="email"
-        type="email"
-        formControlName="email"
+        id="identifier"
+        type="text"
+        formControlName="identifier"
         autocomplete="username"
-        placeholder="you@company.com"
-        [class.invalid]="invalid('email')"
+        placeholder="OIJODO20220001 or you@company.com"
+        [class.invalid]="invalid('identifier')"
       />
-      @if (invalid('email')) {
-        <div class="error">Enter a valid email address.</div>
-      } @else if (fieldErrors()['email']) {
-        <div class="error">{{ fieldErrors()['email'] }}</div>
+      @if (invalid('identifier')) {
+        <div class="error">Enter your login ID or email address.</div>
+      } @else if (fieldErrors()['identifier']) {
+        <div class="error">{{ fieldErrors()['identifier'] }}</div>
       }
     </div>
 
     <div class="field">
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        formControlName="password"
-        autocomplete="current-password"
-        placeholder="••••••••"
-        [class.invalid]="invalid('password')"
-      />
+      <label for="password">Password :-</label>
+      <div class="input-with-action">
+        <input
+          id="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          [class.invalid]="invalid('password')"
+        />
+        <button
+          type="button"
+          class="reveal"
+          (click)="togglePassword()"
+          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+        >
+          {{ showPassword() ? '🙈' : '👁' }}
+        </button>
+      </div>
       @if (invalid('password')) {
         <div class="error">Password must be at least 8 characters.</div>
       }
     </div>
 
     <button class="btn block" type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Signing in…' : 'Sign in' }}
+      {{ submitting() ? 'Signing in…' : 'SIGN IN' }}
     </button>
   </form>
 
@@ -55,6 +67,6 @@
   </div>
 
   <footer>
-    New organization? <a routerLink="/auth/register">Create an account</a>
+    Don't have an Account? <a routerLink="/auth/register">Sign Up</a>
   </footer>
 </div>

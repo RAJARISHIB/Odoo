@@ -27,6 +27,9 @@ class User(BaseDocument):
     organization = ReferenceField("Organization", required=True)
     department = ReferenceField("Department", null=True)
 
+    #: System-generated sign-in identifier, e.g. OIJODO20220001.  Never chosen
+    #: by a person and never editable - see `core.identifiers`.
+    login_id = StringField(required=True, unique=True, max_length=32)
     email = EmailField(required=True, unique=True)
     #: Never serialised - see HIDDEN_FIELDS.
     password_hash = StringField(required=True)
@@ -55,6 +58,7 @@ class User(BaseDocument):
     meta = {
         "collection": "users",
         "indexes": [
+            "login_id",
             "email",
             "organization",
             "role",

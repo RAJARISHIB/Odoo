@@ -31,8 +31,13 @@ export class Employees {
   protected readonly showForm = signal(false);
   protected readonly saving = signal(false);
   protected readonly formErrors = signal<Record<string, string>>({});
-  /** Shown once after creating a user without an explicit password. */
-  protected readonly lastTempPassword = signal<{ email: string; password: string } | null>(null);
+  /**
+   * The credentials the system just issued, shown once so the admin can pass
+   * them to the employee.  The password is never retrievable afterwards.
+   */
+  protected readonly issuedCredentials = signal<
+    { loginId: string; email: string; password: string } | null
+  >(null);
 
   protected readonly roles: Role[] = ['employee', 'manager', 'hr', 'admin', 'super_admin'];
 
@@ -111,7 +116,11 @@ export class Employees {
         this.saving.set(false);
         this.toast.success(`${user.full_name} added.`);
         if (user.temporary_password) {
-          this.lastTempPassword.set({ email: user.email, password: user.temporary_password });
+          this.issuedCredentials.set({
+            loginId: user.login_id,
+            email: user.email,
+            password: user.temporary_password,
+          });
         }
         this.form.reset({ role: 'employee' });
         this.showForm.set(false);
@@ -135,7 +144,11 @@ export class Employees {
 
   protected resetPassword(user: User): void {
     this.users.resetPassword(user.id).subscribe((result) => {
-      this.lastTempPassword.set({ email: user.email, password: result.temporary_password });
+      this.issuedCredentials.set({
+        loginId: user.login_id,
+        email: user.email,
+        password: result.temporary_password,
+      });
       this.toast.success('Password reset. Share the temporary password below.');
     });
   }
@@ -152,7 +165,7 @@ export class Employees {
     return `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase() || 'U';
   }
 
-  protected dismissTempPassword(): void {
-    this.lastTempPassword.set(null);
+  protected dismissCredentials(): void {
+    this.issuedCredentials.set(null);
   }
 }

@@ -42,6 +42,13 @@
   flex: none;
 }
 
+/* Uploaded company logo, shown in place of the default "HR" mark. */
+.sidebar .brand .mark.logo {
+  object-fit: contain;
+  background: var(--surface-alt);
+  padding: 3px;
+}
+
 .sidebar .brand small {
   display: block;
   font-weight: 500;

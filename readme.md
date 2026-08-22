@@ -54,29 +54,105 @@ cd realtime && npm install && cp .env.example .env && npm start
 cd frontend && npm install && npm start
 ```
 
-Open http://localhost:4200 and sign in with a seeded account (password
-`Password123` for all of them):
+Open http://localhost:4200 and sign in with a seeded account - either the login
+ID or the email works, password `Password123` for all of them:
 
-| Email                | Role          | Lands on     |
-| -------------------- | ------------- | ------------ |
-| `owner@acme.test`    | `super_admin` | Admin panel  |
-| `admin@acme.test`    | `admin`       | Admin panel  |
-| `hr@acme.test`       | `hr`          | Admin panel  |
-| `manager@acme.test`  | `manager`     | Admin panel  |
-| `dev@acme.test`      | `employee`    | User panel   |
-| `designer@acme.test` | `employee`    | User panel   |
+| Login ID           | Email                | Role          | Lands on     |
+| ------------------ | -------------------- | ------------- | ------------ |
+| `ACOWAC20240001`   | `owner@acme.test`    | `super_admin` | Admin panel  |
+| `ACAIKA20260001`   | `admin@acme.test`    | `admin`       | Admin panel  |
+| `ACRAME20260002`   | `hr@acme.test`       | `hr`          | Admin panel  |
+| `ACSAIY20260003`   | `manager@acme.test`  | `manager`     | Admin panel  |
+| `ACVIRA20260004`   | `dev@acme.test`      | `employee`    | User panel   |
+| `ACNESH20260005`   | `designer@acme.test` | `employee`    | User panel   |
 
-`python manage.py seed_demo --reset` rebuilds the demo organization from scratch.
+`python manage.py seed_demo --reset` rebuilds the demo organization from scratch
+and prints the login IDs it issued.
 
-### Verifying the wiring
+Browsing to **http://localhost:8000** (the API host) redirects to the sign-in
+page, so neither port shows a 404.
+
+---
+
+## Login IDs
+
+Nobody chooses a username. Every account - the founder who signs up and every
+employee an admin adds afterwards - is issued one by the system:
+
+```
+O I J O D O 2 0 2 2 0 0 0 1
+└┬┘ └──┬──┘ └──┬──┘ └──┬──┘
+ │     │       │       └──── 0001  serial number of joining, per org and year
+ │     │       └──────────── 2022  year of joining
+ │     └──────────────────── JODO  first two letters of first and last name
+ └────────────────────────── OI    organization code
+
+OIJODO20220001  =  Odoo India / John Doe / joined 2022 / first joiner of 2022
+```
+
+The organization code comes from the company name at signup: initials of the
+first two words ("Odoo India" -> `OI`), or the first two letters of a one-word
+name ("Acme" -> `AC`). It is fixed once issued, because every login ID in that
+organization is built on it.
+
+The serial restarts each year and is unique per organization, so the second
+person to join in 2022 is `0002`. `core/identifiers.py` holds the whole rule,
+and both creation paths call it.
+
+**Signing in** accepts the login ID *or* the email - one field, the API decides
+which it received.
+
+### How accounts come into existence
+
+| Path                     | Who does it        | Login ID  | Password              |
+| ------------------------ | ------------------ | --------- | --------------------- |
+| `POST /auth/register`    | A new organization | Generated | Chosen on the form    |
+| `POST /users`            | HR officer / admin | Generated | Generated, unless set |
+
+A normal employee cannot register themselves. When HR adds them, the API returns
+the login ID and a one-time password (shown once in the admin panel, never
+retrievable afterwards) and flags the account `must_change_password`. At their
+first sign-in the UI routes them to `/change-password` and nothing else opens
+until they have set their own password.
+
+### Existing databases
+
+A database seeded before this scheme has no codes or login IDs, and both are
+required and unique:
+
+```bash
+cd backend && .venv/Scripts/python manage.py backfill_login_ids --dry-run
+```
+
+Drop `--dry-run` to apply. It is safe to re-run and skips records that already
+have the fields.
+
+---
+
+## File store
+
+Company logos are uploaded at signup (multipart, field `logo`) or later via
+`POST /organization/logo`. Files are written to `MEDIA_ROOT` (default
+`backend/media/`) - a plain directory, so it can be a Docker volume; see the
+commented `api` service in `docker-compose.yml`.
+
+Only the path is stored in Mongo, and it is served back as an absolute URL built
+from `API_PUBLIC_URL` so the Angular app on another origin can load it. Uploads
+are validated by magic bytes rather than by the filename or the declared content
+type, and capped at 2 MB.
+
+---
+
+## Verifying the wiring
 
 ```bash
 cd realtime && npm run test:e2e
 ```
 
-Runs 30 checks across all three services with everything running: login, role
-gates, token refresh and rotation, check-in/check-out, and that a Django-side
-event actually arrives over a websocket. `npm run smoke` tests the hub alone,
+Runs 45 checks across all three services with everything running: login by ID
+and by email, role gates, login-ID generation and the first-time password flow,
+token refresh and rotation, check-in/check-out, the root redirect, and that a
+Django-side event actually arrives over a websocket. `npm run smoke` tests the hub alone,
 without Django or Mongo.
 
 ---
@@ -92,6 +168,9 @@ root, `backend/` and `realtime/` carry the full list.
 | `JWT_ISSUER`       | Django + Express   | **Must match** (`hrms-api`)             |
 | `INTERNAL_API_KEY` | Django + Express   | **Must match** - guards `/internal/*`   |
 | `MONGO_URI`        | Django             | `mongodb://localhost:27017`             |
+| `MEDIA_ROOT`       | Django             | Upload directory (Docker volume)        |
+| `API_PUBLIC_URL`   | Django             | Origin used to build media URLs         |
+| `FRONTEND_URL`     | Django             | Where `localhost:8000` redirects        |
 | `REALTIME_HTTP_URL`| Django             | Where to publish events                 |
 | `DJANGO_API_URL`   | Express            | Where to report presence                |
 
@@ -114,6 +193,8 @@ backend/
 │   ├── security.py         password hashing + JWT issue/verify
 │   ├── validators.py       field validation, all raising 422s
 │   ├── pagination.py       uniform list pagination
+│   ├── identifiers.py      login ID generation (the OIJODO20220001 rule)
+│   ├── storage.py          uploaded-file store (logos), magic-byte validated
 │   ├── realtime.py         Django -> hub publisher + channel names
 │   ├── mongo.py            connection lifecycle
 │   └── views.py            /health, / index, internal presence callback
@@ -166,8 +247,10 @@ cross-tenant access raises 403 — a super admin is the only exemption.
 
 ## Current scope
 
-Implemented: authentication (login, organization signup, refresh rotation,
-logout, sessions, password change/reset), the employee directory, organization
+Implemented: authentication (login by ID or email, organization signup with a
+logo, system-generated login IDs and first-time passwords, forced password
+change, refresh rotation, logout, sessions, password reset), the employee
+directory, organization
 and department management, attendance (check-in/out, history, summaries, admin
 corrections, daily overview), and realtime delivery of all of it.
 

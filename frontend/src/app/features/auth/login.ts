@@ -8,8 +8,9 @@ import { Auth } from '../../core/services/auth';
 /**
  * Sign-in page for both panels.
  *
- * After authenticating, the user's role decides which panel they land on -
- * there is no separate admin login.
+ * One field accepts either the system-issued login ID (OIJODO20220001) or an
+ * email address.  After authenticating, the user's role decides which panel
+ * they land on - there is no separate admin login.
  */
 @Component({
   selector: 'app-login',
@@ -27,9 +28,10 @@ export class Login {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly fieldErrors = signal<Record<string, string>>({});
+  protected readonly showPassword = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    identifier: ['', [Validators.required, Validators.minLength(3)]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
@@ -43,11 +45,16 @@ export class Login {
     this.errorMessage.set(null);
     this.fieldErrors.set({});
 
-    const { email, password } = this.form.getRawValue();
+    const { identifier, password } = this.form.getRawValue();
 
-    this.auth.login(email, password).subscribe({
-      next: () => {
+    this.auth.login(identifier, password).subscribe({
+      next: (result) => {
         this.submitting.set(false);
+        // A system-generated password has to be replaced before anything else.
+        if (result.user.must_change_password) {
+          this.router.navigate(['/change-password']);
+          return;
+        }
         // Honour ?redirect= when a guard sent them here, otherwise use the
         // panel their role belongs to.
         const redirect = this.route.snapshot.queryParamMap.get('redirect');
@@ -61,15 +68,19 @@ export class Login {
     });
   }
 
+  protected togglePassword(): void {
+    this.showPassword.update((shown) => !shown);
+  }
+
   /** Fills the form with a seeded demo account (`manage.py seed_demo`). */
   protected useDemo(role: 'admin' | 'employee'): void {
     this.form.setValue({
-      email: role === 'admin' ? 'admin@acme.test' : 'dev@acme.test',
+      identifier: role === 'admin' ? 'admin@acme.test' : 'dev@acme.test',
       password: 'Password123',
     });
   }
 
-  protected invalid(control: 'email' | 'password'): boolean {
+  protected invalid(control: 'identifier' | 'password'): boolean {
     const field = this.form.controls[control];
     return field.touched && field.invalid;
   }

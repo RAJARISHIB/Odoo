@@ -52,6 +52,17 @@ export class Api {
     return this.http.delete<ApiResponse<T>>(this.url(path)).pipe(map((r) => r.data));
   }
 
+  /**
+   * POST multipart form data - used when a file rides along (the company logo
+   * on signup, for example).
+   *
+   * The Content-Type header is deliberately not set: the browser has to add it
+   * itself so the multipart boundary is included.
+   */
+  postForm<T>(path: string, form: FormData): Observable<T> {
+    return this.http.post<ApiResponse<T>>(this.url(path), form).pipe(map((r) => r.data));
+  }
+
   /** Full envelope, for the few calls that need `message` as well as `data`. */
   postRaw<T>(path: string, body?: unknown): Observable<ApiResponse<T>> {
     return this.http.post<ApiResponse<T>>(this.url(path), body ?? {});

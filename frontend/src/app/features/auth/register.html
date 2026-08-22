@@ -1,7 +1,9 @@
-<div class="auth-card">
+<div class="auth-card wide">
+  <div class="logo-slot">App/Web Logo</div>
+
   <header>
     <h1>Create your organization</h1>
-    <p class="muted">You will be the first administrator.</p>
+    <p class="muted">You will be the first administrator, with a generated login ID.</p>
   </header>
 
   @if (errorMessage()) {
@@ -9,32 +11,64 @@
   }
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <!-- Company name + logo upload -->
     <div class="field">
-      <label for="organization_name">Organization name</label>
-      <input
-        id="organization_name"
-        formControlName="organization_name"
-        placeholder="Acme Corp"
-        [class.invalid]="invalid('organization_name')"
-      />
-      @if (fieldErrors()['organization_name']) {
+      <label for="organization_name">Company Name :-</label>
+      <div class="input-with-action">
+        <input
+          id="organization_name"
+          formControlName="organization_name"
+          placeholder="Odoo India"
+          [class.invalid]="invalid('organization_name')"
+        />
+        <label class="upload" [title]="logo() ? logo()!.name : 'Upload logo'">
+          @if (logoPreview()) {
+            <img [src]="logoPreview()!" alt="Logo preview" />
+          } @else {
+            <span>⬆</span>
+          }
+          <input type="file" accept="image/*" (change)="pickLogo($event)" hidden />
+        </label>
+      </div>
+      <div class="row hint-row">
+        <span class="subtle">
+          Login IDs start with your company initials — "Odoo India" gives
+          <code>OI</code>.
+        </span>
+        @if (logo()) {
+          <button class="btn ghost sm" type="button" (click)="clearLogo()">Remove logo</button>
+        }
+      </div>
+      @if (invalid('organization_name')) {
+        <div class="error">Enter your company name.</div>
+      } @else if (fieldErrors()['organization_name']) {
         <div class="error">{{ fieldErrors()['organization_name'] }}</div>
+      }
+      @if (fieldErrors()['logo']) {
+        <div class="error">{{ fieldErrors()['logo'] }}</div>
       }
     </div>
 
-    <div class="grid-2">
-      <div class="field">
-        <label for="first_name">First name</label>
-        <input id="first_name" formControlName="first_name" [class.invalid]="invalid('first_name')" />
-      </div>
-      <div class="field">
-        <label for="last_name">Last name</label>
-        <input id="last_name" formControlName="last_name" />
-      </div>
+    <div class="field">
+      <label for="name">Name :-</label>
+      <input
+        id="name"
+        formControlName="name"
+        placeholder="John Doe"
+        [class.invalid]="invalid('name')"
+      />
+      <span class="subtle">
+        First and last name — both are used in your login ID (John Doe gives <code>JODO</code>).
+      </span>
+      @if (invalid('name')) {
+        <div class="error">Enter your full name.</div>
+      } @else if (fieldErrors()['name']) {
+        <div class="error">{{ fieldErrors()['name'] }}</div>
+      }
     </div>
 
     <div class="field">
-      <label for="email">Work email</label>
+      <label for="email">Email :-</label>
       <input
         id="email"
         type="email"
@@ -43,32 +77,81 @@
         placeholder="you@company.com"
         [class.invalid]="invalid('email')"
       />
-      @if (fieldErrors()['email']) {
+      @if (invalid('email')) {
+        <div class="error">Enter a valid email address.</div>
+      } @else if (fieldErrors()['email']) {
         <div class="error">{{ fieldErrors()['email'] }}</div>
       }
     </div>
 
     <div class="field">
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        formControlName="password"
-        autocomplete="new-password"
-        placeholder="At least 8 characters, with a number"
-        [class.invalid]="invalid('password')"
-      />
-      @if (fieldErrors()['password']) {
+      <label for="phone">Phone :-</label>
+      <input id="phone" formControlName="phone" placeholder="+91 90000 00000" />
+      @if (fieldErrors()['phone']) {
+        <div class="error">{{ fieldErrors()['phone'] }}</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">Password :-</label>
+      <div class="input-with-action">
+        <input
+          id="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          autocomplete="new-password"
+          placeholder="At least 8 characters, with a number"
+          [class.invalid]="invalid('password')"
+        />
+        <button
+          type="button"
+          class="reveal"
+          (click)="togglePassword()"
+          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+        >
+          {{ showPassword() ? '🙈' : '👁' }}
+        </button>
+      </div>
+      @if (invalid('password')) {
+        <div class="error">Use at least 8 characters.</div>
+      } @else if (fieldErrors()['password']) {
         <div class="error">{{ fieldErrors()['password'] }}</div>
       }
     </div>
 
+    <div class="field">
+      <label for="confirm_password">Confirm Password :-</label>
+      <div class="input-with-action">
+        <input
+          id="confirm_password"
+          [type]="showConfirm() ? 'text' : 'password'"
+          formControlName="confirm_password"
+          autocomplete="new-password"
+          placeholder="Repeat the password"
+          [class.invalid]="mismatch"
+        />
+        <button
+          type="button"
+          class="reveal"
+          (click)="toggleConfirm()"
+          [attr.aria-label]="showConfirm() ? 'Hide password' : 'Show password'"
+        >
+          {{ showConfirm() ? '🙈' : '👁' }}
+        </button>
+      </div>
+      @if (mismatch) {
+        <div class="error">Passwords do not match.</div>
+      } @else if (fieldErrors()['confirm_password']) {
+        <div class="error">{{ fieldErrors()['confirm_password'] }}</div>
+      }
+    </div>
+
     <button class="btn block" type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Creating…' : 'Create organization' }}
+      {{ submitting() ? 'Creating…' : 'Sign Up' }}
     </button>
   </form>
 
   <footer>
-    Already have an account? <a routerLink="/auth/login">Sign in</a>
+    Already have an account ? <a routerLink="/auth/login">Sign In</a>
   </footer>
 </div>

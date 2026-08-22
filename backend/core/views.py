@@ -5,6 +5,7 @@ websocket presence back to Django.
 import logging
 
 from django.conf import settings
+from django.shortcuts import redirect
 
 from core import mongo, realtime, responses
 from core.base_controller import BaseController
@@ -118,8 +119,36 @@ def realtime_presence(request):
     return responses.success({"received": True})
 
 
+def _frontend_url(path: str = None) -> str:
+    return settings.FRONTEND_URL.rstrip("/") + (path or settings.FRONTEND_LOGIN_PATH)
+
+
+def _wants_html(request) -> bool:
+    """True for a person in a browser, false for an API client."""
+    accept = request.META.get("HTTP_ACCEPT", "")
+    return "text/html" in accept and "application/json" not in accept
+
+
+@api_view("GET")
+def root(request):
+    """The API host has no pages of its own.
+
+    A browser gets sent to the Angular sign-in page; anything speaking JSON
+    gets the route map instead of a surprise redirect.
+    """
+    if _wants_html(request):
+        return redirect(_frontend_url())
+    return SystemController(request).index()
+
+
 def not_found(request, exception=None):
-    """Project-wide 404 so unmatched URLs still answer with the JSON envelope."""
+    """Project-wide 404.
+
+    API clients get the JSON error envelope.  A browser that wandered onto an
+    unknown path is sent to the sign-in page - the same reasoning as `root`.
+    """
+    if _wants_html(request) and not request.path.startswith("/api/"):
+        return redirect(_frontend_url())
     return responses.error("Endpoint not found.", code="not_found", status=404)
 
 

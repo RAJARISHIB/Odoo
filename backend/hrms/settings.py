@@ -66,6 +66,24 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Uploaded files (company logos, avatars).  A plain directory so it can be
+# mounted as a Docker volume; only the public URL is stored in Mongo.
+MEDIA_URL = "/media/"
+# Public origin of this API.  Uploaded files are stored with a relative path so
+# the database stays portable, and serialised as absolute URLs so the Angular
+# app (served from another origin) can load them.
+API_PUBLIC_URL = env_str("API_PUBLIC_URL", "http://localhost:8000")
+MEDIA_ROOT = env_str("MEDIA_ROOT", str(BASE_DIR / "media"))
+
+# Where the Angular app lives.  Hitting the API root in a browser redirects
+# here, so "localhost:8000" lands on the sign-in page instead of a 404.
+FRONTEND_URL = env_str("FRONTEND_URL", "http://localhost:4200")
+FRONTEND_LOGIN_PATH = env_str("FRONTEND_LOGIN_PATH", "/auth/login")
+
+# Uploads are small images; cap the request body accordingly.
+DATA_UPLOAD_MAX_MEMORY_SIZE = env_int("MAX_UPLOAD_BYTES", 5 * 1024 * 1024)
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------

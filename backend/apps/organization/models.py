@@ -15,6 +15,7 @@ from mongoengine import (
 )
 
 from core.base_model import BaseDocument
+from core.storage import absolute_media_url
 
 
 class Organization(BaseDocument):
@@ -22,6 +23,11 @@ class Organization(BaseDocument):
 
     name = StringField(required=True, max_length=150)
     slug = StringField(required=True, unique=True, max_length=150)
+    #: Two-letter prefix of every login ID issued here ("Odoo India" -> "OI").
+    #: Set once at signup; changing it would orphan existing login IDs.
+    code = StringField(required=True, unique=True, max_length=4)
+    #: Public URL of the uploaded logo - see `core.storage`.
+    logo_url = StringField(max_length=500)
     email = EmailField(required=True)
     phone = StringField(max_length=25)
     website = StringField(max_length=200)
@@ -49,9 +55,15 @@ class Organization(BaseDocument):
 
     meta = {
         "collection": "organizations",
-        "indexes": ["slug", "name", "is_active"],
+        "indexes": ["slug", "code", "name", "is_active"],
         "ordering": ["name"],
     }
+
+    def to_dict(self, exclude=(), include_deleted_meta: bool = False) -> dict:
+        data = super().to_dict(exclude=exclude, include_deleted_meta=include_deleted_meta)
+        # Stored relative, served absolute - the UI runs on another origin.
+        data["logo_url"] = absolute_media_url(self.logo_url)
+        return data
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
