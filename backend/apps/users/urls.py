@@ -15,7 +15,17 @@ auth_urlpatterns = [
     path("me", views.me, name="auth-me"),
     path("sessions", views.sessions, name="auth-sessions"),
     path("change-password", views.change_password, name="auth-change-password"),
+
+    path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
+    path("roles", views.role_collection, name="roles-collection"),
+    path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
+    path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
+    path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
+    path("roles", views.role_collection, name="roles-collection"),
+    path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
+    path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
 ]
+
 
 # /api/v1/users/... and /api/v1/profile
 urlpatterns = [
@@ -24,4 +34,8 @@ urlpatterns = [
     path("users/stats", views.user_stats, name="user-stats"),
     path("users/<str:user_id>", views.user_detail, name="user-detail"),
     path("users/<str:user_id>/reset-password", views.user_reset_password, name="user-reset-password"),
+    path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
+    path("roles", views.role_collection, name="roles-collection"),
+    path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
+    path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
 ]

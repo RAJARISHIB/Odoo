@@ -1,6 +1,7 @@
 """Attendance views - thin wrappers over the controllers."""
 from apps.attendance.controllers import AttendanceAdminController, AttendanceController
-from core.decorators import admin_required, api_view, auth_required
+from core.decorators import admin_required, api_view, auth_required, permissions_required
+from core.constants import Permissions
 
 
 # ---------------------------------------------------------------------------

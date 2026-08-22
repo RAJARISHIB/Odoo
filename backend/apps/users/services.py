@@ -10,8 +10,8 @@ from datetime import date, datetime, timezone
 from django.conf import settings
 
 from apps.organization.models import Organization
-from apps.users.models import RefreshToken, User
-from core.constants import Role, UserStatus
+from apps.users.models import RefreshToken, User, Role
+from core.constants import Role as RoleEnum, UserStatus, Permissions, RealtimeEvent
 from core.identifiers import generate_login_id, organization_code, split_full_name
 from core.exceptions import AuthenticationError, Conflict, NotFound, ValidationError
 from core.security import (
@@ -195,6 +195,18 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
         organization.logo_url = save_image(logo, "logos/{}".format(organization.id))
         organization.save()
 
+    # Provision default roles for the new organization
+    roles = {}
+    for r_slug, r_name, perms in [
+        (RoleEnum.SUPER_ADMIN, "Super Admin", list(Permissions.ALL)),
+        (RoleEnum.ADMIN, "Admin", list(Permissions.ALL)),
+        (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN)]),
+        (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW]),
+        (RoleEnum.EMPLOYEE, "Employee", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.ORG_VIEW])
+    ]:
+        from apps.users.models import Role
+        roles[r_slug] = Role(organization=organization, name=r_name, slug=r_slug, is_system=True, permissions=perms).save()
+
     joined_at = datetime.now(timezone.utc)
     user = User(
         organization=organization,
@@ -203,7 +215,7 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
         first_name=first_name,
         last_name=last_name,
         phone=data.get("phone", ""),
-        role=Role.SUPER_ADMIN,
+        role=roles[RoleEnum.SUPER_ADMIN],
         status=UserStatus.ACTIVE,
         date_of_joining=joined_at,
     )
@@ -334,13 +346,19 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
                 raise ValidationError("Date of birth cannot be in the future.", details={"date_of_birth": "Must be today or in the past."})
             user.date_of_birth = datetime.combine(dob_d, time.min, tzinfo=timezone.utc)
 
-    # Role and status are privileged, and nobody may demote themselves.
-    if "role" in data and editor and editor.role in (Role.SUPER_ADMIN, Role.ADMIN):
-        if str(editor.id) == str(user.id) and data["role"] != user.role:
-            raise ValidationError("You cannot change your own role.", details={"role": "Not allowed."})
-        user.role = validate_choice(data["role"], Role.ALL, "role")
 
-    if "status" in data and editor and editor.is_admin:
+    # Role and status are privileged, and nobody may demote themselves.
+    if "role" in data and editor and editor.has_permission(Permissions.ROLES_ASSIGN):
+        if str(editor.id) == str(user.id) and data["role"] != str(user.role.id if user.role else ""):
+            raise ValidationError("You cannot change your own role.", details={"role": "Not allowed."})
+        role_doc = get_role(user.organization, data["role"])
+        if not role_doc:
+            raise ValidationError("Role not found.", details={"role": "Invalid role ID."})
+        user.role = role_doc
+
+    if "status" in data and editor and editor.has_permission(Permissions.USERS_EDIT):
+        if str(editor.id) == str(user.id) and data["status"] == UserStatus.SUSPENDED:
+            raise ValidationError("You cannot suspend your own account.", details={"status": "Not allowed."})
         user.status = validate_choice(data["status"], UserStatus.ALL, "status")
 
     if "department_id" in data:
@@ -403,7 +421,9 @@ def search_users(organization: Organization, *, search: str = None, role: str = 
             }
         )
     if role:
-        queryset = queryset.filter(role=validate_choice(role, Role.ALL, "role"))
+        role_doc = Role.objects.filter(organization=organization, id=role).first()
+        if role_doc:
+            queryset = queryset.filter(role=role_doc)
     if status:
         queryset = queryset.filter(status=validate_choice(status, UserStatus.ALL, "status"))
     if department_id:
@@ -421,3 +441,96 @@ def _department_or_404(organization: Organization, department_id: str):
     if not department:
         raise NotFound("Department not found.")
     return department
+
+
+# ---------------------------------------------------------------------------
+# Roles
+# ---------------------------------------------------------------------------
+from django.utils.text import slugify
+from core.realtime import notify_user
+
+def list_roles(organization):
+    return Role.objects.filter(organization=organization).all()
+
+def get_role(organization, role_id: str):
+    return Role.objects.filter(id=role_id, organization=organization).first()
+
+def get_role_users_count(role):
+    return User.objects.filter(role=role, is_deleted=False).count()
+
+def create_role(organization, name: str, description: str, permissions: list):
+    slug = slugify(name)
+    if Role.objects.filter(organization=organization, slug=slug).first():
+        raise ValidationError("A role with a similar name already exists.", code="duplicate_role")
+        
+    invalid_perms = set(permissions) - set(Permissions.ALL)
+    if invalid_perms:
+        raise ValidationError(f"Invalid permissions: {invalid_perms}")
+
+    role = Role(
+        organization=organization,
+        name=name,
+        slug=slug,
+        description=description,
+        permissions=list(set(permissions)),
+        is_system=False
+    ).save()
+    return role
+
+def update_role(organization, role_id: str, name: str = None, description: str = None, permissions: list = None):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+    
+    if role.is_system and name and name != role.name:
+        raise ValidationError("Cannot rename system roles.", code="system_role")
+
+    if name and not role.is_system:
+        role.name = name
+        role.slug = slugify(name)
+    
+    if description is not None:
+        role.description = description
+        
+    if permissions is not None:
+        invalid_perms = set(permissions) - set(Permissions.ALL)
+        if invalid_perms:
+            raise ValidationError(f"Invalid permissions: {invalid_perms}")
+        role.permissions = list(set(permissions))
+        
+    role.save()
+    
+    # Notify users with this role
+    # RealtimeService.publish(...)
+    
+    return role
+
+def delete_role(organization, role_id: str):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+        
+    if role.is_system:
+        raise ValidationError("Cannot delete system roles.", code="system_role")
+        
+    if get_role_users_count(role) > 0:
+        raise ValidationError("Cannot delete role while users are assigned to it.", code="role_in_use")
+        
+    role.delete()
+
+def assign_role(organization, role_id: str, user_ids: list):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+        
+    users = User.objects.filter(organization=organization, id__in=user_ids, is_deleted=False)
+    for user in users:
+        user.role = role
+        user.save()
+        # Revoke tokens if role downgraded? Optional for now.
+        
+        # Notify
+        try:
+            notify_user(user.id, RealtimeEvent.USER_UPDATED, user.to_dict())
+        except Exception:
+            pass

@@ -88,6 +88,29 @@ def roles_required(*roles):
     return decorator
 
 
+
+def permissions_required(*permissions):
+    """Require an authenticated user holding all of the specified permissions."""
+
+    def decorator(view):
+        @auth_required
+        @functools.wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if request.method == "OPTIONS":
+                return view(request, *args, **kwargs)
+            user = request.auth_user
+            missing = [p for p in permissions if not user.has_permission(p)]
+            if missing:
+                raise PermissionDenied(
+                    "Missing required permissions: {}.".format(", ".join(missing))
+                )
+            return view(request, *args, **kwargs)
+
+        wrapper.required_permissions = permissions
+        return wrapper
+
+    return decorator
+
 def admin_required(view):
     """Shorthand for any role that can reach the admin panel."""
     return roles_required(*Role.ADMIN_PANEL)(view)

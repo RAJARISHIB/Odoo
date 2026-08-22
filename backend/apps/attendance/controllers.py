@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Attendance controllers.
 
 Punch endpoints emit realtime events so the admin panel's live board updates
@@ -6,7 +11,7 @@ without polling.
 from apps.attendance import services
 from apps.users.services import get_user_in_org
 from core.base_controller import BaseController
-from core.constants import AttendanceSource, RealtimeEvent, Role
+from core.constants import AttendanceSource, RealtimeEvent, Role, Permissions
 
 
 class AttendanceController(BaseController):
@@ -69,7 +74,7 @@ class AttendanceAdminController(BaseController):
     """Admin-facing attendance: /api/v1/admin/attendance/*"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ATTENDANCE_VIEW_ALL)
         target_user = None
         if self.param("user_id"):
             target_user = get_user_in_org(self.user.organization, self.param("user_id"))
@@ -84,20 +89,20 @@ class AttendanceAdminController(BaseController):
         return self.paginated(queryset, serializer=self._with_user)
 
     def retrieve(self, record_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ATTENDANCE_VIEW_ALL)
         record = services.get_record(self.user.organization, record_id)
         return self.ok(self._with_user(record))
 
     def overview(self):
         """Live 'who is in today' snapshot."""
-        self.require_admin()
+        self.require_permissions(Permissions.ATTENDANCE_VIEW_ALL)
         from core.validators import parse_date
 
         day = parse_date(self.param("date"), "date")
         return self.ok(services.daily_overview(self.user.organization, day))
 
     def user_summary(self, user_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ATTENDANCE_VIEW_ALL)
         target_user = get_user_in_org(self.user.organization, user_id)
         summary = services.user_summary(
             self.user.organization, target_user,
@@ -107,7 +112,7 @@ class AttendanceAdminController(BaseController):
 
     def manual_entry(self):
         """Create or correct one employee's day."""
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.ATTENDANCE_VIEW_TEAM)
         self.require("user_id", "date")
         target_user = get_user_in_org(self.user.organization, self.field("user_id"))
         record = services.upsert_manual_entry(
@@ -120,7 +125,7 @@ class AttendanceAdminController(BaseController):
         return self.created(record.to_dict(), "Attendance recorded.")
 
     def destroy(self, record_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ATTENDANCE_MANAGE)
         record = services.get_record(self.user.organization, record_id)
         record.soft_delete()
         self.emit_to_admins(RealtimeEvent.ATTENDANCE_UPDATED, {"deleted_id": str(record.id)})

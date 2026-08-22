@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Leave controllers."""
 from datetime import date
 
@@ -94,7 +99,7 @@ class LeaveController(BaseController):
 # here - the Angular guards are a UX convenience only.
 # =============================================================================
 from apps.users.services import get_user_in_org
-from core.constants import Role
+from core.constants import Role, Permissions, Permissions
 from core.validators import parse_int
 
 
@@ -108,21 +113,21 @@ class LeaveTypeController(BaseController):
         return self.ok([leave_type.to_dict() for leave_type in types])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("name", "code")
         leave_type = services.create_leave_type(self.user.organization, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
         return self.created(leave_type.to_dict(), "Leave type created.")
 
     def update(self, type_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         leave_type = services.get_leave_type(self.user.organization, type_id)
         leave_type = services.update_leave_type(leave_type, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
         return self.ok(leave_type.to_dict(), "Leave type updated.")
 
     def set_active(self, type_id, active: bool):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         leave_type = services.get_leave_type(self.user.organization, type_id)
         leave_type = services.update_leave_type(leave_type, {"is_active": active})
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
@@ -134,14 +139,14 @@ class HolidayAdminController(BaseController):
     existing `LeaveController.holidays`; this only adds admin-only writes."""
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("name", "date")
         holiday = services.create_holiday_admin(self.user.organization, self.data, created_by=self.user)
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         return self.created(holiday.to_dict(), "Holiday created.")
 
     def update(self, holiday_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         holiday = services.update_holiday_admin(self.user.organization, holiday_id, self.data, updated_by=self.user)
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         self.emit_to_org(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
@@ -152,9 +157,11 @@ class LeaveAdminRequestController(BaseController):
     """Organization-wide leave requests: /api/v1/admin/leaves/requests"""
 
     def list(self):
-        self.require_admin()
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
+        manager = self.user if not self.user.has_permission(Permissions.ORG_MANAGE) else None
         queryset = services.admin_list_leave_requests(
             self.user.organization,
+            manager=manager,
             status=self.param("status"), leave_type_id=self.param("leave_type_id"),
             department_id=self.param("department_id"), search=self.param("search"),
             date_from=self.param("date_from"), date_to=self.param("date_to"),
@@ -162,19 +169,23 @@ class LeaveAdminRequestController(BaseController):
         return self.paginated(queryset, serializer=self._with_employee)
 
     def retrieve(self, request_id):
-        self.require_admin()
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.get_leave_request_in_org(self.user.organization, request_id)
+        if not self.user.has_permission(Permissions.ORG_MANAGE):
+            from apps.teams.services import get_subordinate_ids
+            if str(request.employee.id) not in get_subordinate_ids(self.user.organization, self.user):
+                raise PermissionDenied("You can only view requests for your team members.")
         return self.ok(self._with_employee(request))
 
     def approve(self, request_id):
-        self.require_admin()
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.approve_leave_request(
             self.user.organization, request_id, self.user, leave_type_id=self.field("leave_type_id")
         )
         return self._announce(request, "Leave request approved.")
 
     def reject(self, request_id):
-        self.require_admin()
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.reject_leave_request(self.user.organization, request_id, self.user, self.field("comment"))
         return self._announce(request, "Leave request rejected.")
 
@@ -204,28 +215,28 @@ class LeaveAllocationController(BaseController):
     """Role-based allocation rules + accrual generation: /api/v1/admin/leaves/allocation-rules"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         rules = services.list_allocation_rules(
             self.user.organization, leave_type_id=self.param("leave_type_id"), role=self.param("role"),
         )
         return self.ok([rule.to_dict() for rule in rules])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("leave_type_id", "role", "amount")
         rule = services.create_allocation_rule(self.user.organization, self.data, created_by=self.user)
         self.emit_to_admins(RealtimeEvent.LEAVE_ALLOCATION_UPDATED, {"rule": rule.to_dict()})
         return self.created(rule.to_dict(), "Allocation rule created.")
 
     def update(self, rule_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         rule = services.get_allocation_rule(self.user.organization, rule_id)
         rule = services.update_allocation_rule(rule, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_ALLOCATION_UPDATED, {"rule": rule.to_dict()})
         return self.ok(rule.to_dict(), "Allocation rule updated.")
 
     def generate(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         today = date.today()
         year = parse_int(self.field("year"), today.year, "year")
         month = parse_int(self.field("month"), today.month, "month")
@@ -237,7 +248,7 @@ class LeaveAllocationController(BaseController):
         return self.ok(result, "Generated allocations for {}.".format(result["period"]))
 
     def carry_forward(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("leave_type_id", "year")
         leave_type = services.get_leave_type(self.user.organization, self.field("leave_type_id"))
         year = parse_int(self.field("year"), None, "year")
@@ -254,14 +265,14 @@ class LeaveAdjustmentController(BaseController):
     """Manual, audited balance corrections: /api/v1/admin/leaves/adjustments"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         target_user = get_user_in_org(self.user.organization, self.param("user_id")) if self.param("user_id") else None
         leave_type = services.get_leave_type(self.user.organization, self.param("leave_type_id")) if self.param("leave_type_id") else None
         adjustments = services.list_adjustments(self.user.organization, user=target_user, leave_type=leave_type)
         return self.ok([self._with_creator(a) for a in adjustments])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("user_id", "leave_type_id", "amount", "reason")
         target_user = get_user_in_org(self.user.organization, self.field("user_id"))
         leave_type = services.get_leave_type(self.user.organization, self.field("leave_type_id"))
@@ -286,7 +297,7 @@ class LeaveDashboardController(BaseController):
     """Balances + org-wide analytics."""
 
     def admin_balances(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         rows = services.list_org_balances(
             self.user.organization, year,
@@ -296,7 +307,7 @@ class LeaveDashboardController(BaseController):
         return self.ok(rows, meta={"total": len(rows), "year": year})
 
     def dashboard(self):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         summary = services.dashboard_summary(
             self.user.organization, year,
@@ -306,7 +317,7 @@ class LeaveDashboardController(BaseController):
         return self.ok(summary)
 
     def employee_summary(self, user_id):
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_MANAGE)
         year = parse_int(self.param("year"), date.today().year, "year")
         target_user = get_user_in_org(self.user.organization, user_id)
         return self.ok(services.employee_summary(self.user.organization, target_user, year))

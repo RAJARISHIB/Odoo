@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Teams domain business logic."""
 import calendar
 from datetime import date, datetime, time, timedelta, timezone
@@ -476,3 +481,38 @@ def get_team_birthdays(organization, employee: User, ref_date_str: str = None) -
         "birthdays_today": birthdays_today,
         "upcoming_birthdays": upcoming_birthdays,
     }
+
+
+def get_subordinate_ids(organization, manager) -> list:
+    """Return a list of user IDs that are subordinates to the given manager."""
+    memberships = TeamMember.objects.filter(
+        organization=organization,
+        employee=manager,
+        is_active=True,
+        is_deleted=False,
+    )
+    
+    subordinate_ids = set()
+    for membership in memberships:
+        if not membership.team or membership.team.status != Team.STATUS_ACTIVE:
+            continue
+            
+        if not membership.hierarchy_level:
+            continue
+            
+        # Get all team members in the same team
+        team_members = TeamMember.objects.filter(
+            organization=organization,
+            team=membership.team,
+            is_active=True,
+            is_deleted=False
+        )
+        
+        manager_order = membership.hierarchy_level.order
+        for member in team_members:
+            if not member.hierarchy_level:
+                subordinate_ids.add(str(member.employee.id))
+            elif member.hierarchy_level.order > manager_order:
+                subordinate_ids.add(str(member.employee.id))
+                
+    return list(subordinate_ids)

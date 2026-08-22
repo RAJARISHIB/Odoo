@@ -40,6 +40,13 @@ def list_leave_requests(organization, employee=None, start_date=None, end_date=N
     """Fetch leave requests for an employee/organization."""
     queryset = LeaveRequest.objects.filter(organization=organization, is_deleted=False)
 
+    if manager:
+        from apps.teams.services import get_subordinate_ids
+        sub_ids = get_subordinate_ids(organization, manager)
+        if not sub_ids:
+            return queryset.none()
+        queryset = queryset.filter(employee__in=sub_ids)
+
     if employee:
         queryset = queryset.filter(employee=employee)
 
@@ -303,9 +310,16 @@ def get_leave_request_in_org(organization, request_id: str) -> LeaveRequest:
 # ---------------------------------------------------------------------------
 # Admin: leave requests (list all / approve / reject)
 # ---------------------------------------------------------------------------
-def admin_list_leave_requests(organization, *, status=None, leave_type_id=None, department_id=None,
+def admin_list_leave_requests(organization, *, manager=None, status=None, leave_type_id=None, department_id=None,
                               search=None, date_from=None, date_to=None):
     queryset = LeaveRequest.objects.filter(organization=organization, is_deleted=False)
+
+    if manager:
+        from apps.teams.services import get_subordinate_ids
+        sub_ids = get_subordinate_ids(organization, manager)
+        if not sub_ids:
+            return queryset.none()
+        queryset = queryset.filter(employee__in=sub_ids)
 
     if status:
         queryset = queryset.filter(status=validate_choice(status, LeaveRequest.STATUS_CHOICES, "status"))
@@ -342,6 +356,20 @@ def approve_leave_request(organization, request_id: str, reviewer, leave_type_id
     flow never sets a leave type, so an admin may tag one here (for dashboard
     attribution) without ever having to change how leave is requested."""
     request = get_leave_request_in_org(organization, request_id)
+    from core.constants import Permissions
+    from core.exceptions import PermissionDenied
+    if not reviewer.has_permission(Permissions.ORG_MANAGE):
+        from apps.teams.services import get_subordinate_ids
+        if str(request.employee.id) not in get_subordinate_ids(organization, reviewer):
+            raise PermissionDenied("You can only approve requests for your team members.")
+
+    from core.constants import Permissions
+    from core.exceptions import PermissionDenied
+    if not reviewer.has_permission(Permissions.ORG_MANAGE):
+        from apps.teams.services import get_subordinate_ids
+        if str(request.employee.id) not in get_subordinate_ids(organization, reviewer):
+            raise PermissionDenied("You can only reject requests for your team members.")
+
     if request.status != LeaveRequest.STATUS_PENDING:
         raise Conflict("Only pending requests can be approved.", code="invalid_status")
 
@@ -357,6 +385,20 @@ def approve_leave_request(organization, request_id: str, reviewer, leave_type_id
 
 def reject_leave_request(organization, request_id: str, reviewer, comment: str = None) -> LeaveRequest:
     request = get_leave_request_in_org(organization, request_id)
+    from core.constants import Permissions
+    from core.exceptions import PermissionDenied
+    if not reviewer.has_permission(Permissions.ORG_MANAGE):
+        from apps.teams.services import get_subordinate_ids
+        if str(request.employee.id) not in get_subordinate_ids(organization, reviewer):
+            raise PermissionDenied("You can only approve requests for your team members.")
+
+    from core.constants import Permissions
+    from core.exceptions import PermissionDenied
+    if not reviewer.has_permission(Permissions.ORG_MANAGE):
+        from apps.teams.services import get_subordinate_ids
+        if str(request.employee.id) not in get_subordinate_ids(organization, reviewer):
+            raise PermissionDenied("You can only reject requests for your team members.")
+
     if request.status != LeaveRequest.STATUS_PENDING:
         raise Conflict("Only pending requests can be rejected.", code="invalid_status")
 

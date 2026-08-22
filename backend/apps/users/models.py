@@ -12,14 +12,37 @@ from mongoengine import (
     DictField,
     EmailField,
     IntField,
+    ListField,
     ReferenceField,
     StringField,
 )
 
 from core.base_model import BaseDocument
-from core.constants import Panel, Role, UserStatus
+from core.constants import Panel, Role as RoleEnum, UserStatus
 from core.security import hash_password, verify_password
 
+
+
+class Role(BaseDocument):
+    """A dynamically configurable role with specific permissions."""
+    organization = ReferenceField("Organization", null=True)
+    name = StringField(required=True, max_length=80)
+    slug = StringField(required=True, max_length=80)
+    description = StringField(max_length=255, default="")
+    permissions = ListField(StringField(), default=list)
+    is_system = BooleanField(default=False)
+
+    meta = {
+        "collection": "roles",
+        "indexes": [
+            "organization",
+            {"fields": ("organization", "slug"), "unique": True, "sparse": True},
+        ],
+        "ordering": ["name"],
+    }
+
+    def __repr__(self):
+        return f"<Role {self.name} ({self.slug})>"
 
 class User(BaseDocument):
     """A person who can sign in.  `role` decides which panel the UI opens."""
@@ -45,7 +68,7 @@ class User(BaseDocument):
     date_of_birth = DateTimeField(null=True)
     reporting_to = ReferenceField("self", null=True)
 
-    role = StringField(required=True, choices=Role.ALL, default=Role.EMPLOYEE)
+    role = ReferenceField("Role", required=True)
     status = StringField(required=True, choices=UserStatus.ALL, default=UserStatus.ACTIVE)
 
     last_login_at = DateTimeField(null=True)
@@ -77,11 +100,21 @@ class User(BaseDocument):
     @property
     def panel(self) -> str:
         """Which Angular panel this user lands on after login."""
-        return Panel.ADMIN if self.role in Role.ADMIN_PANEL else Panel.USER
+        if not self.role or isinstance(self.role, str):
+            return Panel.USER
+        return Panel.ADMIN if getattr(self.role, "slug", "") in RoleEnum.ADMIN_PANEL else Panel.USER
 
     @property
     def is_admin(self) -> bool:
-        return self.role in Role.ADMIN_PANEL
+        return getattr(self.role, "slug", "") in RoleEnum.ADMIN_PANEL if self.role and not isinstance(self.role, str) else False
+
+
+    def has_permission(self, permission_key: str) -> bool:
+        if not self.role or isinstance(self.role, str):
+            return False
+        if "*" in self.role.permissions or getattr(self.role, "slug", "") in (RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN):
+            return True
+        return permission_key in self.role.permissions
 
     # -- passwords ---------------------------------------------------------
     def set_password(self, raw_password: str):
@@ -103,10 +136,18 @@ class User(BaseDocument):
         data["full_name"] = self.full_name
         data["panel"] = self.panel
         data["is_admin"] = self.is_admin
+
         if self.date_of_birth:
             data["date_of_birth"] = self.date_of_birth.strftime("%Y-%m-%d")
         else:
             data["date_of_birth"] = None
+
+        if self.role and not isinstance(self.role, str):
+            try:
+                data["role"] = {"id": str(self.role.id), "name": getattr(self.role, "name", ""), "slug": getattr(self.role, "slug", "")}
+                data["permissions"] = getattr(self.role, "permissions", [])
+            except Exception:
+                pass
         return data
 
     def __repr__(self):

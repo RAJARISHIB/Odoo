@@ -17,19 +17,19 @@ from apps.leaves.models import Holiday, LeaveAllocation, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
 from apps.payroll.models import EmployeePayroll, PayrollDocument, RoleSalaryTemplate
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
-from apps.users.models import RefreshToken, User
-from core.constants import AttendanceSource, AttendanceStatus, Role, UserStatus
+from apps.users.models import RefreshToken, User, Role
+from core.constants import AttendanceSource, AttendanceStatus, Role as RoleEnum, UserStatus, Permissions
 from core.identifiers import generate_login_id, organization_code
 
 DEMO_SLUG = "acme-corp"
 DEMO_PASSWORD = "Password123"
 
 DEMO_PEOPLE = [
-    ("admin@acme.test", "Aisha", "Kapoor", Role.ADMIN, "Engineering", "Head of Engineering"),
-    ("hr@acme.test", "Rahul", "Menon", Role.HR, "People Ops", "HR Manager"),
-    ("manager@acme.test", "Sara", "Iyer", Role.MANAGER, "Engineering", "Engineering Manager"),
-    ("dev@acme.test", "Vikram", "Rao", Role.EMPLOYEE, "Engineering", "Software Engineer"),
-    ("designer@acme.test", "Neha", "Shah", Role.EMPLOYEE, "Engineering", "Product Designer"),
+    ("admin@acme.test", "Aisha", "Kapoor", RoleEnum.ADMIN, "Engineering", "Head of Engineering"),
+    ("hr@acme.test", "Rahul", "Menon", RoleEnum.HR, "People Ops", "HR Manager"),
+    ("manager@acme.test", "Sara", "Iyer", RoleEnum.MANAGER, "Engineering", "Engineering Manager"),
+    ("dev@acme.test", "Vikram", "Rao", RoleEnum.EMPLOYEE, "Engineering", "Software Engineer"),
+    ("designer@acme.test", "Neha", "Shah", RoleEnum.EMPLOYEE, "Engineering", "Product Designer"),
 ]
 
 
@@ -45,9 +45,23 @@ class Command(BaseCommand):
             self._reset()
 
         organization = self._organization()
+        
+        # Provision default roles for the organization
+        roles = {}
+        for r_slug, r_name, perms in [
+            (RoleEnum.SUPER_ADMIN, "Super Admin", list(Permissions.ALL)),
+            (RoleEnum.ADMIN, "Admin", list(Permissions.ALL)),
+            (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN)]),
+            (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW]),
+            (RoleEnum.EMPLOYEE, "Employee", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.ORG_VIEW])
+        ]:
+            roles[r_slug] = Role.objects.filter(organization=organization, slug=r_slug).first()
+            if not roles[r_slug]:
+                roles[r_slug] = Role(organization=organization, name=r_name, slug=r_slug, is_system=True, permissions=perms).save()
+            
         departments = self._departments(organization)
-        owner = self._owner(organization)
-        users = self._users(organization, departments)
+        owner = self._owner(organization, roles)
+        users = self._users(organization, departments, roles)
         self._attendance(organization, [owner] + users, options["days"])
         self._holidays(organization)
         self._leaves(organization, users)
@@ -62,9 +76,9 @@ class Command(BaseCommand):
         self.stdout.write("  Sign in with either the login ID or the email:")
         self.stdout.write("    {:<16} {:<20} {:<12} {}".format("LOGIN ID", "EMAIL", "ROLE", "PANEL"))
         for user in [owner] + users:
-            panel = "admin panel" if user.role in Role.ADMIN_PANEL else "user panel"
+            panel = "admin panel" if user.role.slug in RoleEnum.ADMIN_PANEL else "user panel"
             self.stdout.write("    {:<16} {:<20} {:<12} {}".format(
-                user.login_id, user.email, user.role, panel))
+                user.login_id, user.email, user.role.slug, panel))
 
     # -- steps -------------------------------------------------------------
     def _reset(self):
@@ -115,7 +129,7 @@ class Command(BaseCommand):
             departments[name] = department
         return departments
 
-    def _owner(self, organization) -> User:
+    def _owner(self, organization, roles) -> User:
         owner = User.objects.filter(email="owner@acme.test").first()
         if owner:
             return owner
@@ -126,7 +140,7 @@ class Command(BaseCommand):
             email="owner@acme.test",
             first_name="Owner",
             last_name="Acme",
-            role=Role.SUPER_ADMIN,
+            role=roles[RoleEnum.SUPER_ADMIN],
             status=UserStatus.ACTIVE,
             designation="Founder",
             employee_id="EMP001",
@@ -135,20 +149,20 @@ class Command(BaseCommand):
         owner.set_password(DEMO_PASSWORD)
         return owner.save()
 
-    def _users(self, organization, departments) -> list:
+    def _users(self, organization, departments, roles) -> list:
         created = []
         for index, (email, first, last, role, department, designation) in enumerate(DEMO_PEOPLE, start=2):
             user = User.objects.filter(email=email).first()
             if not user:
                 joined_at = datetime.now(timezone.utc) - timedelta(days=120 + index * 10)
                 user = User(
-                    organization=organization,
-                    department=departments.get(department),
-                    login_id=generate_login_id(organization, first, last, joined_at),
-                    email=email,
-                    first_name=first,
-                    last_name=last,
-                    role=role,
+                        organization=organization,
+                        department=departments.get(department),
+                        login_id=generate_login_id(organization, first, last, joined_at),
+                        email=email,
+                        first_name=first,
+                        last_name=last,
+                        role=roles.get(role, roles[RoleEnum.EMPLOYEE]),
                     status=UserStatus.ACTIVE,
                     designation=designation,
                     employee_id="EMP{:03d}".format(index),
@@ -233,8 +247,8 @@ class Command(BaseCommand):
                 ).save()
                 count += 1
         self.stdout.write("Seeded {} holidays.".format(count))
-
     def _leaves(self, organization, users):
+        LeaveType.objects.filter(organization=organization).delete()
         today = datetime.now(timezone.utc).date()
 
         # Seed Leave Types
@@ -273,7 +287,6 @@ class Command(BaseCommand):
                             amount=default_amount,
                             period_key=period_key,
                         ).save()
-
         dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
         if not dev_user:
             return

@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """User + auth controllers.
 
 Each public method maps 1:1 to a route in `apps/users/urls.py`.  They read the
@@ -7,7 +12,7 @@ the standard envelope.
 from apps.users import services
 from apps.users.models import User
 from core.base_controller import BaseController
-from core.constants import RealtimeEvent, Role
+from core.constants import RealtimeEvent, Role, Permissions
 from core.exceptions import ValidationError
 from core.realtime import panel_channel, user_channel
 
@@ -100,7 +105,6 @@ class AuthController(BaseController):
     # -- helpers -----------------------------------------------------------
     def _session_meta(self) -> dict:
         return self.client_meta
-
     @staticmethod
     def _permissions(user) -> dict:
         """Coarse capability flags the Angular guards and menus read."""
@@ -108,11 +112,12 @@ class AuthController(BaseController):
             "panel": user.panel,
             # True until a system-generated password has been replaced.
             "must_change_password": bool(user.must_change_password),
-            "can_manage_users": user.role in (Role.SUPER_ADMIN, Role.ADMIN, Role.HR),
-            "can_manage_organization": user.role in (Role.SUPER_ADMIN, Role.ADMIN),
-            "can_view_all_attendance": user.role in Role.ADMIN_PANEL,
-            "can_approve_attendance": user.role in (Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER),
+            "can_manage_users": user.has_permission(Permissions.USERS_EDIT) or user.has_permission(Permissions.USERS_CREATE),
+            "can_manage_organization": user.has_permission(Permissions.ORG_MANAGE),
+            "can_view_all_attendance": user.has_permission(Permissions.ATTENDANCE_VIEW_ALL),
+            "can_approve_attendance": user.has_permission(Permissions.ATTENDANCE_MANAGE) or user.has_permission(Permissions.ATTENDANCE_VIEW_TEAM),
         }
+
 
     @staticmethod
     def _realtime_hints(user_dict: dict) -> dict:
@@ -128,7 +133,7 @@ class UserController(BaseController):
     """Admin-side employee directory: /api/v1/users/*"""
 
     def list(self):
-        self.require_admin()
+        self.require_permissions(Permissions.USERS_VIEW)
         queryset = services.search_users(
             self.user.organization,
             search=self.param("search"),
@@ -144,7 +149,7 @@ class UserController(BaseController):
         The system allocates the login ID, and a first-time password too unless
         the admin supplied one - a normal user never registers themselves.
         """
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.USERS_EDIT)
         self.require("email")
         # The form may send a single "name" or separate first/last names.
         if not self.field("name") and not self.field("first_name"):
@@ -182,7 +187,7 @@ class UserController(BaseController):
 
     def destroy(self, user_id):
         """Soft delete - the document stays for attendance history."""
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN)
+        self.require_permissions(Permissions.USERS_CREATE)
         if self.is_self(user_id):
             raise ValidationError("You cannot delete your own account.")
         user = services.get_user_in_org(self.user.organization, user_id)
@@ -194,7 +199,7 @@ class UserController(BaseController):
         return self.deleted("Employee removed.")
 
     def reset_password(self, user_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.USERS_EDIT)
         user = services.get_user_in_org(self.user.organization, user_id)
         temporary_password = services.reset_password(user, self.field("new_password"))
 
@@ -204,9 +209,9 @@ class UserController(BaseController):
 
     def stats(self):
         """Headline counters for the admin dashboard."""
-        self.require_admin()
+        self.require_permissions(Permissions.USERS_VIEW)
         queryset = User.objects.filter(organization=self.user.organization, is_deleted=False)
-        by_role = {role: queryset.filter(role=role).count() for role in Role.ALL}
+        roles = getattr(self.user, "organization", None) and Role.objects.filter(organization=self.user.organization).all() or []; by_role = {r.name: queryset.filter(role=r).count() for r in roles}
         return self.ok(
             {
                 "total": queryset.count(),
@@ -231,3 +236,56 @@ class ProfileController(BaseController):
         user = services.update_user(user, data, editor=None)
         self.emit_to_user(user.id, RealtimeEvent.USER_UPDATED, {"user": user.to_dict()})
         return self.ok(user.to_dict(), "Profile updated.")
+
+
+class RoleController(BaseController):
+    """CRUD for custom roles in an organization."""
+
+    def catalog(self):
+        """Return the hardcoded permission definitions grouped by module."""
+        return self.success(data=Permissions.CATALOG)
+
+    def list(self):
+        roles = services.list_roles(self.organization)
+        return self.success(data=[r.to_dict() for r in roles])
+
+    def retrieve(self, role_id: str):
+        role = services.get_role(self.organization, role_id)
+        if not role:
+            return self.not_found("Role not found.")
+        
+        # Optionally fetch users assigned to this role
+        users_count = services.get_role_users_count(role)
+        data = role.to_dict()
+        data["users_count"] = users_count
+        return self.success(data=data)
+
+    def create(self):
+        self.require_fields("name", "permissions")
+        role = services.create_role(
+            organization=self.organization,
+            name=self.field("name"),
+            description=self.field("description", ""),
+            permissions=self.field("permissions"),
+        )
+        # Assuming RealtimeService publishes event
+        return self.success(data=role.to_dict(), message="Role created successfully.", status_code=201)
+
+    def update(self, role_id: str):
+        role = services.update_role(
+            organization=self.organization,
+            role_id=role_id,
+            name=self.field("name"),
+            description=self.field("description"),
+            permissions=self.field("permissions"),
+        )
+        return self.success(data=role.to_dict(), message="Role updated successfully.")
+
+    def destroy(self, role_id: str):
+        services.delete_role(self.organization, role_id)
+        return self.success(message="Role deleted.")
+
+    def assign(self, role_id: str):
+        self.require_fields("user_ids")
+        services.assign_role(self.organization, role_id, self.field("user_ids"))
+        return self.success(message="Role assigned successfully.")

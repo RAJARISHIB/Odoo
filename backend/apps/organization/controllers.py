@@ -1,7 +1,12 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Organization + department controllers."""
 from apps.organization import services
 from core.base_controller import BaseController
-from core.constants import RealtimeEvent, Role
+from core.constants import RealtimeEvent, Role, Permissions
 
 
 class OrganizationController(BaseController):
@@ -13,7 +18,7 @@ class OrganizationController(BaseController):
         return self.ok(organization.to_dict())
 
     def update(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN)
+        self.require_permissions(Permissions.ORG_MANAGE)
         organization = services.get_organization(self.organization_id)
         organization = services.update_organization(organization, self.data)
 
@@ -27,7 +32,7 @@ class OrganizationController(BaseController):
         Multipart, field name `logo`.  The old file is deleted once the new one
         is safely stored - see `core.storage`.
         """
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN)
+        self.require_permissions(Permissions.ORG_MANAGE)
         organization = services.get_organization(self.organization_id)
         organization = services.set_logo(organization, self.file("logo", required=True))
 
@@ -39,7 +44,7 @@ class OrganizationController(BaseController):
 
     def overview(self):
         """Small aggregate used by the admin dashboard header."""
-        self.require_admin()
+        self.require_permissions(Permissions.ORG_VIEW)
         organization = services.get_organization(self.organization_id)
         return self.ok(
             {
@@ -62,7 +67,7 @@ class DepartmentController(BaseController):
         return self.paginated(queryset)
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.DEPARTMENTS_MANAGE)
         department = services.create_department(self.user.organization, self.data)
         self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()})
         return self.created(department.to_dict(), "Department created.")
@@ -73,14 +78,14 @@ class DepartmentController(BaseController):
         return self.ok(department.to_dict())
 
     def update(self, department_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.DEPARTMENTS_MANAGE)
         department = services.get_department(self.user.organization, department_id)
         department = services.update_department(self.user.organization, department, self.data)
         self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()})
         return self.ok(department.to_dict(), "Department updated.")
 
     def destroy(self, department_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN)
+        self.require_permissions(Permissions.ORG_MANAGE)
         department = services.get_department(self.user.organization, department_id)
         department.soft_delete()
         self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department_id": str(department.id)})

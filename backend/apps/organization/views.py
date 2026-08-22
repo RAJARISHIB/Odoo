@@ -1,6 +1,7 @@
 """Organization + department views - thin wrappers over the controllers."""
 from apps.organization.controllers import DepartmentController, OrganizationController
-from core.decorators import admin_required, api_view, auth_required
+from core.decorators import admin_required, api_view, auth_required, permissions_required
+from core.constants import Permissions
 
 
 @api_view("GET", "PATCH", "PUT")
@@ -13,13 +14,13 @@ def organization(request):
 
 
 @api_view("POST")
-@admin_required
+@permissions_required(Permissions.ORG_MANAGE)
 def organization_logo(request):
     return OrganizationController(request).upload_logo()
 
 
 @api_view("GET")
-@admin_required
+@permissions_required(Permissions.ORG_VIEW)
 def organization_overview(request):
     return OrganizationController(request).overview()
 
