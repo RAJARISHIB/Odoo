@@ -105,7 +105,6 @@ class AuthController(BaseController):
     # -- helpers -----------------------------------------------------------
     def _session_meta(self) -> dict:
         return self.client_meta
-
     @staticmethod
     def _permissions(user) -> dict:
         """Coarse capability flags the Angular guards and menus read."""
@@ -113,11 +112,12 @@ class AuthController(BaseController):
             "panel": user.panel,
             # True until a system-generated password has been replaced.
             "must_change_password": bool(user.must_change_password),
-            "can_manage_users": user.role in (Role.SUPER_ADMIN, Role.ADMIN, Role.HR),
-            "can_manage_organization": user.role in (Role.SUPER_ADMIN, Role.ADMIN),
-            "can_view_all_attendance": user.role in Role.ADMIN_PANEL,
-            "can_approve_attendance": user.role in (Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER),
+            "can_manage_users": user.has_permission(Permissions.USERS_EDIT) or user.has_permission(Permissions.USERS_CREATE),
+            "can_manage_organization": user.has_permission(Permissions.ORG_MANAGE),
+            "can_view_all_attendance": user.has_permission(Permissions.ATTENDANCE_VIEW_ALL),
+            "can_approve_attendance": user.has_permission(Permissions.ATTENDANCE_MANAGE) or user.has_permission(Permissions.ATTENDANCE_VIEW_TEAM),
         }
+
 
     @staticmethod
     def _realtime_hints(user_dict: dict) -> dict:
