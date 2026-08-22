@@ -18,7 +18,7 @@ from mongoengine import (
 )
 
 from core.base_model import BaseDocument
-from core.constants import Panel, Role, UserStatus
+from core.constants import Panel, Role as RoleEnum, UserStatus
 from core.security import hash_password, verify_password
 
 
@@ -102,17 +102,17 @@ class User(BaseDocument):
         """Which Angular panel this user lands on after login."""
         if not self.role or isinstance(self.role, str):
             return Panel.USER
-        return Panel.ADMIN if getattr(self.role, "slug", "") in Role.ADMIN_PANEL else Panel.USER
+        return Panel.ADMIN if getattr(self.role, "slug", "") in RoleEnum.ADMIN_PANEL else Panel.USER
 
     @property
     def is_admin(self) -> bool:
-        return getattr(self.role, "slug", "") in Role.ADMIN_PANEL if self.role and not isinstance(self.role, str) else False
+        return getattr(self.role, "slug", "") in RoleEnum.ADMIN_PANEL if self.role and not isinstance(self.role, str) else False
 
 
     def has_permission(self, permission_key: str) -> bool:
         if not self.role or isinstance(self.role, str):
             return False
-        if "*" in self.role.permissions or getattr(self.role, "slug", "") in (Role.SUPER_ADMIN, Role.ADMIN):
+        if "*" in self.role.permissions or getattr(self.role, "slug", "") in (RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN):
             return True
         return permission_key in self.role.permissions
 
