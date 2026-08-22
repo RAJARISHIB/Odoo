@@ -206,7 +206,7 @@ class LeaveAdminRequestController(BaseController):
                 "email": employee.email,
                 "employee_id": employee.employee_id,
                 "department_id": str(employee.department.id) if employee.department else None,
-                "role": employee.role,
+                "role": getattr(employee.role, "slug", str(employee.role or "")),
             }
         return data
 

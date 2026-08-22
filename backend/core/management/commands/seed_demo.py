@@ -447,14 +447,14 @@ class Command(BaseCommand):
 
         # Seed Role Salary Templates
         tpl_dev = payroll_services.upsert_role_template(organization, {
-            "role": Role.EMPLOYEE,
+            "role": RoleEnum.EMPLOYEE,
             "designation": "Software Engineer",
             "monthly_wage": 60000.0,
             "employee_pf_rate": 12.0,
             "professional_tax": 200.0,
         })
         tpl_admin = payroll_services.upsert_role_template(organization, {
-            "role": Role.ADMIN,
+            "role": RoleEnum.ADMIN,
             "designation": "Head of Engineering",
             "monthly_wage": 120000.0,
             "employee_pf_rate": 12.0,

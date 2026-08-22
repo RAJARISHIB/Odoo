@@ -1020,7 +1020,7 @@ def list_org_balances(organization, year: int, *, leave_type_id: str = None, dep
             "employee_name": user.full_name,
             "employee_id": user.employee_id,
             "department_id": str(user.department.id) if user.department else None,
-            "role": user.role,
+            "role": getattr(user.role, "slug", str(user.role or "")),
             "allocated": total_allocated,
             "used": total_used,
             "pending": total_pending,
