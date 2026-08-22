@@ -41,13 +41,6 @@ def list_leave_requests(organization, employee=None, manager=None, start_date=No
     """Fetch leave requests for an employee/organization."""
     queryset = LeaveRequest.objects.filter(organization=organization, is_deleted=False)
 
-    if manager:
-        from apps.teams.services import get_subordinate_ids
-        sub_ids = get_subordinate_ids(organization, manager)
-        if not sub_ids:
-            return queryset.none()
-        queryset = queryset.filter(employee__in=sub_ids)
-
     if employee:
         queryset = queryset.filter(employee=employee)
 

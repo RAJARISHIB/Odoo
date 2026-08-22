@@ -10,7 +10,7 @@ request through `BaseController`, delegate the work to `services.py`, and return
 the standard envelope.
 """
 from apps.users import services
-from apps.users.models import Role, User
+from apps.users.models import Role as RoleDoc, User
 from core.base_controller import BaseController
 from core.constants import AuditAction, Permissions, RealtimeEvent, Role as RoleEnum
 from core.exceptions import NotFound, ValidationError
@@ -347,7 +347,8 @@ class UserController(BaseController):
         """Headline counters for the admin dashboard."""
         self.require_permissions(Permissions.USERS_VIEW)
         queryset = User.objects.filter(organization=self.user.organization, is_deleted=False)
-        roles = getattr(self.user, "organization", None) and RoleModel.objects.filter(organization=self.user.organization).all() or []; by_role = {r.name: queryset.filter(role=r).count() for r in roles}
+        roles = RoleDoc.objects.filter(organization=self.user.organization) if self.user.organization else []
+        by_role = {r.name: queryset.filter(role=r).count() for r in roles}
         return self.ok(
             {
                 "total": queryset.count(),

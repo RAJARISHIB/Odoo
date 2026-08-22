@@ -51,6 +51,12 @@ const EVENTS: Record<
   'leave.allocation_updated': { icon: 'settings', tone: 'info', verb: 'leave allocation changed', link: '/settings/leave-policy' },
   'leave.balance_updated': { icon: 'plane', tone: 'info', verb: 'leave balance changed', link: '/time-off' },
   'holiday.updated': { icon: 'calendar', tone: 'info', verb: 'holidays changed', link: '/settings/holidays' },
+  'claim.created': { icon: 'file', tone: 'warning', verb: 'submitted an expense claim', link: '/settings/claims-approvals' },
+  'claim.updated': { icon: 'check', tone: 'info', verb: 'expense claim updated', link: '/claims' },
+  'fine.created': { icon: 'warning', tone: 'warning', verb: 'received a fine', link: '/fines' },
+  'fine.updated': { icon: 'warning', tone: 'info', verb: 'fine status updated', link: '/fines' },
+  'request.created': { icon: 'mail', tone: 'warning', verb: 'submitted a request', link: '/settings/incoming-requests' },
+  'request.updated': { icon: 'check', tone: 'info', verb: 'request updated', link: '/requests' },
 };
 
 /**
@@ -128,6 +134,9 @@ export class NotificationMenu {
       attendance?: { status?: string; total_hours?: number };
       organization?: { name?: string };
       leave_request?: { start_date?: string; end_date?: string; status?: string };
+      claim?: { expense_type?: string; amount?: number; status?: string };
+      fine?: { reason?: string; amount?: number; status?: string };
+      request?: { request_type?: string; status?: string };
     } | null;
 
     const who =
@@ -150,7 +159,13 @@ export class NotificationMenu {
 
   private detailFor(
     message: ServerMessage,
-    payload: { attendance?: { total_hours?: number }; leave_request?: { start_date?: string; end_date?: string } } | null,
+    payload: {
+      attendance?: { total_hours?: number };
+      leave_request?: { start_date?: string; end_date?: string };
+      claim?: { expense_type?: string; amount?: number; status?: string };
+      fine?: { reason?: string; amount?: number; status?: string };
+      request?: { request_type?: string; status?: string };
+    } | null,
   ): string {
     if (message.event?.startsWith('attendance.') && payload?.attendance?.total_hours) {
       return `${payload.attendance.total_hours}h logged today`;
@@ -160,6 +175,18 @@ export class NotificationMenu {
       return leave.end_date && leave.end_date !== leave.start_date
         ? `${leave.start_date} → ${leave.end_date}`
         : leave.start_date;
+    }
+    const claim = payload?.claim;
+    if (claim?.expense_type) {
+      return `${claim.expense_type} · ₹${claim.amount ?? 0}${claim.status ? ` · ${claim.status}` : ''}`;
+    }
+    const fine = payload?.fine;
+    if (fine?.reason) {
+      return `₹${fine.amount ?? 0} · ${fine.reason}${fine.status ? ` · ${fine.status}` : ''}`;
+    }
+    const req = payload?.request;
+    if (req?.request_type) {
+      return `${req.request_type}${req.status ? ` · ${req.status}` : ''}`;
     }
     return message.channel ?? '';
   }

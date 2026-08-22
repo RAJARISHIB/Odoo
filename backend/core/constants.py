@@ -122,6 +122,12 @@ class RealtimeEvent:
     ORG_UPDATED = "organization.updated"
     NOTIFICATION = "notification"
     SYSTEM_ANNOUNCEMENT = "system.announcement"
+    CLAIM_CREATED = "claim.created"
+    CLAIM_UPDATED = "claim.updated"
+    FINE_CREATED = "fine.created"
+    FINE_UPDATED = "fine.updated"
+    REQUEST_CREATED = "request.created"
+    REQUEST_UPDATED = "request.updated"
 
 class Permissions:
     # Users & Directory
