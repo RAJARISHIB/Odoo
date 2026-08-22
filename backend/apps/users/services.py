@@ -6,7 +6,7 @@ command, a seed script or a background job.
 """
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -383,12 +383,15 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
 
 
     # Role and status are privileged, and nobody may demote themselves.
-    if "role" in data and editor and editor.has_permission(Permissions.ROLES_ASSIGN):
-        if str(editor.id) == str(user.id) and data["role"] != str(user.role.id if user.role else ""):
+    if "role" in data and editor and (editor.has_permission(Permissions.ROLES_ASSIGN) or editor.has_permission(Permissions.USERS_EDIT)):
+        target_role = str(data["role"])
+        current_slug = getattr(user.role, "slug", "")
+        current_id = str(user.role.id) if user.role else ""
+        if str(editor.id) == str(user.id) and target_role not in (current_slug, current_id):
             raise ValidationError("You cannot change your own role.", details={"role": "Not allowed."})
-        role_doc = get_role(user.organization, data["role"])
+        role_doc = get_role(user.organization, target_role)
         if not role_doc:
-            raise ValidationError("Role not found.", details={"role": "Invalid role ID."})
+            raise ValidationError("Role not found.", details={"role": "Invalid role ID or slug."})
         user.role = role_doc
 
     if "status" in data and editor and editor.has_permission(Permissions.USERS_EDIT):
@@ -487,8 +490,15 @@ from core.realtime import notify_user
 def list_roles(organization):
     return Role.objects.filter(organization=organization).all()
 
-def get_role(organization, role_id: str):
-    return Role.objects.filter(id=role_id, organization=organization).first()
+def get_role(organization, role_id_or_slug: str):
+    if not role_id_or_slug:
+        return None
+    from bson.objectid import ObjectId
+    if ObjectId.is_valid(role_id_or_slug):
+        role = Role.objects.filter(id=role_id_or_slug, organization=organization).first()
+        if role:
+            return role
+    return Role.objects.filter(slug=role_id_or_slug, organization=organization).first()
 
 def get_role_users_count(role):
     return User.objects.filter(role=role, is_deleted=False).count()
