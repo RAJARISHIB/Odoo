@@ -61,6 +61,48 @@ class LeaveAllocationFrequency:
     ALL = (MONTHLY, YEARLY)
 
 
+class AuditAction:
+    """Security-relevant event names written to `core.audit.AuditLog`.
+
+    Distinct from `RealtimeEvent` below: realtime events are UI push
+    notifications, these are the accountability record - see `core.audit`.
+    """
+
+    LOGIN_SUCCESS = "login.success"
+    LOGIN_FAILED = "login.failed"
+    LOGOUT = "logout"
+    ACCOUNT_LOCKED = "account.locked"
+
+    PASSWORD_CHANGED = "password.changed"
+    PASSWORD_RESET_REQUESTED = "password.reset_requested"
+    PASSWORD_RESET_COMPLETED = "password.reset_completed"
+    ADMIN_PASSWORD_RESET = "password.admin_reset"
+
+    EMAIL_VERIFIED = "email.verified"
+
+    MFA_CHALLENGE_ISSUED = "mfa.challenge_issued"
+    MFA_ENABLED = "mfa.enabled"
+    MFA_DISABLED = "mfa.disabled"
+    MFA_FAILED = "mfa.failed"
+    MFA_RECOVERY_CODES_REGENERATED = "mfa.recovery_codes_regenerated"
+
+    ROLE_CHANGED = "role.changed"
+    PERMISSION_CHANGED = "permission.changed"
+
+    USER_CREATED = "user.created"
+    USER_UPDATED = "user.updated"
+    USER_DELETED = "user.deleted"
+
+    SESSION_REVOKED = "session.revoked"
+
+    LEAVE_APPROVED = "leave.approved"
+    LEAVE_REJECTED = "leave.rejected"
+    LEAVE_BALANCE_ADJUSTED = "leave.balance_adjusted"
+    HOLIDAY_CHANGED = "holiday.changed"
+
+    ACCESS_DENIED = "access.denied"
+
+
 class RealtimeEvent:
     """Event names published to the websocket hub.  Keep in sync with the
     Angular `RealtimeService` and `realtime/src/lib/events.js`."""
@@ -80,6 +122,12 @@ class RealtimeEvent:
     ORG_UPDATED = "organization.updated"
     NOTIFICATION = "notification"
     SYSTEM_ANNOUNCEMENT = "system.announcement"
+    CLAIM_CREATED = "claim.created"
+    CLAIM_UPDATED = "claim.updated"
+    FINE_CREATED = "fine.created"
+    FINE_UPDATED = "fine.updated"
+    REQUEST_CREATED = "request.created"
+    REQUEST_UPDATED = "request.updated"
 
 class Permissions:
     # Users & Directory
@@ -114,6 +162,10 @@ class Permissions:
     ROLES_MANAGE = 'roles.manage'
     ROLES_ASSIGN = 'roles.assign'
 
+    # Security & audit
+    AUDIT_VIEW = 'audit.view'
+    SECURITY_MANAGE = 'security.manage'
+
     # Payroll
     PAYROLL_VIEW_ALL = 'payroll.view_all'
     PAYROLL_MANAGE = 'payroll.manage'
@@ -128,6 +180,7 @@ class Permissions:
         LEAVES_APPLY, LEAVES_VIEW_OWN, LEAVES_VIEW_TEAM, LEAVES_VIEW_ALL, LEAVES_APPROVE, LEAVES_MANAGE_TYPES,
         ORG_VIEW, ORG_MANAGE, DEPARTMENTS_MANAGE,
         ROLES_VIEW, ROLES_MANAGE, ROLES_ASSIGN,
+        AUDIT_VIEW, SECURITY_MANAGE,
         PAYROLL_VIEW_ALL, PAYROLL_MANAGE,
         CLAIMS_VIEW_ALL, CLAIMS_MANAGE,
     )
@@ -183,6 +236,14 @@ class Permissions:
                 {'key': ROLES_VIEW, 'label': 'View Roles', 'description': 'View roles and assigned permissions.'},
                 {'key': ROLES_MANAGE, 'label': 'Manage Roles', 'description': 'Create, edit, and delete custom roles.'},
                 {'key': ROLES_ASSIGN, 'label': 'Assign Roles', 'description': 'Assign roles to employees.'}
+            ]
+        },
+        {
+            'module': 'security',
+            'label': 'Security & Audit',
+            'permissions': [
+                {'key': AUDIT_VIEW, 'label': 'View Audit Log', 'description': 'Read the security audit trail.'},
+                {'key': SECURITY_MANAGE, 'label': 'Manage Security Settings', 'description': 'Manage organization-wide security settings.'}
             ]
         },
         {

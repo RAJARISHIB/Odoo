@@ -5,6 +5,7 @@ a domain decision lives here, so the same logic can be reused from a management
 command, a seed script or a background job.
 """
 import logging
+import re
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -12,16 +13,29 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 from apps.organization.models import Department, Organization
-from apps.users.models import RefreshToken, User, Role
-from core.constants import Role as RoleEnum, UserStatus, Permissions, RealtimeEvent
+from apps.users.models import EmailVerificationToken, PasswordResetToken, RefreshToken, Role, User
+from core.audit import record as audit_record
+from core.constants import AuditAction, Permissions, RealtimeEvent, Role as RoleEnum, UserStatus
 from core.identifiers import generate_login_id, organization_code, split_full_name
 from core.exceptions import AuthenticationError, Conflict, NotFound, PermissionDenied, ValidationError
+from core.mailer import send as send_email
 from core.security import (
+    TOKEN_TYPE_MFA_PENDING,
     TOKEN_TYPE_REFRESH,
     create_access_token,
+    create_mfa_pending_token,
     create_refresh_token,
     decode_token,
+    generate_raw_token,
+    generate_recovery_codes,
+    generate_totp_secret,
+    hash_password,
+    hash_token,
+    totp_uri,
+    verify_password,
+    verify_totp,
 )
+from core.permissions import assert_can_assign_role
 from core.storage import save_image
 from core.utils import random_password, slugify
 from core.validators import (
@@ -39,10 +53,20 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Token issuing
 # ---------------------------------------------------------------------------
-def issue_token_pair(user: User, *, ip_address: str = "", user_agent: str = "") -> dict:
-    """Mint an access + refresh pair and record the refresh session."""
-    access_token, _, access_expires = create_access_token(user)
+def issue_token_pair(user: User, *, ip_address: str = "", user_agent: str = "",
+                     reauth_at: datetime = None) -> dict:
+    """Mint an access + refresh pair and record the refresh session.
+
+    `reauth_at` is when the caller last fully proved their identity (password
+    + MFA if enabled). A fresh login/MFA-verify leaves it unset (defaults to
+    now); rotating a refresh token passes the *original* session's value
+    through unchanged - see `refresh_session`.
+    """
+    reauth_at = reauth_at or datetime.now(timezone.utc)
     refresh_token, refresh_jti, refresh_expires = create_refresh_token(user)
+    access_token, _, access_expires = create_access_token(
+        user, reauth_at=reauth_at, session_jti=refresh_jti
+    )
 
     RefreshToken(
         user=user,
@@ -50,6 +74,7 @@ def issue_token_pair(user: User, *, ip_address: str = "", user_agent: str = "") 
         expires_at=refresh_expires,
         ip_address=ip_address,
         user_agent=user_agent,
+        reauth_at=reauth_at,
     ).save()
 
     return {
@@ -75,15 +100,33 @@ def find_by_identifier(identifier: str) -> User:
     return User.objects.filter(login_id=identifier.upper(), is_deleted=False).first()
 
 
+#: Temporary lockout, not a permanent ban - see `core.ratelimit` for the
+#: pre-auth (IP-based) throttle layered on top of this per-account one.
+LOGIN_MAX_FAILED_ATTEMPTS = 5
+LOGIN_LOCKOUT_MINUTES = 15
+
+
 def authenticate(identifier: str, password: str) -> User:
     """Verify credentials.  The failure message is deliberately identical for
     an unknown account and a wrong password so the endpoint cannot enumerate
     users."""
     user = find_by_identifier(identifier)
 
+    if user and user.locked_until:
+        locked_until = user.locked_until
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if locked_until > datetime.now(timezone.utc):
+            raise AuthenticationError(
+                "Too many failed attempts. Try again in a few minutes.",
+                code="account_locked",
+            )
+
     if not user or not user.check_password(password):
         if user:
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= LOGIN_MAX_FAILED_ATTEMPTS:
+                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
             user.save()
         raise AuthenticationError(
             "Invalid login ID / email or password.", code="invalid_credentials"
@@ -98,9 +141,85 @@ def authenticate(identifier: str, password: str) -> User:
 
 
 def login(identifier: str, password: str, *, ip_address: str = "", user_agent: str = "") -> dict:
-    user = authenticate(identifier, password)
+    """Password step.  For an MFA-enabled account this deliberately does not
+    return usable tokens - only a narrow `mfa_pending_token` good for
+    `verify_mfa_login` - so a stolen/guessed password alone never yields a
+    session."""
+    try:
+        user = authenticate(identifier, password)
+    except AuthenticationError as exc:
+        # A cheap re-lookup only for audit context (organization, resource_id)
+        # - authenticate() already did the real credential check above and
+        # this never changes the response, so it cannot be used to
+        # enumerate accounts.
+        matched_user = find_by_identifier(identifier)
+        audit_record(
+            action=(
+                AuditAction.ACCOUNT_LOCKED if exc.code == "account_locked" else AuditAction.LOGIN_FAILED
+            ),
+            actor=matched_user, organization=matched_user.organization if matched_user else None,
+            resource_type="user", resource_id=str(matched_user.id) if matched_user else identifier,
+            result="failure", ip_address=ip_address, user_agent=user_agent,
+            metadata={"identifier": identifier, "reason": exc.code},
+        )
+        raise
+
+    if user.mfa_enabled:
+        pending_token, _, expires_at = create_mfa_pending_token(user)
+        audit_record(
+            action=AuditAction.MFA_CHALLENGE_ISSUED, actor=user,
+            resource_type="user", resource_id=str(user.id),
+            ip_address=ip_address, user_agent=user_agent,
+        )
+        return {
+            "mfa_required": True,
+            "mfa_pending_token": pending_token,
+            "expires_at": expires_at.isoformat(),
+        }
+
     user.mark_logged_in()
     tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent)
+    audit_record(
+        action=AuditAction.LOGIN_SUCCESS, actor=user,
+        resource_type="user", resource_id=str(user.id),
+        ip_address=ip_address, user_agent=user_agent,
+    )
+    return {"mfa_required": False, "user": user.to_dict(), "tokens": tokens}
+
+
+def verify_mfa_login(mfa_pending_token: str, code: str, *,
+                     ip_address: str = "", user_agent: str = "") -> dict:
+    """Second step for an MFA-enabled account: exchange the pending token +
+    a TOTP/recovery code for a real session."""
+    try:
+        payload = decode_token(mfa_pending_token, expected_type=TOKEN_TYPE_MFA_PENDING)
+    except AuthenticationError:
+        raise AuthenticationError(
+            "Your sign-in session expired. Please sign in again.", code="mfa_session_expired"
+        )
+
+    user = User.objects.filter(id=payload["sub"], is_deleted=False).first()
+    if not user or user.status != UserStatus.ACTIVE:
+        raise AuthenticationError("Account is no longer active.", code="account_inactive")
+    if not user.mfa_enabled:
+        raise AuthenticationError("MFA is not enabled for this account.", code="mfa_not_enabled")
+
+    if not _consume_mfa_code(user, code):
+        audit_record(
+            action=AuditAction.MFA_FAILED, actor=user,
+            resource_type="user", resource_id=str(user.id), result="failure",
+            ip_address=ip_address, user_agent=user_agent,
+        )
+        raise AuthenticationError("Invalid authentication code.", code="invalid_mfa_code")
+
+    user.mark_logged_in()
+    reauth_at = datetime.now(timezone.utc)
+    tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent, reauth_at=reauth_at)
+    audit_record(
+        action=AuditAction.LOGIN_SUCCESS, actor=user,
+        resource_type="user", resource_id=str(user.id),
+        ip_address=ip_address, user_agent=user_agent, metadata={"via": "mfa"},
+    )
     return {"user": user.to_dict(), "tokens": tokens}
 
 
@@ -118,7 +237,12 @@ def refresh_session(refresh_token: str, *, ip_address: str = "", user_agent: str
         raise AuthenticationError("Account is no longer active.", code="account_inactive")
 
     stored.revoke()  # single-use rotation
-    tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent)
+    # Carried forward, not reset to "now": a refreshed session is not a
+    # freshly re-authenticated one, so `require_step_up` should judge it by
+    # when the credentials were actually last proven.
+    tokens = issue_token_pair(
+        user, ip_address=ip_address, user_agent=user_agent, reauth_at=stored.reauth_at
+    )
     return {"user": user.to_dict(), "tokens": tokens}
 
 
@@ -145,6 +269,103 @@ def logout(refresh_token: str = None, user: User = None, *, all_sessions: bool =
 
 def list_sessions(user: User):
     return RefreshToken.objects.filter(user=user, revoked=False).order_by("-created_at")
+
+
+def revoke_session(user: User, session_id: str) -> bool:
+    """Revoke one of `user`'s own sessions by id - e.g. "sign out this
+    device" from a list, as opposed to the current session's own logout or a
+    blanket `all_sessions=True`."""
+    session = RefreshToken.objects.filter(id=session_id, user=user, revoked=False).first()
+    if not session:
+        return False
+    session.revoke()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# MFA (TOTP) - see `core.security` for the RFC 6238 primitives.
+# ---------------------------------------------------------------------------
+def _consume_mfa_code(user: User, code: str) -> bool:
+    """Accepts either a current TOTP code or an unused recovery code (which
+    is then marked used - each is single-use)."""
+    code = (code or "").strip()
+    if not code:
+        return False
+    if user.mfa_secret and verify_totp(user.mfa_secret, code):
+        return True
+
+    normalized = code.upper()
+    for entry in user.mfa_recovery_codes:
+        if entry.get("used_at"):
+            continue
+        if verify_password(normalized, entry.get("hash", "")):
+            entry["used_at"] = datetime.now(timezone.utc).isoformat()
+            user.save()
+            return True
+    return False
+
+
+def mfa_enroll_start(user: User) -> dict:
+    """Generates a new TOTP secret and stores it *unconfirmed*
+    (`mfa_enabled` stays False until `mfa_enroll_confirm` proves the user's
+    authenticator app actually has it)."""
+    secret = generate_totp_secret()
+    user.mfa_secret = secret
+    user.mfa_enabled = False
+    user.save()
+    return {"secret": secret, "otpauth_uri": totp_uri(secret, account_name=user.email)}
+
+
+def mfa_enroll_confirm(user: User, code: str) -> list:
+    """Proves enrollment with one real code, turns MFA on, and returns the
+    one-time recovery codes (only ever shown here - only their hashes are
+    kept)."""
+    if not user.mfa_secret:
+        raise ValidationError(
+            "Start MFA enrollment first.", details={"code": "No enrollment in progress."}
+        )
+    if not verify_totp(user.mfa_secret, code):
+        raise ValidationError("Incorrect code.", details={"code": "Invalid or expired code."})
+
+    raw_codes = generate_recovery_codes()
+    user.mfa_recovery_codes = [{"hash": hash_password(c), "used_at": None} for c in raw_codes]
+    user.mfa_enabled = True
+    user.save()
+    return raw_codes
+
+
+def mfa_disable(user: User, current_password: str, code: str) -> None:
+    """Disabling MFA weakens the account, so it demands the same proof MFA
+    itself would: the password, plus one more TOTP/recovery code. Every
+    other session is then forced to re-authenticate."""
+    if not user.check_password(current_password):
+        raise AuthenticationError("Current password is incorrect.", code="invalid_password")
+    if not _consume_mfa_code(user, code):
+        raise ValidationError(
+            "Invalid authentication code.", details={"code": "Incorrect code or recovery code."}
+        )
+
+    user.mfa_enabled = False
+    user.mfa_secret = ""
+    user.mfa_recovery_codes = []
+    user.save()
+    logout(user=user, all_sessions=True)
+
+
+def mfa_regenerate_recovery_codes(user: User, current_password: str, code: str) -> list:
+    if not user.check_password(current_password):
+        raise AuthenticationError("Current password is incorrect.", code="invalid_password")
+    if not user.mfa_enabled:
+        raise ValidationError("MFA is not enabled.", details={"code": "Enable MFA first."})
+    if not _consume_mfa_code(user, code):
+        raise ValidationError(
+            "Invalid authentication code.", details={"code": "Incorrect code or recovery code."}
+        )
+
+    raw_codes = generate_recovery_codes()
+    user.mfa_recovery_codes = [{"hash": hash_password(c), "used_at": None} for c in raw_codes]
+    user.save()
+    return raw_codes
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +441,10 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
         role=roles[RoleEnum.SUPER_ADMIN],
         status=UserStatus.ACTIVE,
         date_of_joining=joined_at,
+        # They just proved control of this address by completing signup with
+        # it - unlike an employee invited by someone else, there is nothing
+        # further to verify.
+        email_verified=True,
     )
     user.set_password(password)
     user.save()
@@ -290,6 +515,11 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
         raw_password = temporary_password = random_password()
 
     role_slug = validate_choice(data.get("role", RoleEnum.EMPLOYEE), RoleEnum.ALL, "role")
+    # A creator may only hand out a role ranked below their own - otherwise an
+    # HR account could provision a new SUPER_ADMIN through the ordinary
+    # "create employee" form.
+    if created_by is not None:
+        assert_can_assign_role(getattr(created_by.role, "slug", None), role_slug)
     role_obj = Role.objects.filter(organization=organization, slug=role_slug).first()
     if not role_obj:
         role_obj = Role.objects.filter(organization=organization, slug=RoleEnum.EMPLOYEE).first()
@@ -322,6 +552,7 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
 
     user.set_password(raw_password)
     user.save()
+    send_verification_email(user)
 
     logger.info(
         "User %s (%s) created in org %s by %s",
@@ -392,12 +623,24 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
         role_doc = get_role(user.organization, target_role)
         if not role_doc:
             raise ValidationError("Role not found.", details={"role": "Invalid role ID or slug."})
+        # A creator may only hand out a role ranked below their own - otherwise
+        # an HR account could promote someone straight to SUPER_ADMIN.
+        assert_can_assign_role(getattr(editor.role, "slug", None), getattr(role_doc, "slug", None))
         user.role = role_doc
 
     if "status" in data and editor and editor.has_permission(Permissions.USERS_EDIT):
         if str(editor.id) == str(user.id) and data["status"] == UserStatus.SUSPENDED:
             raise ValidationError("You cannot suspend your own account.", details={"status": "Not allowed."})
-        user.status = validate_choice(data["status"], UserStatus.ALL, "status")
+        new_status = validate_choice(data["status"], UserStatus.ALL, "status")
+        was_active = user.status == UserStatus.ACTIVE
+        user.status = new_status
+        if was_active and new_status != UserStatus.ACTIVE:
+            # Belt-and-braces: both `refresh_session` and the auth middleware
+            # already re-check live status on every use, so a disabled
+            # account cannot get a new access token or use an old one
+            # regardless - this just makes the revocation explicit rather
+            # than "happens to fail the next status check".
+            logout(user=user, all_sessions=True)
 
     if "department_id" in data:
         user.department = (
@@ -432,6 +675,131 @@ def reset_password(user: User, new_password: str = None) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Self-service password reset.  The response is identical whether or not the
+# account exists (see `request_password_reset`), and the raw token only ever
+# appears in the email body - the API never echoes it back, and only its hash
+# is persisted (`core.security.hash_token`), same principle as `RefreshToken`.
+# ---------------------------------------------------------------------------
+PASSWORD_RESET_TTL = timedelta(hours=1)
+EMAIL_VERIFICATION_TTL = timedelta(days=3)
+
+
+def request_password_reset(identifier: str, *, ip_address: str = "", user_agent: str = "") -> None:
+    user = find_by_identifier(identifier)
+    if user and user.status == UserStatus.ACTIVE:
+        raw_token = generate_raw_token()
+        PasswordResetToken(
+            user=user,
+            token_hash=hash_token(raw_token),
+            expires_at=datetime.now(timezone.utc) + PASSWORD_RESET_TTL,
+        ).save()
+        link = "{}{}?token={}".format(
+            settings.FRONTEND_URL.rstrip("/"), "/auth/reset-password", raw_token
+        )
+        send_email(
+            user.email,
+            "Reset your Dayflow password",
+            "Someone requested a password reset for your account.\n\n"
+            "Reset it here (valid for 1 hour, one-time use): {}\n\n"
+            "If this wasn't you, no action is needed.".format(link),
+        )
+        audit_record(
+            action=AuditAction.PASSWORD_RESET_REQUESTED, actor=user,
+            resource_type="user", resource_id=str(user.id),
+            ip_address=ip_address, user_agent=user_agent,
+        )
+    else:
+        # Logged without an `actor` (no matching, active account) so this
+        # stays a security signal (repeated probing of unknown identifiers)
+        # without letting the log itself become an enumeration oracle - the
+        # API response above is identical either way.
+        audit_record(
+            action=AuditAction.PASSWORD_RESET_REQUESTED, result="unknown_account",
+            resource_type="user", resource_id=identifier,
+            ip_address=ip_address, user_agent=user_agent,
+        )
+    # Identical outcome either way - the caller cannot tell whether the
+    # account exists from this response.
+
+
+def reset_password_with_token(raw_token: str, new_password: str, *,
+                              ip_address: str = "", user_agent: str = "") -> User:
+    token = PasswordResetToken.objects.filter(token_hash=hash_token(raw_token)).first()
+    if not token or not token.is_active:
+        audit_record(
+            action=AuditAction.PASSWORD_RESET_COMPLETED, result="invalid_token",
+            ip_address=ip_address, user_agent=user_agent,
+        )
+        raise ValidationError(
+            "This reset link is invalid or has expired.",
+            details={"token": "Request a new password reset."},
+        )
+    user = User.objects.filter(id=token.user.id, is_deleted=False).first()
+    if not user or user.status != UserStatus.ACTIVE:
+        raise ValidationError("This reset link is no longer valid.", details={"token": "Invalid."})
+
+    validate_password(new_password, "new_password")
+    user.set_password(new_password)
+    user.must_change_password = False
+    user.locked_until = None
+    user.failed_login_attempts = 0
+    user.save()
+
+    token.used_at = datetime.now(timezone.utc)
+    token.save()
+    logout(user=user, all_sessions=True)
+    audit_record(
+        action=AuditAction.PASSWORD_RESET_COMPLETED, actor=user,
+        resource_type="user", resource_id=str(user.id),
+        ip_address=ip_address, user_agent=user_agent,
+    )
+    return user
+
+
+# ---------------------------------------------------------------------------
+# Email verification
+# ---------------------------------------------------------------------------
+def send_verification_email(user: User) -> None:
+    if user.email_verified:
+        return
+    raw_token = generate_raw_token()
+    EmailVerificationToken(
+        user=user,
+        token_hash=hash_token(raw_token),
+        expires_at=datetime.now(timezone.utc) + EMAIL_VERIFICATION_TTL,
+    ).save()
+    link = "{}{}?token={}".format(
+        settings.FRONTEND_URL.rstrip("/"), "/auth/verify-email", raw_token
+    )
+    send_email(
+        user.email,
+        "Verify your Dayflow email address",
+        "Welcome to Dayflow. Verify your email address here (valid for 3 days): {}".format(link),
+    )
+
+
+def verify_email_token(raw_token: str) -> User:
+    token = EmailVerificationToken.objects.filter(token_hash=hash_token(raw_token)).first()
+    if not token or not token.is_active:
+        raise ValidationError(
+            "This verification link is invalid or has expired.",
+            details={"token": "Request a new verification email."},
+        )
+    user = User.objects.filter(id=token.user.id, is_deleted=False).first()
+    if not user:
+        raise ValidationError("This verification link is no longer valid.", details={"token": "Invalid."})
+
+    user.email_verified = True
+    user.save()
+    token.used_at = datetime.now(timezone.utc)
+    token.save()
+    audit_record(
+        action=AuditAction.EMAIL_VERIFIED, actor=user, resource_type="user", resource_id=str(user.id),
+    )
+    return user
+
+
+# ---------------------------------------------------------------------------
 # Queries
 # ---------------------------------------------------------------------------
 def get_user_in_org(organization: Organization, user_id: str) -> User:
@@ -447,14 +815,18 @@ def search_users(organization: Organization, *, search: str = None, role: str = 
     queryset = User.objects.filter(organization=organization, is_deleted=False)
 
     if search:
+        # Escaped so a search term can never be read as a regex - an
+        # unescaped `.*` or `(a+)+` from the client would otherwise let it
+        # widen the match arbitrarily or cause a ReDoS.
+        pattern = re.escape(search)
         queryset = queryset.filter(
             __raw__={
                 "$or": [
-                    {"first_name": {"$regex": search, "$options": "i"}},
-                    {"last_name": {"$regex": search, "$options": "i"}},
-                    {"email": {"$regex": search, "$options": "i"}},
-                    {"employee_id": {"$regex": search, "$options": "i"}},
-                    {"login_id": {"$regex": search, "$options": "i"}},
+                    {"first_name": {"$regex": pattern, "$options": "i"}},
+                    {"last_name": {"$regex": pattern, "$options": "i"}},
+                    {"email": {"$regex": pattern, "$options": "i"}},
+                    {"employee_id": {"$regex": pattern, "$options": "i"}},
+                    {"login_id": {"$regex": pattern, "$options": "i"}},
                 ]
             }
         )

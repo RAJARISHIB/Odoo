@@ -53,6 +53,21 @@ export const routes: Routes = [
         title: 'Accept invitation',
         loadComponent: () => import('./features/auth/accept-invite').then((m) => m.AcceptInvite),
       },
+      {
+        path: 'mfa-verify',
+        title: 'Verify your identity',
+        loadComponent: () => import('./features/auth/mfa-verify').then((m) => m.MfaVerify),
+      },
+      {
+        path: 'forgot-password',
+        title: 'Forgot password',
+        loadComponent: () => import('./features/auth/forgot-password').then((m) => m.ForgotPassword),
+      },
+      {
+        path: 'reset-password',
+        title: 'Reset password',
+        loadComponent: () => import('./features/auth/reset-password').then((m) => m.ResetPassword),
+      },
     ],
   },
 

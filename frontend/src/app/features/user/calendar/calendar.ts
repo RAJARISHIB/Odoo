@@ -187,9 +187,10 @@ export class UserCalendar implements OnInit {
 
     const holidaysMap = new Map<string, Holiday[]>();
     (feed?.holidays ?? []).forEach((h) => {
-      const list = holidaysMap.get(h.date) || [];
+      const dateKey = typeof h.date === 'string' ? h.date.slice(0, 10) : '';
+      const list = holidaysMap.get(dateKey) || [];
       list.push(h);
-      holidaysMap.set(h.date, list);
+      holidaysMap.set(dateKey, list);
     });
 
     const leavesList = feed?.leaves ?? [];
@@ -336,12 +337,15 @@ export class UserCalendar implements OnInit {
     this.loading.set(true);
     const active = this.currentMonth();
     const year = active.getFullYear();
-    const month = active.getMonth() + 1;
+    const month = active.getMonth();
 
-    // Date range for current month +/- padding
-    const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDayNum = new Date(year, month, 0).getDate();
-    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
+    const firstDay = new Date(year, month, 1);
+    const startingDayOfWeek = firstDay.getDay();
+    const startDate = new Date(year, month, 1 - startingDayOfWeek);
+    const endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 41);
+
+    const startStr = this.formatDateStr(startDate);
+    const endStr = this.formatDateStr(endDate);
 
     this.leavesService.getCalendar({ start_date: startStr, end_date: endStr }).subscribe({
       next: (feed) => {

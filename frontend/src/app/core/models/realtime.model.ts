@@ -24,7 +24,13 @@ export type DomainEventName =
   | 'leave.type_updated'
   | 'leave.allocation_updated'
   | 'leave.balance_updated'
-  | 'holiday.updated';
+  | 'holiday.updated'
+  | 'claim.created'
+  | 'claim.updated'
+  | 'fine.created'
+  | 'fine.updated'
+  | 'request.created'
+  | 'request.updated';
 
 export interface ServerMessage<T = unknown> {
   id: string;

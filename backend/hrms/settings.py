@@ -40,8 +40,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     "core.middleware.RequestContextMiddleware",
     "core.middleware.ExceptionHandlerMiddleware",
 ]
@@ -146,6 +148,36 @@ CORS_ALLOW_HEADERS = [
 # Create logs directory
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# Transport / browser security.  HTTPS-only settings are gated behind DEBUG so
+# local development over plain http keeps working; a real deployment must run
+# with DJANGO_DEBUG=False behind TLS.
+# ---------------------------------------------------------------------------
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
+
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
+SECURE_HSTS_SECONDS = env_int("DJANGO_HSTS_SECONDS", 0 if DEBUG else 31536000)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if not DEBUG else None
+
+# ---------------------------------------------------------------------------
+# Email (password reset / verification).  Defaults to printing to the console
+# in development; set EMAIL_HOST + credentials in .env to send real mail.
+# ---------------------------------------------------------------------------
+EMAIL_HOST = env_str("EMAIL_HOST", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = env_int("EMAIL_PORT", 587)
+    EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "no-reply@dayflow.local")
 
 LOGGING = {
     "version": 1,

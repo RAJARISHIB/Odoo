@@ -19,6 +19,7 @@ from apps.claims.urls import admin_urlpatterns as claims_admin_urls
 from apps.payroll.urls import admin_urlpatterns as payroll_admin_urls
 from apps.teams.urls import admin_urlpatterns as teams_admin_urls
 from apps.leaves.urls import admin_urlpatterns as leaves_admin_urls
+from apps.users.urls import admin_urlpatterns as users_admin_urls
 from apps.users.urls import auth_urlpatterns
 from core import views as core_views
 
@@ -48,6 +49,7 @@ urlpatterns = [
     path(API_PREFIX + "admin/", include((teams_admin_urls, "admin-teams"))),
     path(API_PREFIX + "admin/", include((claims_admin_urls, "admin-claims"))),
     path(API_PREFIX + "admin/", include((payroll_admin_urls, "admin-payroll"))),
+    path(API_PREFIX + "admin/", include((users_admin_urls, "admin-users"))),
 
     path(API_PREFIX + "internal/realtime/presence", core_views.realtime_presence,
          name="internal-realtime-presence"),

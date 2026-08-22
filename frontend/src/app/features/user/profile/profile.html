@@ -100,5 +100,144 @@
         </div>
       </form>
     </section>
+
+    <section class="card" style="align-self: start">
+      <div class="card-head">
+        <h3>Two-factor authentication</h3>
+        @if (auth.user()?.mfa_enabled) {
+          <span class="badge success">Enabled</span>
+        } @else {
+          <span class="badge warning">Not enabled</span>
+        }
+      </div>
+      <div class="card-body">
+        @if (mfaError()) {
+          <div class="error" style="margin-bottom: var(--space-3)">{{ mfaError() }}</div>
+        }
+
+        @switch (mfaStep()) {
+          @case ('idle') {
+            @if (auth.user()?.mfa_enabled) {
+              <p class="subtle">
+                Your account is protected with an authenticator app. Keep your recovery codes safe -
+                regenerating replaces the old ones.
+              </p>
+              <div class="row">
+                <button class="btn ghost sm" type="button" (click)="openMfaAction('regenerate')">
+                  Regenerate recovery codes
+                </button>
+                <button class="btn danger sm" type="button" (click)="openMfaAction('disable')">
+                  Disable MFA
+                </button>
+              </div>
+            } @else {
+              <p class="subtle">
+                Add a second step to sign-in using an authenticator app (Google Authenticator,
+                Microsoft Authenticator, Authy, ...).
+              </p>
+              <button class="btn" type="button" [disabled]="mfaBusy()" (click)="startMfaEnrollment()">
+                {{ mfaBusy() ? 'Starting…' : 'Enable MFA' }}
+              </button>
+            }
+
+            @if (showMfaAction()) {
+              <form class="mfa-action" [formGroup]="mfaActionForm" (ngSubmit)="submitMfaAction()" novalidate>
+                <p class="subtle">
+                  {{ showMfaAction() === 'disable' ? 'Confirm your identity to disable MFA.' : 'Confirm your identity to regenerate recovery codes.' }}
+                </p>
+                <div class="field">
+                  <label for="mfa_action_password">Current password</label>
+                  <input id="mfa_action_password" type="password" formControlName="current_password" autocomplete="current-password" />
+                </div>
+                <div class="field">
+                  <label for="mfa_action_code">Authentication code</label>
+                  <input id="mfa_action_code" type="text" inputmode="numeric" formControlName="code" placeholder="123456 or XXXX-XXXX" />
+                </div>
+                <div class="row">
+                  <button class="btn" type="submit" [disabled]="mfaBusy()">
+                    {{ mfaBusy() ? 'Working…' : 'Confirm' }}
+                  </button>
+                  <button class="btn ghost sm" type="button" (click)="closeMfaAction()">Cancel</button>
+                </div>
+              </form>
+            }
+          }
+
+          @case ('enrolling') {
+            <p class="subtle">Scan this QR code with your authenticator app, then enter the 6-digit code it shows.</p>
+            @if (enrollQrSvg()) {
+              <div class="mfa-qr" [innerHTML]="enrollQrSvg()"></div>
+            }
+            @if (enrollData()) {
+              <p class="subtle">Can't scan? Enter this code manually:</p>
+              <code class="mono">{{ enrollData()!.secret }}</code>
+            }
+            <form [formGroup]="enrollForm" (ngSubmit)="confirmMfaEnrollment()" novalidate>
+              <div class="field">
+                <label for="enroll_code">Authentication code</label>
+                <input id="enroll_code" type="text" inputmode="numeric" formControlName="code" placeholder="123456" autofocus />
+              </div>
+              <div class="row">
+                <button class="btn" type="submit" [disabled]="mfaBusy()">
+                  {{ mfaBusy() ? 'Confirming…' : 'Confirm and enable' }}
+                </button>
+                <button class="btn ghost sm" type="button" (click)="cancelMfaEnrollment()">Cancel</button>
+              </div>
+            </form>
+          }
+
+          @case ('codes') {
+            <div class="notice">
+              Save these recovery codes somewhere safe. Each one can be used once if you lose access
+              to your authenticator app - they will not be shown again.
+            </div>
+            <div class="recovery-codes">
+              @for (recoveryCode of recoveryCodes(); track recoveryCode) {
+                <code class="mono">{{ recoveryCode }}</code>
+              }
+            </div>
+            <button class="btn" type="button" (click)="finishMfaEnrollment()">Done</button>
+          }
+        }
+      </div>
+    </section>
+
+    <section class="card" style="align-self: start">
+      <div class="card-head">
+        <h3>Active sessions</h3>
+        @if (sessions().length > 1) {
+          <button class="btn ghost sm" type="button" (click)="signOutAllOtherSessions()">
+            Sign out all other sessions
+          </button>
+        }
+      </div>
+      <div class="card-body">
+        @if (!sessions().length) {
+          <p class="subtle">No active sessions.</p>
+        }
+        @for (session of sessions(); track session.id) {
+          <div class="session-row">
+            <div>
+              <strong>{{ session.user_agent || 'Unknown device' }}</strong>
+              @if (session.is_current) { <span class="badge primary">This device</span> }
+              <div class="subtle">
+                {{ session.ip_address || 'Unknown IP' }} · signed in
+                {{ session.created_at ? (session.created_at | date: 'medium') : 'recently' }}
+              </div>
+            </div>
+            @if (!session.is_current) {
+              <button
+                class="btn ghost sm"
+                type="button"
+                [disabled]="revokingSessionId() === session.id"
+                (click)="revokeSession(session)"
+              >
+                {{ revokingSessionId() === session.id ? 'Signing out…' : 'Sign out' }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </section>
   </div>
 </div>

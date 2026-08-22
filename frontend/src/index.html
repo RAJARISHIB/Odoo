@@ -19,6 +19,25 @@
   <meta name="twitter:description" content="Attendance, people and time off for your organization.">
   <meta name="twitter:image" content="/og-image.png">
 
+  <!-- Locked down to what the SPA actually needs. `connect-src` allowlists both
+       the local dev hosts and any https/wss host so this file does not need a
+       per-environment build step; narrow it to the exact production API/WS
+       origin once those are final. The inline theme script below is allowed by
+       hash, not 'unsafe-inline', so no other inline script can execute even if
+       something manages to inject one. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'sha256-QxQivwmi5kZ0QB/JOuETD97ROtqqpa0tKVgTJ27nDqA=';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https:;
+    font-src 'self' data:;
+    connect-src 'self' http://localhost:8000 ws://localhost:4000 https: wss:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+  ">
+
   <script>
     /* Applies the stored theme before first paint, so a pinned dark theme does
        not flash light on every load. Keep 'hrms.theme' in sync with STORAGE_KEY
