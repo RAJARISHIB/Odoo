@@ -15,7 +15,7 @@ from apps.attendance.models import Attendance, WorkSession
 from apps.leaves.models import Holiday, LeaveRequest
 from apps.organization.models import Department, Organization
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
-from apps.users.models import RefreshToken, User
+from apps.users.models import RefreshToken, User, Role
 from core.constants import AttendanceSource, AttendanceStatus, Role as RoleEnum, UserStatus, Permissions
 from core.identifiers import generate_login_id, organization_code
 
@@ -72,9 +72,9 @@ class Command(BaseCommand):
         self.stdout.write("  Sign in with either the login ID or the email:")
         self.stdout.write("    {:<16} {:<20} {:<12} {}".format("LOGIN ID", "EMAIL", "ROLE", "PANEL"))
         for user in [owner] + users:
-            panel = "admin panel" if user.RoleEnum.slug in RoleEnum.ADMIN_PANEL else "user panel"
+            panel = "admin panel" if user.role.slug in RoleEnum.ADMIN_PANEL else "user panel"
             self.stdout.write("    {:<16} {:<20} {:<12} {}".format(
-                user.login_id, user.email, user.role, panel))
+                user.login_id, user.email, user.role.slug, panel))
 
     # -- steps -------------------------------------------------------------
     def _reset(self):
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             email="owner@acme.test",
             first_name="Owner",
             last_name="Acme",
-            role=RoleEnum.SUPER_ADMIN,
+            role=roles[RoleEnum.SUPER_ADMIN],
             status=UserStatus.ACTIVE,
             designation="Founder",
             employee_id="EMP001",
