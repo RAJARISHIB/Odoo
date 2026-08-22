@@ -8,12 +8,33 @@
       <a class="btn ghost" routerLink="/employees">
         <app-icon name="people" />Directory
       </a>
+      <button class="btn secondary" type="button" (click)="toggleInviteForm()">
+        <app-icon [name]="showInviteForm() ? 'x' : 'mail'" [strokeWidth]="2" />
+        {{ showInviteForm() ? 'Cancel Invite' : 'Invite Employee' }}
+      </button>
       <button class="btn" type="button" (click)="toggleForm()">
         <app-icon [name]="showForm() ? 'x' : 'plus'" [strokeWidth]="2" />
-        {{ showForm() ? 'Cancel' : 'Add employee' }}
+        {{ showForm() ? 'Cancel' : 'Add Employee' }}
       </button>
     </div>
   </div>
+
+  @if (sentInviteInfo(); as info) {
+    <div class="card temp-password" style="background: rgba(15, 118, 110, 0.08); border-color: var(--primary);">
+      <div class="card-body row">
+        <span class="spacer">
+          <strong style="color: var(--primary)">Invitation email sent to {{ info.email }}!</strong>
+          <div style="margin-top: 6px">
+            Direct Link: <code class="mono">{{ info.invite_url }}</code>
+          </div>
+          <span class="subtle">
+            An invitation email containing this onboarding link was dispatched via SMTP.
+          </span>
+        </span>
+        <button class="btn ghost sm" type="button" (click)="dismissInviteInfo()">Dismiss</button>
+      </div>
+    </div>
+  }
 
   @if (issuedCredentials(); as issued) {
     <div class="card temp-password">
@@ -31,6 +52,54 @@
         <button class="btn ghost sm" type="button" (click)="dismissCredentials()">Dismiss</button>
       </div>
     </div>
+  }
+
+  @if (showInviteForm()) {
+    <section class="card mb-4" style="border: 1px solid var(--primary);">
+      <div class="card-head">
+        <h3>Invite New Employee</h3>
+      </div>
+      <form class="card-body" [formGroup]="inviteForm" (ngSubmit)="sendInvite()" novalidate>
+        <p class="subtle" style="margin-top: 0; margin-bottom: 16px;">
+          Sends an official email with a secure onboarding link for the employee to accept their invitation and set their password.
+        </p>
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="inv_email">Email Address *</label>
+            <input id="inv_email" type="email" formControlName="email" placeholder="colleague@acme.com" />
+            @if (inviteFormErrors()['email']) { <div class="error">{{ inviteFormErrors()['email'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="inv_first_name">First Name *</label>
+            <input id="inv_first_name" formControlName="first_name" placeholder="Aisha" />
+            @if (inviteFormErrors()['first_name']) { <div class="error">{{ inviteFormErrors()['first_name'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="inv_last_name">Last Name</label>
+            <input id="inv_last_name" formControlName="last_name" placeholder="Kapoor" />
+          </div>
+          <div class="field">
+            <label for="inv_designation">Designation</label>
+            <input id="inv_designation" formControlName="designation" placeholder="Software Engineer" />
+          </div>
+          <div class="field">
+            <label for="inv_employee_id">Employee ID</label>
+            <input id="inv_employee_id" formControlName="employee_id" placeholder="EMP007" />
+          </div>
+          <div class="field">
+            <label for="inv_role">Role</label>
+            <select id="inv_role" formControlName="role">
+              @for (role of roles; track role) {
+                <option [value]="role">{{ role.replace('_', ' ') }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <button class="btn primary" type="submit" [disabled]="inviteSaving()">
+          {{ inviteSaving() ? 'Sending Email…' : 'Send Email Invitation' }}
+        </button>
+      </form>
+    </section>
   }
 
   @if (showForm()) {

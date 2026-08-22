@@ -1,0 +1,102 @@
+<div class="auth-card">
+  <div class="auth-head">
+    <app-logo [size]="40" />
+    <h1>Accept Invitation</h1>
+    @if (inviteData(); as inv) {
+      <p>Welcome <strong>{{ inv.full_name }}</strong>! Complete your onboarding for <strong>{{ inv.organization_name }}</strong>.</p>
+    } @else {
+      <p>Set up your account to get started.</p>
+    }
+  </div>
+
+  @if (loading()) {
+    <div style="text-align: center; padding: 32px 0;">
+      <p class="subtle" style="margin-top: 12px;">Verifying invitation details…</p>
+    </div>
+  } @else if (errorMessage() && !inviteData()) {
+    <div class="banner error">
+      {{ errorMessage() }}
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+      <a class="btn primary" routerLink="/auth/login">Back to Sign In</a>
+    </div>
+  } @else {
+    @if (errorMessage()) {
+      <div class="banner error">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <div class="invite-info-summary" style="background: var(--surface-alt); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span style="color: var(--text-muted);">Email:</span>
+        <strong>{{ inviteData()?.email }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span style="color: var(--text-muted);">Role:</span>
+        <span class="badge primary">{{ inviteData()?.role_name }}</span>
+      </div>
+      @if (inviteData()?.designation) {
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Designation:</span>
+          <strong>{{ inviteData()?.designation }}</strong>
+        </div>
+      }
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="field">
+          <label for="first_name">First Name *</label>
+          <input id="first_name" formControlName="first_name" placeholder="Aisha" />
+        </div>
+        <div class="field">
+          <label for="last_name">Last Name</label>
+          <input id="last_name" formControlName="last_name" placeholder="Kapoor" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone Number <span class="subtle">(optional)</span></label>
+        <input id="phone" formControlName="phone" placeholder="+91 98765 43210" />
+      </div>
+
+      <div class="field">
+        <label for="password">Set Password *</label>
+        <div class="input-wrap">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="At least 8 characters"
+            autocomplete="new-password"
+          />
+          <button class="btn icon ghost" type="button" (click)="toggleShowPassword()" tabindex="-1">
+            <app-icon [name]="showPassword() ? 'x' : 'eye'" />
+          </button>
+        </div>
+        @if (fieldErrors()['password']) {
+          <div class="field-error">{{ fieldErrors()['password'] }}</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="confirm_password">Confirm Password *</label>
+        <input
+          id="confirm_password"
+          type="password"
+          formControlName="confirm_password"
+          placeholder="Repeat your new password"
+          autocomplete="new-password"
+        />
+        @if (fieldErrors()['confirm_password']) {
+          <div class="field-error">{{ fieldErrors()['confirm_password'] }}</div>
+        }
+      </div>
+
+      <button class="btn primary full" type="submit" [disabled]="submitting()" style="margin-top: 16px;">
+        {{ submitting() ? 'Creating Account…' : 'Accept Invitation & Complete Onboarding' }}
+      </button>
+    </form>
+  }
+</div>

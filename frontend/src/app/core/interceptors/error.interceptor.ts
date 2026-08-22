@@ -13,14 +13,9 @@ import { Toast } from '../services/toast';
  * second belongs inline on the form fields.
  */
 export const errorInterceptor: HttpInterceptorFn = (request, next) => {
-  const toast = inject(Toast);
-
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
       const body = normalise(error);
-      if (error.status !== 401 && error.status !== 422) {
-        toast.error(body.message);
-      }
       return throwError(() => body);
     }),
   );

@@ -19,7 +19,7 @@ export class Toast {
   }
 
   error(text: string): void {
-    this.push('error', text, 6000);
+    // Suppressed per user request — no error popups shown in the UI.
   }
 
   info(text: string): void {

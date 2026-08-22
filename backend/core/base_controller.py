@@ -118,7 +118,9 @@ class BaseController:
 
     @property
     def role(self):
-        return self.user.role if self.user else None
+        if not self.user or not self.user.role:
+            return None
+        return getattr(self.user.role, "slug", str(self.user.role))
 
     @property
     def organization_id(self):
@@ -132,6 +134,7 @@ class BaseController:
         if not self.user:
             raise AuthenticationError()
         return self.user
+
     def require_permissions(self, *permissions):
         """Restrict an action to users holding ALL the specified permissions."""
         user = self.require_user()
@@ -142,6 +145,7 @@ class BaseController:
             )
         return user
 
+<<<<<<< HEAD
     def require_any_permission(self, *permissions):
         """Restrict an action to users holding AT LEAST ONE of the specified permissions."""
         user = self.require_user()
@@ -156,6 +160,13 @@ class BaseController:
         user = self.require_user()
         role_slug = getattr(user.role, 'slug', str(user.role or ''))
         if role_slug not in roles:
+=======
+    def require_roles(self, *roles):
+        """Restrict an action to specific role slugs."""
+        user = self.require_user()
+        user_role_slug = self.role
+        if user_role_slug not in roles:
+>>>>>>> 1c5cbf77f1ccf91637ea963d09731d15d13ff717
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
@@ -169,7 +180,7 @@ class BaseController:
         return self.require_roles(Role.SUPER_ADMIN)
     @property
     def is_admin(self) -> bool:
-        return bool(self.user and hasattr(self.user.role, 'slug') and self.user.role.slug in Role.ADMIN_PANEL)
+        return bool(self.user and getattr(self.user.role, "slug", str(self.user.role)) in Role.ADMIN_PANEL)
 
 
     def is_self(self, user_id) -> bool:

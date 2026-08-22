@@ -77,7 +77,12 @@ class User(BaseDocument):
     must_change_password = BooleanField(default=False)
     preferences = DictField(default=dict)
 
-    HIDDEN_FIELDS = ("password_hash", "failed_login_attempts")
+    invite_token = StringField(null=True)
+    invite_token_expires_at = DateTimeField(null=True)
+    invited_by = ReferenceField("self", null=True)
+    invited_at = DateTimeField(null=True)
+
+    HIDDEN_FIELDS = ("password_hash", "failed_login_attempts", "invite_token")
 
     meta = {
         "collection": "users",

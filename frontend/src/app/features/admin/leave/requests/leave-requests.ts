@@ -13,18 +13,14 @@ import {
 import { Leaves } from '../../../../core/services/leaves';
 import { Realtime } from '../../../../core/services/realtime';
 import { Toast } from '../../../../core/services/toast';
+import { Icon } from '../../../../shared/icon/icon';
 
 /**
- * Admin leave requests: every employee's requests, with approve/reject.
- *
- * Approve lets the admin optionally tag which configured leave type this
- * request should be attributed to (the employee's own submission flow does
- * not collect one), so the dashboard can build a per-type utilization picture
- * without ever having touched the employee calendar.
+ * Admin leave requests: every employee's requests, with approve/reject modal workflows.
  */
 @Component({
   selector: 'app-leave-requests',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './leave-requests.html',
   styleUrl: './leave-requests.scss',
@@ -42,8 +38,18 @@ export class LeaveRequests {
   protected readonly meta = signal<PageMeta>(EMPTY_PAGE_META);
   protected readonly types = signal<LeaveType[]>([]);
   protected readonly loading = signal(false);
-  /** Leave type picked per pending row before approving - keyed by request id. */
-  protected readonly approveTypeChoice = signal<Record<string, string>>({});
+
+  // Modal states
+  protected readonly selectedApproveRequest = signal<LeaveRequest | null>(null);
+  protected readonly selectedRejectRequest = signal<LeaveRequest | null>(null);
+
+  protected readonly approveForm = this.fb.nonNullable.group({
+    leave_type_id: [''],
+  });
+
+  protected readonly rejectForm = this.fb.nonNullable.group({
+    comment: [''],
+  });
 
   protected readonly filters = this.fb.nonNullable.group({
     status: [''],
@@ -89,25 +95,54 @@ export class LeaveRequests {
     this.load(page);
   }
 
-  protected setApproveType(requestId: string, typeId: string): void {
-    this.approveTypeChoice.update((map) => ({ ...map, [requestId]: typeId }));
-  }
-
-  protected approve(request: LeaveRequest): void {
-    if (!confirm(`Approve ${request.total_days} day(s) of leave?`)) return;
-    const typeId = this.approveTypeChoice()[request.id] || undefined;
-    this.leaves.approveRequest(request.id, typeId).subscribe(() => {
-      this.toast.success('Leave request approved.');
-      this.load(this.meta().page);
+  protected openApproveModal(request: LeaveRequest): void {
+    this.selectedApproveRequest.set(request);
+    this.approveForm.patchValue({
+      leave_type_id: request.leave_type_id || '',
     });
   }
 
-  protected reject(request: LeaveRequest): void {
-    const comment = prompt('Reason for rejecting this request (optional):');
-    if (comment === null) return;
-    this.leaves.rejectRequest(request.id, comment).subscribe(() => {
-      this.toast.success('Leave request rejected.');
-      this.load(this.meta().page);
+  protected openRejectModal(request: LeaveRequest): void {
+    this.selectedRejectRequest.set(request);
+    this.rejectForm.reset({ comment: '' });
+  }
+
+  protected closeModals(): void {
+    this.selectedApproveRequest.set(null);
+    this.selectedRejectRequest.set(null);
+  }
+
+  protected confirmApprove(): void {
+    const request = this.selectedApproveRequest();
+    if (!request) return;
+
+    const typeId = this.approveForm.controls.leave_type_id.value || undefined;
+    this.leaves.approveRequest(request.id, typeId).subscribe({
+      next: () => {
+        this.toast.success('Leave request approved successfully.');
+        this.closeModals();
+        this.load(this.meta().page);
+      },
+      error: () => {
+        // toast handled by error interceptor
+      },
+    });
+  }
+
+  protected confirmReject(): void {
+    const request = this.selectedRejectRequest();
+    if (!request) return;
+
+    const comment = this.rejectForm.controls.comment.value.trim() || undefined;
+    this.leaves.rejectRequest(request.id, comment).subscribe({
+      next: () => {
+        this.toast.success('Leave request rejected.');
+        this.closeModals();
+        this.load(this.meta().page);
+      },
+      error: () => {
+        // toast handled by error interceptor
+      },
     });
   }
 }
