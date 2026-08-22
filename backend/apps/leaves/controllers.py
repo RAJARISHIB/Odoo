@@ -99,7 +99,7 @@ class LeaveController(BaseController):
 # here - the Angular guards are a UX convenience only.
 # =============================================================================
 from apps.users.services import get_user_in_org
-from core.constants import Role, Permissions
+from core.constants import Role, Permissions, Permissions
 from core.validators import parse_int
 
 
@@ -113,21 +113,21 @@ class LeaveTypeController(BaseController):
         return self.ok([leave_type.to_dict() for leave_type in types])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("name", "code")
         leave_type = services.create_leave_type(self.user.organization, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
         return self.created(leave_type.to_dict(), "Leave type created.")
 
     def update(self, type_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         leave_type = services.get_leave_type(self.user.organization, type_id)
         leave_type = services.update_leave_type(leave_type, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
         return self.ok(leave_type.to_dict(), "Leave type updated.")
 
     def set_active(self, type_id, active: bool):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         leave_type = services.get_leave_type(self.user.organization, type_id)
         leave_type = services.update_leave_type(leave_type, {"is_active": active})
         self.emit_to_admins(RealtimeEvent.LEAVE_TYPE_UPDATED, {"leave_type": leave_type.to_dict()})
@@ -139,14 +139,14 @@ class HolidayAdminController(BaseController):
     existing `LeaveController.holidays`; this only adds admin-only writes."""
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("name", "date")
         holiday = services.create_holiday_admin(self.user.organization, self.data, created_by=self.user)
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         return self.created(holiday.to_dict(), "Holiday created.")
 
     def update(self, holiday_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         holiday = services.update_holiday_admin(self.user.organization, holiday_id, self.data, updated_by=self.user)
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         self.emit_to_org(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
@@ -216,21 +216,21 @@ class LeaveAllocationController(BaseController):
         return self.ok([rule.to_dict() for rule in rules])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("leave_type_id", "role", "amount")
         rule = services.create_allocation_rule(self.user.organization, self.data, created_by=self.user)
         self.emit_to_admins(RealtimeEvent.LEAVE_ALLOCATION_UPDATED, {"rule": rule.to_dict()})
         return self.created(rule.to_dict(), "Allocation rule created.")
 
     def update(self, rule_id):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         rule = services.get_allocation_rule(self.user.organization, rule_id)
         rule = services.update_allocation_rule(rule, self.data)
         self.emit_to_admins(RealtimeEvent.LEAVE_ALLOCATION_UPDATED, {"rule": rule.to_dict()})
         return self.ok(rule.to_dict(), "Allocation rule updated.")
 
     def generate(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         today = date.today()
         year = parse_int(self.field("year"), today.year, "year")
         month = parse_int(self.field("month"), today.month, "month")
@@ -242,7 +242,7 @@ class LeaveAllocationController(BaseController):
         return self.ok(result, "Generated allocations for {}.".format(result["period"]))
 
     def carry_forward(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("leave_type_id", "year")
         leave_type = services.get_leave_type(self.user.organization, self.field("leave_type_id"))
         year = parse_int(self.field("year"), None, "year")
@@ -266,7 +266,7 @@ class LeaveAdjustmentController(BaseController):
         return self.ok([self._with_creator(a) for a in adjustments])
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.ORG_MANAGE)
         self.require("user_id", "leave_type_id", "amount", "reason")
         target_user = get_user_in_org(self.user.organization, self.field("user_id"))
         leave_type = services.get_leave_type(self.user.organization, self.field("leave_type_id"))
