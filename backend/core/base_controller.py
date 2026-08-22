@@ -142,6 +142,15 @@ class BaseController:
             )
         return user
 
+    def require_any_permission(self, *permissions):
+        """Restrict an action to users holding AT LEAST ONE of the specified permissions."""
+        user = self.require_user()
+        if not any(user.has_permission(p) for p in permissions):
+            raise PermissionDenied(
+                "This action requires at least one of these permissions: {}.".format(", ".join(permissions))
+            )
+        return user
+
     def require_roles(self, *roles):
         """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
