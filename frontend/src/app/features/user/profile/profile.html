@@ -2,81 +2,102 @@
   <div class="page-head">
     <div>
       <h1>Profile</h1>
-      <p>Your details and sign-in credentials.</p>
+      <p>Manage your account credentials, designation, and contact information.</p>
     </div>
   </div>
 
-  <div class="grid cols-2">
+  <div class="profile-grid">
+    <!-- Main Personal & Account Details Card -->
     <section class="card">
-      <div class="card-head"><h3>Personal details</h3></div>
-      <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
-        <div class="grid cols-2">
-          <div class="field">
-            <label for="first_name">First name</label>
-            <input id="first_name" formControlName="first_name" placeholder="Aisha" autocomplete="given-name" />
-            @if (profileErrors()['first_name']) { <div class="error">{{ profileErrors()['first_name'] }}</div> }
+      <div class="card-head">
+        <h3>Personal Details</h3>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="first_name">First Name *</label>
+              <input id="first_name" formControlName="first_name" class="form-control" placeholder="Aisha" autocomplete="given-name" />
+              @if (profileErrors()['first_name']) { <div class="error-msg">{{ profileErrors()['first_name'] }}</div> }
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name</label>
+              <input id="last_name" formControlName="last_name" class="form-control" placeholder="Kapoor" autocomplete="family-name" />
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input id="phone" type="tel" formControlName="phone" class="form-control" placeholder="+91 98765 43210" autocomplete="tel" />
+              @if (profileErrors()['phone']) { <div class="error-msg">{{ profileErrors()['phone'] }}</div> }
+            </div>
+            <div class="form-group">
+              <label for="designation">Designation</label>
+              <input id="designation" formControlName="designation" class="form-control" placeholder="Software Engineer" />
+            </div>
           </div>
-          <div class="field">
-            <label for="last_name">Last name</label>
-            <input id="last_name" formControlName="last_name" placeholder="Kapoor" autocomplete="family-name" />
-          </div>
-          <div class="field">
-            <label for="phone">Phone</label>
-            <input id="phone" type="tel" formControlName="phone" placeholder="+91 98765 43210" autocomplete="tel" />
-            @if (profileErrors()['phone']) { <div class="error">{{ profileErrors()['phone'] }}</div> }
-          </div>
-          <div class="field">
-            <label for="designation">Designation</label>
-            <input id="designation" formControlName="designation" placeholder="Software Engineer" />
+
+          <!-- Account & System Credentials Section -->
+          <div class="credentials-section">
+            <h4 class="section-title">System Account Information</h4>
+            <div class="credentials-grid">
+              <div class="info-card">
+                <span class="info-label">Login ID</span>
+                <span class="info-value mono font-semibold">{{ auth.user()?.login_id }}</span>
+              </div>
+              <div class="info-card">
+                <span class="info-label">Email Address</span>
+                <span class="info-value font-semibold">{{ auth.user()?.email }}</span>
+              </div>
+              <div class="info-card">
+                <span class="info-label">System Role</span>
+                <span class="info-value">
+                  <span class="badge primary text-capitalize">{{ auth.user()?.role?.replace('_', ' ') }}</span>
+                </span>
+              </div>
+              <div class="info-card">
+                <span class="info-label">Employee ID</span>
+                <span class="info-value font-semibold">{{ auth.user()?.employee_id || '—' }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="row readonly">
-          <div>
-            <div class="label subtle">Login ID</div>
-            <strong class="mono">{{ auth.user()?.login_id }}</strong>
-          </div>
-          <div>
-            <div class="label subtle">Email</div>
-            <strong>{{ auth.user()?.email }}</strong>
-          </div>
-          <div>
-            <div class="label subtle">Role</div>
-            <span class="badge primary">{{ auth.user()?.role?.replace('_', ' ') }}</span>
-          </div>
-          <div>
-            <div class="label subtle">Employee ID</div>
-            <strong>{{ auth.user()?.employee_id || '—' }}</strong>
-          </div>
+        <div class="card-foot">
+          <button class="btn primary" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : 'Save Changes' }}
+          </button>
         </div>
-
-        <button class="btn" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save changes' }}
-        </button>
       </form>
     </section>
 
-    <section class="card" style="align-self: start">
-      <div class="card-head"><h3>Change password</h3></div>
-      <form class="card-body" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
-        <div class="field">
-          <label for="current_password">Current password</label>
-          <input id="current_password" type="password" formControlName="current_password" autocomplete="current-password" placeholder="Your current password" />
-          @if (passwordErrors()['current_password']) {
-            <div class="error">{{ passwordErrors()['current_password'] }}</div>
-          }
+    <!-- Change Password Card -->
+    <section class="card self-start">
+      <div class="card-head">
+        <h3>Change Password</h3>
+      </div>
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+        <div class="card-body form-stack">
+          <div class="form-group">
+            <label for="current_password">Current Password *</label>
+            <input id="current_password" type="password" formControlName="current_password" class="form-control" autocomplete="current-password" placeholder="Your current password" />
+            @if (passwordErrors()['current_password']) {
+              <div class="error-msg">{{ passwordErrors()['current_password'] }}</div>
+            }
+          </div>
+          <div class="form-group">
+            <label for="new_password">New Password *</label>
+            <input id="new_password" type="password" formControlName="new_password" class="form-control" autocomplete="new-password" placeholder="At least 8 characters" />
+            @if (passwordErrors()['new_password']) {
+              <div class="error-msg">{{ passwordErrors()['new_password'] }}</div>
+            }
+          </div>
+          <p class="subtle-note">Changing your password signs you out of all active sessions.</p>
         </div>
-        <div class="field">
-          <label for="new_password">New password</label>
-          <input id="new_password" type="password" formControlName="new_password" autocomplete="new-password" placeholder="At least 8 characters, with a number" />
-          @if (passwordErrors()['new_password']) {
-            <div class="error">{{ passwordErrors()['new_password'] }}</div>
-          }
+
+        <div class="card-foot">
+          <button class="btn danger" type="submit" [disabled]="changingPassword()">
+            {{ changingPassword() ? 'Updating…' : 'Update Password' }}
+          </button>
         </div>
-        <p class="subtle">Changing your password signs you out of every device.</p>
-        <button class="btn" type="submit" [disabled]="changingPassword()">
-          {{ changingPassword() ? 'Updating…' : 'Update password' }}
-        </button>
       </form>
     </section>
   </div>

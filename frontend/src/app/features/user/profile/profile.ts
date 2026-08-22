@@ -12,6 +12,7 @@ import { Users } from '../../../core/services/users';
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.html',
+  styleUrl: './profile.scss',
 })
 export class Profile {
   private readonly users = inject(Users);
