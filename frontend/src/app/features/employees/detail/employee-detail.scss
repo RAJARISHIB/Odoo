@@ -182,3 +182,25 @@
     width: auto;
   }
 }
+
+@media (max-width: 720px) {
+  .hero {
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-4);
+  }
+
+  /* The actions were hanging off the right of a wrapped hero; full width and
+     evenly split reads as a deliberate button row. */
+  .hero-actions {
+    width: 100%;
+  }
+
+  .hero-actions > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .summary .value {
+    font-size: var(--text-lg);
+  }
+}

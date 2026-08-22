@@ -17,7 +17,7 @@
   </div>
 
   @if (showEntryForm()) {
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>Record or correct a day</h3></div>
       <form class="card-body" [formGroup]="entryForm" (ngSubmit)="saveEntry()" novalidate>
         <div class="grid cols-3">
@@ -33,7 +33,7 @@
           </div>
           <div class="field">
             <label for="entry_date">Date</label>
-            <input id="entry_date" type="date" formControlName="date" />
+            <input id="entry_date" type="date" formControlName="date" placeholder="YYYY-MM-DD" />
             @if (formErrors()['date']) { <div class="error">{{ formErrors()['date'] }}</div> }
           </div>
           <div class="field">
@@ -46,11 +46,11 @@
           </div>
           <div class="field">
             <label for="entry_in">Check in</label>
-            <input id="entry_in" type="datetime-local" formControlName="check_in" />
+            <input id="entry_in" type="datetime-local" formControlName="check_in" placeholder="YYYY-MM-DD HH:MM" />
           </div>
           <div class="field">
             <label for="entry_out">Check out</label>
-            <input id="entry_out" type="datetime-local" formControlName="check_out" />
+            <input id="entry_out" type="datetime-local" formControlName="check_out" placeholder="YYYY-MM-DD HH:MM" />
             @if (formErrors()['check_out']) { <div class="error">{{ formErrors()['check_out'] }}</div> }
           </div>
           <div class="field">
@@ -79,11 +79,11 @@
         </div>
         <div class="field">
           <label>From</label>
-          <input type="date" formControlName="date_from" />
+          <input type="date" formControlName="date_from" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>To</label>
-          <input type="date" formControlName="date_to" />
+          <input type="date" formControlName="date_to" placeholder="YYYY-MM-DD" />
         </div>
         <div class="field">
           <label>Status</label>
@@ -109,31 +109,31 @@
             <th>First in</th>
             <th>Last out</th>
             <th>Hours</th>
-            <th style="text-align: right">Actions</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (record of rows(); track record.id) {
             <tr>
-              <td>
+              <td data-primary>
                 <strong>{{ record.user?.name ?? '—' }}</strong>
                 <div class="subtle">{{ record.user?.employee_id || record.user?.email }}</div>
               </td>
-              <td class="mono">{{ record.date | date: 'mediumDate' }}</td>
-              <td>
+              <td class="mono" data-label="Date">{{ record.date | date: 'mediumDate' }}</td>
+              <td data-label="Status">
                 <span class="badge" [class]="record.status">{{ statusLabels[record.status] }}</span>
                 @if (record.is_manual) { <span class="badge">manual</span> }
               </td>
-              <td class="mono">{{ record.first_check_in ? (record.first_check_in | date: 'shortTime') : '—' }}</td>
-              <td class="mono">
+              <td class="mono" data-label="First in">{{ record.first_check_in ? (record.first_check_in | date: 'shortTime') : '—' }}</td>
+              <td class="mono" data-label="Last out">
                 @if (record.is_checked_in) {
                   <span class="badge success">Working</span>
                 } @else {
                   {{ record.last_check_out ? (record.last_check_out | date: 'shortTime') : '—' }}
                 }
               </td>
-              <td class="mono">{{ record.total_hours }}</td>
-              <td style="text-align: right">
+              <td class="mono" data-label="Hours">{{ record.total_hours }}</td>
+              <td class="col-actions">
                 <button class="btn ghost sm" type="button" (click)="remove(record)">Remove</button>
               </td>
             </tr>

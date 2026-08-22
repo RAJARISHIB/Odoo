@@ -1,0 +1,47 @@
+<div class="fines-page">
+  <div class="page-header">
+    <div>
+      <h2>My Fines</h2>
+      <p class="sub-text">View fines applied to your account by organization administrators.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading fines history...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Amount</th>
+              <th>Reason</th>
+              <th>Date Applied</th>
+              <th>Applied By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fine of fines(); track fine.id) {
+              <tr>
+                <td class="font-bold text-danger">{{ fine.amount | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="desc-cell">{{ fine.reason }}</td>
+                <td>{{ fine.date | date:'dd MMM yyyy' }}</td>
+                <td>{{ fine.applied_by?.full_name || 'Admin' }}</td>
+                <td>
+                  <span class="badge" [class.badge-danger]="fine.status === 'ACTIVE'" [class.badge-secondary]="fine.status === 'CANCELLED'">
+                    {{ fine.status }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-state">No fines applied to your account.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

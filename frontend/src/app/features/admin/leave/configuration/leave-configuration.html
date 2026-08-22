@@ -11,14 +11,14 @@
   </div>
 
   @if (tab() === 'types') {
-    <div class="row" style="justify-content: flex-end; margin-bottom: 12px">
+    <div class="row toolbar-end">
       <button class="btn" type="button" (click)="toggleTypeForm()">
         {{ showTypeForm() && !editingTypeId() ? 'Cancel' : '+ Add leave type' }}
       </button>
     </div>
 
     @if (showTypeForm()) {
-      <section class="card" style="margin-bottom: 16px">
+      <section class="card mb-4">
         <div class="card-head"><h3>{{ editingTypeId() ? 'Edit leave type' : 'New leave type' }}</h3></div>
         <form class="card-body" [formGroup]="typeForm" (ngSubmit)="saveType()" novalidate>
           <div class="grid cols-3">
@@ -34,7 +34,7 @@
             </div>
             <div class="field">
               <label for="lt_desc">Description</label>
-              <input id="lt_desc" formControlName="description" />
+              <input id="lt_desc" formControlName="description" placeholder="Short note shown to employees" />
             </div>
             <div class="field">
               <label for="lt_min_unit">Minimum unit (days)</label>
@@ -48,31 +48,45 @@
               <label for="lt_max">Max days per request</label>
               <input id="lt_max" type="number" step="0.5" formControlName="max_days_per_request" placeholder="No limit" />
             </div>
-            <div class="field row" style="margin-top: 24px; gap: 18px">
-              <label class="row" style="gap: 6px; margin: 0">
-                <input type="checkbox" formControlName="is_paid" style="width: auto" /> Paid
+          </div>
+
+          <!-- Out of the grid entirely. Three checkboxes wedged into one
+               3-column cell needed a magic 24px top margin to line up with
+               the inputs beside them, and collapsed into an unreadable stack
+               the moment the grid went single-column. -->
+          <div class="field">
+            <label id="lt_behaviour">Behaviour</label>
+            <div class="check-group" role="group" aria-labelledby="lt_behaviour">
+              <label class="check">
+                <input type="checkbox" formControlName="is_paid" />
+                Paid
               </label>
-              <label class="row" style="gap: 6px; margin: 0">
-                <input type="checkbox" formControlName="allow_fractional" style="width: auto" /> Fractional
+              <label class="check">
+                <input type="checkbox" formControlName="allow_fractional" />
+                Allow half days
               </label>
-              <label class="row" style="gap: 6px; margin: 0">
-                <input type="checkbox" formControlName="requires_approval" style="width: auto" /> Requires approval
+              <label class="check">
+                <input type="checkbox" formControlName="requires_approval" />
+                Requires approval
               </label>
             </div>
           </div>
 
-          <h3 style="margin: 18px 0 10px">Carry forward</h3>
-          <div class="grid cols-3">
-            <div class="field">
-              <label class="row" style="gap: 6px; margin: 0">
-                <input type="checkbox" formControlName="allow_carry_forward" style="width: auto" /> Allow carry forward
-              </label>
-            </div>
-            @if (typeForm.getRawValue().allow_carry_forward) {
+          <h3 class="form-section">Carry forward</h3>
+
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" formControlName="allow_carry_forward" />
+              Roll unused balance into the next period
+            </label>
+          </div>
+
+          @if (typeForm.getRawValue().allow_carry_forward) {
+            <div class="grid cols-2 carry-fields">
               <div class="field">
                 <label for="lt_cf_pct">Percentage carried</label>
-                <input id="lt_cf_pct" type="number" min="0" max="100" formControlName="carry_forward_percentage" />
-                <div class="subtle">% of unused balance rolled into the next period.</div>
+                <input id="lt_cf_pct" type="number" min="0" max="100" formControlName="carry_forward_percentage" placeholder="100" />
+                <div class="hint">Share of the unused balance that rolls over.</div>
                 @if (typeErrors()['carry_forward_percentage']) { <div class="error">{{ typeErrors()['carry_forward_percentage'] }}</div> }
               </div>
               <div class="field">
@@ -82,8 +96,8 @@
                   <option value="monthly">Each month (into next month)</option>
                 </select>
               </div>
-            }
-          </div>
+            </div>
+          }
 
           <button class="btn" type="submit" [disabled]="savingType()">
             {{ savingType() ? 'Saving…' : 'Save leave type' }}
@@ -106,28 +120,28 @@
               <th>Approval</th>
               <th>Carry forward</th>
               <th>Status</th>
-              <th style="text-align: right">Actions</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (type of types(); track type.id) {
               <tr>
-                <td><strong>{{ type.name }}</strong></td>
-                <td><code class="mono">{{ type.code }}</code></td>
-                <td>{{ type.is_paid ? 'Yes' : 'No' }}</td>
-                <td>{{ type.allow_fractional ? 'Yes' : 'No' }}</td>
-                <td class="mono">{{ type.min_unit }}</td>
-                <td class="mono">{{ type.max_days_per_request ?? '—' }}</td>
-                <td>{{ type.requires_approval ? 'Required' : 'Auto' }}</td>
-                <td>
+                <td data-primary><strong>{{ type.name }}</strong></td>
+                <td data-label="Code"><code class="mono">{{ type.code }}</code></td>
+                <td data-label="Paid">{{ type.is_paid ? 'Yes' : 'No' }}</td>
+                <td data-label="Fractional">{{ type.allow_fractional ? 'Yes' : 'No' }}</td>
+                <td class="mono" data-label="Min unit">{{ type.min_unit }}</td>
+                <td class="mono" data-label="Max/request">{{ type.max_days_per_request ?? '—' }}</td>
+                <td data-label="Approval">{{ type.requires_approval ? 'Required' : 'Auto' }}</td>
+                <td data-label="Carry forward">
                   @if (type.allow_carry_forward) {
                     <span class="badge info">{{ type.carry_forward_percentage }}% / {{ type.carry_forward_frequency }}</span>
                   } @else {
                     <span class="subtle">—</span>
                   }
                 </td>
-                <td><span class="badge" [class]="type.is_active ? 'active' : 'suspended'">{{ type.is_active ? 'Active' : 'Inactive' }}</span></td>
-                <td style="text-align: right; white-space: nowrap">
+                <td data-label="Status"><span class="badge" [class]="type.is_active ? 'active' : 'suspended'">{{ type.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td class="col-actions">
                   <button class="btn ghost sm" type="button" (click)="toggleTypeForm(type)">Edit</button>
                   <button class="btn ghost sm" type="button" (click)="toggleTypeActive(type)">
                     {{ type.is_active ? 'Deactivate' : 'Activate' }}
@@ -151,12 +165,12 @@
   }
 
   @if (tab() === 'rules') {
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>Generate accrual</h3></div>
-      <form class="card-body row" [formGroup]="generateForm" (ngSubmit)="generate()" style="align-items: flex-end">
+      <form class="card-body filters" [formGroup]="generateForm" (ngSubmit)="generate()">
         <div class="field">
           <label for="gen_year">Year</label>
-          <input id="gen_year" type="number" formControlName="year" style="width: 100px" />
+          <input id="gen_year" type="number" formControlName="year" class="narrow" placeholder="2026" />
         </div>
         <div class="field">
           <label for="gen_freq">Frequency</label>
@@ -168,7 +182,7 @@
         @if (generateForm.getRawValue().frequency === 'monthly') {
           <div class="field">
             <label for="gen_month">Month</label>
-            <input id="gen_month" type="number" min="1" max="12" formControlName="month" style="width: 90px" />
+            <input id="gen_month" type="number" min="1" max="12" formControlName="month" class="narrow" placeholder="1" />
           </div>
         }
         <button class="btn" type="submit" [disabled]="generating()">
@@ -182,10 +196,10 @@
       </form>
     </section>
 
-    <section class="card" style="margin-bottom: 16px">
+    <section class="card mb-4">
       <div class="card-head"><h3>Carry forward</h3></div>
       <form class="card-body" [formGroup]="carryForwardForm" (ngSubmit)="carryForward()" novalidate>
-        <div class="row" style="align-items: flex-end">
+        <div class="filters">
           <div class="field">
             <label for="cf_type">Leave type</label>
             <select id="cf_type" formControlName="leave_type_id">
@@ -207,12 +221,12 @@
           </div>
           <div class="field">
             <label for="cf_year">From year</label>
-            <input id="cf_year" type="number" formControlName="year" style="width: 100px" />
+            <input id="cf_year" type="number" formControlName="year" class="narrow" placeholder="2026" />
           </div>
           @if (carryForwardForm.getRawValue().frequency === 'monthly') {
             <div class="field">
               <label for="cf_month">From month</label>
-              <input id="cf_month" type="number" min="1" max="12" formControlName="month" style="width: 90px" />
+              <input id="cf_month" type="number" min="1" max="12" formControlName="month" class="narrow" placeholder="1" />
             </div>
           }
           <button class="btn" type="submit" [disabled]="carryingForward()">
@@ -220,7 +234,7 @@
           </button>
         </div>
         @if (selectedCarryForwardType(); as sel) {
-          <p class="subtle" style="margin-top: 10px">
+          <p class="subtle mt-3">
             Carries {{ sel.carry_forward_percentage }}% of each employee's unused {{ sel.name }} balance into the next period.
           </p>
         }
@@ -232,14 +246,14 @@
       </form>
     </section>
 
-    <div class="row" style="justify-content: flex-end; margin-bottom: 12px">
+    <div class="row toolbar-end">
       <button class="btn" type="button" (click)="toggleRuleForm()">
         {{ showRuleForm() ? 'Cancel' : '+ Add rule' }}
       </button>
     </div>
 
     @if (showRuleForm()) {
-      <section class="card" style="margin-bottom: 16px">
+      <section class="card mb-4">
         <div class="card-head"><h3>New allocation rule</h3></div>
         <form class="card-body" [formGroup]="ruleForm" (ngSubmit)="saveRule()" novalidate>
           <div class="grid cols-3">
@@ -263,7 +277,7 @@
             </div>
             <div class="field">
               <label for="rule_amount">Amount (days)</label>
-              <input id="rule_amount" type="number" step="0.5" min="0.5" formControlName="amount" />
+              <input id="rule_amount" type="number" step="0.5" min="0.5" formControlName="amount" placeholder="1.5" />
               @if (ruleErrors()['amount']) { <div class="error">{{ ruleErrors()['amount'] }}</div> }
             </div>
             <div class="field">
@@ -275,7 +289,7 @@
             </div>
             <div class="field">
               <label for="rule_effective">Effective from</label>
-              <input id="rule_effective" type="date" formControlName="effective_from" />
+              <input id="rule_effective" type="date" formControlName="effective_from" placeholder="YYYY-MM-DD" />
               @if (ruleErrors()['effective_from']) { <div class="error">{{ ruleErrors()['effective_from'] }}</div> }
             </div>
           </div>
@@ -298,20 +312,20 @@
               <th>Effective from</th>
               <th>Effective to</th>
               <th>Status</th>
-              <th style="text-align: right">Actions</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (rule of rules(); track rule.id) {
               <tr>
-                <td>{{ typeName(rule.leave_type_id) }}</td>
-                <td><span class="badge primary">{{ rule.role.replace('_', ' ') }}</span></td>
-                <td class="mono">{{ rule.amount }}</td>
-                <td>{{ rule.frequency }}</td>
-                <td class="mono">{{ rule.effective_from | date: 'mediumDate' }}</td>
-                <td class="mono">{{ rule.effective_to ? (rule.effective_to | date: 'mediumDate') : '—' }}</td>
-                <td><span class="badge" [class]="rule.is_active ? 'active' : 'suspended'">{{ rule.is_active ? 'Active' : 'Inactive' }}</span></td>
-                <td style="text-align: right">
+                <td data-primary>{{ typeName(rule.leave_type_id) }}</td>
+                <td data-label="Role"><span class="badge primary">{{ rule.role.replace('_', ' ') }}</span></td>
+                <td class="mono" data-label="Amount">{{ rule.amount }}</td>
+                <td data-label="Frequency">{{ rule.frequency }}</td>
+                <td class="mono" data-label="Effective from">{{ rule.effective_from | date: 'mediumDate' }}</td>
+                <td class="mono" data-label="Effective to">{{ rule.effective_to ? (rule.effective_to | date: 'mediumDate') : '—' }}</td>
+                <td data-label="Status"><span class="badge" [class]="rule.is_active ? 'active' : 'suspended'">{{ rule.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td class="col-actions">
                   <button class="btn ghost sm" type="button" (click)="toggleRuleActive(rule)">
                     {{ rule.is_active ? 'Deactivate' : 'Activate' }}
                   </button>

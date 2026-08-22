@@ -26,6 +26,7 @@ type Tab = 'types' | 'rules';
   imports: [ReactiveFormsModule, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './leave-configuration.html',
+  styleUrl: './leave-configuration.scss',
 })
 export class LeaveConfiguration {
   private readonly leaves = inject(Leaves);

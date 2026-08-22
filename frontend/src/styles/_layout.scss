@@ -104,6 +104,33 @@
   color: var(--text-subtle);
 }
 
+/* ---------- spacing utilities ----------------------------------------------
+   Deliberately few and token-bound. They exist because the feature templates
+   were carrying ~20 inline `style="margin-top: 16px"` attributes, which sit
+   outside the scale and cannot be re-tuned at a breakpoint. Reach for `.stack`
+   first — these are for the one-off gap between two sibling cards. */
+.mt-3 {
+  margin-top: var(--space-3);
+}
+.mt-4 {
+  margin-top: var(--space-4);
+}
+.mt-5 {
+  margin-top: var(--space-5);
+}
+.mb-3 {
+  margin-bottom: var(--space-3);
+}
+.mb-4 {
+  margin-bottom: var(--space-4);
+}
+.ml-2 {
+  margin-left: var(--space-2);
+}
+.p-0 {
+  padding: 0;
+}
+
 /* One chevron icon, four directions. */
 .rot-90 {
   transform: rotate(90deg);

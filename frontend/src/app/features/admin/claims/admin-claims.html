@@ -1,0 +1,151 @@
+<div class="admin-claims-page">
+  <div class="page-header">
+    <div>
+      <h2>Expense Claims Management</h2>
+      <p class="sub-text">Review, approve, or reject employee expense reimbursement claims.</p>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar card">
+    <div class="filter-tabs">
+      <button class="tab-btn" [class.active]="statusFilter() === 'PENDING'" (click)="onFilterChange('PENDING')">
+        Pending
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'APPROVED'" (click)="onFilterChange('APPROVED')">
+        Approved
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'REJECTED'" (click)="onFilterChange('REJECTED')">
+        Rejected
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'ALL'" (click)="onFilterChange('ALL')">
+        All Claims
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading claims...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Expense Type</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Receipt</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (claim of claims(); track claim.id) {
+              <tr>
+                <td>
+                  <div class="user-row">
+                    <span class="user-name">{{ claim.employee?.full_name || 'Employee' }}</span>
+                    <span class="user-email">{{ claim.employee?.email || '' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-name font-medium">{{ claim.expense_type }}</span>
+                  @if (claim.expense_type === 'Other' && claim.other_type_description) {
+                    <span class="sub-text font-normal"> ({{ claim.other_type_description }})</span>
+                  }
+                </td>
+                <td class="font-bold text-main">{{ claim.amount | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td>{{ claim.expense_date | date:'dd MMM yyyy' }}</td>
+                <td class="desc-cell">{{ claim.description }}</td>
+                <td>
+                  @if (claim.has_receipt) {
+                    <button class="btn-link" (click)="downloadReceipt(claim)">
+                      <app-icon name="paperclip"></app-icon> View Receipt
+                    </button>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge" [class.badge-warning]="claim.status === 'PENDING'" [class.badge-success]="claim.status === 'APPROVED'" [class.badge-danger]="claim.status === 'REJECTED'">
+                    {{ claim.status }}
+                  </span>
+                  @if (claim.admin_comment) {
+                    <div class="sub-text mt-1">{{ claim.admin_comment }}</div>
+                  }
+                </td>
+                <td style="text-align: right;">
+                  @if (claim.status === 'PENDING') {
+                    <div class="action-buttons">
+                      <button class="btn btn-success btn-xs" (click)="openApproveModal(claim)">Approve</button>
+                      <button class="btn btn-danger btn-xs" (click)="openRejectModal(claim)">Reject</button>
+                    </div>
+                  } @else {
+                    <span class="text-muted text-xs">Processed</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-state">No {{ statusFilter().toLowerCase() }} expense claims found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Approve Modal -->
+  @if (showApproveModal()) {
+    <div class="modal-backdrop" (click)="showApproveModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Approve Expense Claim</h3>
+          <button class="btn-icon" (click)="showApproveModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="actionForm" (ngSubmit)="confirmApprove()">
+          <div class="modal-body">
+            <p>Approve <strong>{{ selectedClaim()?.expense_type }}</strong> claim of <strong>₹{{ selectedClaim()?.amount }}</strong> submitted by <strong>{{ selectedClaim()?.employee?.full_name }}</strong>?</p>
+            <div class="form-group">
+              <label>Approval Comment (Optional)</label>
+              <input type="text" formControlName="comment" class="form-control" placeholder="e.g. Approved per policy..." />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showApproveModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-success">Confirm Approve</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Reject Modal -->
+  @if (showRejectModal()) {
+    <div class="modal-backdrop" (click)="showRejectModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Reject Expense Claim</h3>
+          <button class="btn-icon" (click)="showRejectModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="actionForm" (ngSubmit)="confirmReject()">
+          <div class="modal-body">
+            <p>Reject <strong>{{ selectedClaim()?.expense_type }}</strong> claim of <strong>₹{{ selectedClaim()?.amount }}</strong> submitted by <strong>{{ selectedClaim()?.employee?.full_name }}</strong>?</p>
+            <div class="form-group">
+              <label>Rejection Reason / Comment</label>
+              <input type="text" formControlName="comment" class="form-control" placeholder="e.g. Receipt missing, ineligible expense..." />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showRejectModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-danger">Confirm Reject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

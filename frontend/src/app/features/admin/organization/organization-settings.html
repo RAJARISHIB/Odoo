@@ -1,119 +1,57 @@
 <div class="page">
   <div class="page-head">
     <div>
-      <h1>Organization</h1>
-      <p>Company profile and the working-hours policy attendance is graded against.</p>
+      <h1>Organization profile</h1>
+      <p>Company name, contact details and the timezone every timestamp is shown in.</p>
     </div>
   </div>
 
-  <div class="grid cols-2">
-    <section class="card">
-      <div class="card-head"><h3>Profile &amp; policy</h3></div>
-      <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
-        <div class="grid cols-2">
-          <div class="field">
-            <label for="org_name">Name</label>
-            <input id="org_name" formControlName="name" />
-            @if (formErrors()['name']) { <div class="error">{{ formErrors()['name'] }}</div> }
-          </div>
-          <div class="field">
-            <label for="org_email">Email</label>
-            <input id="org_email" type="email" formControlName="email" />
-            @if (formErrors()['email']) { <div class="error">{{ formErrors()['email'] }}</div> }
-          </div>
-          <div class="field">
-            <label for="org_phone">Phone</label>
-            <input id="org_phone" formControlName="phone" />
-          </div>
-          <div class="field">
-            <label for="org_city">City</label>
-            <input id="org_city" formControlName="city" />
-          </div>
-          <div class="field">
-            <label for="org_country">Country</label>
-            <input id="org_country" formControlName="country" />
-          </div>
-          <div class="field">
-            <label for="org_tz">Timezone</label>
-            <input id="org_tz" formControlName="timezone" placeholder="Asia/Kolkata" />
-            @if (formErrors()['timezone']) { <div class="error">{{ formErrors()['timezone'] }}</div> }
-          </div>
-        </div>
+  <section class="card">
+    <div class="card-head">
+      <h3>Company details</h3>
+      @if (organization(); as org) {
+        <span class="subtle">Login IDs are issued as <code>{{ org.code }}…</code></span>
+      }
+    </div>
 
-        <h3 style="margin: 14px 0 10px">Working hours</h3>
-        <div class="grid cols-3">
-          <div class="field">
-            <label for="start">Shift start</label>
-            <input id="start" type="time" formControlName="work_start_time" />
-            @if (formErrors()['work_start_time']) { <div class="error">{{ formErrors()['work_start_time'] }}</div> }
-          </div>
-          <div class="field">
-            <label for="end">Shift end</label>
-            <input id="end" type="time" formControlName="work_end_time" />
-          </div>
-          <div class="field">
-            <label for="grace">Late grace (min)</label>
-            <input id="grace" type="number" formControlName="late_grace_minutes" />
-          </div>
-          <div class="field">
-            <label for="full_day">Full day (hours)</label>
-            <input id="full_day" type="number" formControlName="full_day_hours" />
-          </div>
-          <div class="field">
-            <label for="half_day">Half day (hours)</label>
-            <input id="half_day" type="number" formControlName="half_day_hours" />
-          </div>
-        </div>
-
+    <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="grid cols-2">
         <div class="field">
-          <label>Working days</label>
-          <div class="row">
-            @for (day of weekdays; track $index) {
-              <button
-                type="button"
-                class="btn sm"
-                [class.ghost]="!workingDays().includes($index)"
-                (click)="toggleDay($index)"
-              >
-                {{ day }}
-              </button>
-            }
-          </div>
-          @if (formErrors()['working_days']) { <div class="error">{{ formErrors()['working_days'] }}</div> }
+          <label for="org_name">Name</label>
+          <input id="org_name" formControlName="name" placeholder="Acme Corporation" />
+          @if (formErrors()['name']) { <div class="error">{{ formErrors()['name'] }}</div> }
         </div>
-
-        <button class="btn" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save changes' }}
-        </button>
-      </form>
-    </section>
-
-    <section class="card" style="align-self: start">
-      <div class="card-head"><h3>Departments</h3></div>
-      <div class="card-body">
-        <form class="row" [formGroup]="departmentForm" (ngSubmit)="addDepartment()">
-          <div class="field spacer" style="margin: 0">
-            <input formControlName="name" placeholder="Department name" />
-          </div>
-          <div class="field" style="margin: 0; width: 110px">
-            <input formControlName="code" placeholder="Code" />
-          </div>
-          <button class="btn sm" type="submit">Add</button>
-        </form>
-        @if (formErrors()['department']) { <div class="error">{{ formErrors()['department'] }}</div> }
-
-        <div style="margin-top: 14px">
-          @for (department of departments(); track department.id) {
-            <div class="row dept">
-              <strong class="spacer">{{ department.name }}</strong>
-              @if (department.code) { <span class="badge">{{ department.code }}</span> }
-              <button class="btn ghost sm" type="button" (click)="removeDepartment(department)">Remove</button>
-            </div>
-          } @empty {
-            <p class="muted">No departments yet. Add the first one above.</p>
-          }
+        <div class="field">
+          <label for="org_email">Email</label>
+          <input id="org_email" type="email" formControlName="email" placeholder="people@acme.com" />
+          @if (formErrors()['email']) { <div class="error">{{ formErrors()['email'] }}</div> }
+        </div>
+        <div class="field">
+          <label for="org_phone">Phone</label>
+          <input id="org_phone" formControlName="phone" placeholder="+91 80 4000 1234" />
+          @if (formErrors()['phone']) { <div class="error">{{ formErrors()['phone'] }}</div> }
+        </div>
+        <div class="field">
+          <label for="org_city">City</label>
+          <input id="org_city" formControlName="city" placeholder="Bengaluru" />
+        </div>
+        <div class="field">
+          <label for="org_country">Country</label>
+          <input id="org_country" formControlName="country" placeholder="India" />
+        </div>
+        <div class="field">
+          <label for="org_tz">Timezone</label>
+          <input id="org_tz" formControlName="timezone" placeholder="Asia/Kolkata" />
+          <div class="hint">An IANA name — attendance days are cut at midnight here.</div>
+          @if (formErrors()['timezone']) { <div class="error">{{ formErrors()['timezone'] }}</div> }
         </div>
       </div>
-    </section>
-  </div>
+    </form>
+
+    <div class="card-foot">
+      <button class="btn" type="button" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Saving…' : 'Save profile' }}
+      </button>
+    </div>
+  </section>
 </div>

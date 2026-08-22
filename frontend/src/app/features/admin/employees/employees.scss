@@ -16,3 +16,49 @@
 .card-head .filters {
   width: 100%;
 }
+
+@media (max-width: 720px) {
+  /* The credentials block is a one-shot secret: it must never be clipped or
+     put behind a horizontal scroll. `anywhere` lets a long generated password
+     break mid-token rather than widening the card. */
+  .temp-password .card-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .temp-password code {
+    display: inline-block;
+    margin: 2px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .temp-password .btn {
+    align-self: flex-start;
+  }
+}
+
+/* The name cell is the row's way into the record. A link, not a row click
+   handler: it keyboard-focuses, middle-clicks into a new tab and shows its
+   destination on hover, none of which a (click) on the <tr> would. */
+.person-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: inherit;
+}
+
+.person-link:hover {
+  text-decoration: none;
+  color: var(--primary);
+}
+
+.person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.person-text strong {
+  font-weight: var(--weight-semibold);
+}

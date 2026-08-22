@@ -1,0 +1,127 @@
+<div class="claims-page">
+  <div class="page-header">
+    <div>
+      <h2>Expense Claims</h2>
+      <p class="sub-text">Submit and track your business expense reimbursements.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openNewClaimModal()">
+      <app-icon name="plus"></app-icon> New Claim
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading your expense claims...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Expense Type</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Receipt</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (claim of claims(); track claim.id) {
+              <tr>
+                <td>
+                  <div class="expense-type-cell">
+                    <span class="type-name">{{ claim.expense_type }}</span>
+                    @if (claim.expense_type === 'Other' && claim.other_type_description) {
+                      <span class="type-sub">({{ claim.other_type_description }})</span>
+                    }
+                  </div>
+                </td>
+                <td class="font-bold text-main">{{ claim.amount | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td>{{ claim.expense_date | date:'dd MMM yyyy' }}</td>
+                <td class="desc-cell">{{ claim.description }}</td>
+                <td>
+                  @if (claim.has_receipt) {
+                    <button class="btn-link" (click)="downloadReceipt(claim)">
+                      <app-icon name="paperclip"></app-icon> Download
+                    </button>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge" [class.badge-warning]="claim.status === 'PENDING'" [class.badge-success]="claim.status === 'APPROVED'" [class.badge-danger]="claim.status === 'REJECTED'">
+                    {{ claim.status }}
+                  </span>
+                  @if (claim.admin_comment) {
+                    <div class="sub-text mt-1">{{ claim.admin_comment }}</div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty-state">No expense claims submitted yet. Click "New Claim" to get started.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- New Claim Modal -->
+  @if (showNewClaimModal()) {
+    <div class="modal-backdrop" (click)="showNewClaimModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Submit Expense Claim</h3>
+          <button class="btn-icon" (click)="showNewClaimModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="claimForm" (ngSubmit)="submitClaim()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Expense Type *</label>
+              <select formControlName="expense_type" class="form-control">
+                @for (type of expenseTypes; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </div>
+
+            @if (claimForm.value.expense_type === 'Other') {
+              <div class="form-group">
+                <label>Specify Custom Expense Type *</label>
+                <input type="text" formControlName="other_type_description" class="form-control" placeholder="e.g. Software License, Client Gift..." />
+              </div>
+            }
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Amount (₹) *</label>
+                <input type="number" formControlName="amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Expense Date *</label>
+                <input type="date" formControlName="expense_date" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Reason / Description *</label>
+              <textarea formControlName="description" class="form-control" rows="3" placeholder="Explain the business purpose of this expense..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Receipt / Supporting Document</label>
+              <input type="file" (change)="onFileSelected($event)" class="form-control file-input" accept="image/*,.pdf,.doc,.docx" />
+              <p class="sub-text mt-1">Accepts images, PDF, or documents (max 10MB).</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showNewClaimModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="claimForm.invalid">Submit Claim</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

@@ -19,6 +19,7 @@ import { Toast } from '../../../../core/services/toast';
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './leave-dashboard.html',
+  styleUrl: './leave-dashboard.scss',
 })
 export class LeaveDashboard {
   private readonly leaves = inject(Leaves);

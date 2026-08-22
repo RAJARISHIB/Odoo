@@ -86,6 +86,13 @@ export const routes: Routes = [
       },
 
       {
+        path: 'teams',
+        title: 'My team',
+        data: { breadcrumb: 'My Team' },
+        loadComponent: () => import('./features/teams/my-team/my-team').then((m) => m.MyTeam),
+      },
+
+      {
         path: 'attendance',
         data: { breadcrumb: 'Attendance' },
         children: [
@@ -128,6 +135,27 @@ export const routes: Routes = [
       },
 
       {
+        path: 'claims',
+        title: 'Expense Claims',
+        data: { breadcrumb: 'Claims' },
+        loadComponent: () => import('./features/user/claims/claims').then((m) => m.ClaimsComponent),
+      },
+
+      {
+        path: 'fines',
+        title: 'My Fines',
+        data: { breadcrumb: 'Fines' },
+        loadComponent: () => import('./features/user/fines/fines').then((m) => m.FinesComponent),
+      },
+
+      {
+        path: 'requests',
+        title: 'Employee Requests',
+        data: { breadcrumb: 'Requests' },
+        loadComponent: () => import('./features/user/requests/requests').then((m) => m.EmployeeRequestsComponent),
+      },
+
+      {
         path: 'me',
         title: 'My profile',
         data: { breadcrumb: 'My profile' },
@@ -148,21 +176,82 @@ export const routes: Routes = [
               import('./features/admin/dashboard/dashboard').then((m) => m.AdminDashboard),
           },
           {
+            path: 'teams',
+            title: 'Teams setup',
+            data: { breadcrumb: 'Teams setup' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/teams/manage-teams').then((m) => m.ManageTeams),
+          },
+          {
+            path: 'claims-approvals',
+            title: 'Claim approvals',
+            data: { breadcrumb: 'Claim approvals' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/claims/admin-claims').then((m) => m.AdminClaimsComponent),
+          },
+          {
+            path: 'fines-management',
+            title: 'Fines setup',
+            data: { breadcrumb: 'Fines setup' },
+            canActivate: [capabilityGuard('can_manage_users')],
+            loadComponent: () =>
+              import('./features/admin/fines/admin-fines').then((m) => m.AdminFinesComponent),
+          },
+          {
+            path: 'incoming-requests',
+            title: 'Incoming requests',
+            data: { breadcrumb: 'Incoming requests' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/requests/admin-requests').then((m) => m.AdminRequestsComponent),
+          },
+          {
             path: 'people',
-            title: 'People',
             data: { breadcrumb: 'People' },
             canActivate: [capabilityGuard('can_manage_users')],
-            loadComponent: () => import('./features/admin/employees/employees').then((m) => m.Employees),
+            children: [
+              {
+                path: '',
+                title: 'People',
+                loadComponent: () =>
+                  import('./features/admin/employees/employees').then((m) => m.Employees),
+              },
+              {
+                path: ':id',
+                title: 'Edit employee',
+                data: { breadcrumb: 'Edit' },
+                loadComponent: () =>
+                  import('./features/admin/employees/employee-edit').then((m) => m.EmployeeEdit),
+              },
+            ],
           },
           {
             path: 'organization',
-            title: 'Organization',
+            title: 'Organization profile',
             data: { breadcrumb: 'Organization' },
             canActivate: [capabilityGuard('can_manage_organization')],
             loadComponent: () =>
               import('./features/admin/organization/organization-settings').then(
                 (m) => m.OrganizationSettings,
               ),
+          },
+          {
+            path: 'work-policy',
+            title: 'Work policy',
+            data: { breadcrumb: 'Work policy' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/organization/work-policy').then((m) => m.WorkPolicy),
+          },
+          {
+            path: 'departments',
+            title: 'Departments',
+            data: { breadcrumb: 'Departments' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/organization/departments').then((m) => m.Departments),
           },
           {
             path: 'leave-insights',

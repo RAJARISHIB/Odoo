@@ -12,7 +12,8 @@ from datetime import date, datetime, time, timedelta, timezone
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
-from apps.leaves.models import Holiday, LeaveRequest, LeaveType
+from apps.claims.models import EmployeeRequest, ExpenseClaim, Fine
+from apps.leaves.models import Holiday, LeaveAllocation, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
 from apps.users.models import RefreshToken, User, Role
@@ -64,6 +65,7 @@ class Command(BaseCommand):
         self._holidays(organization)
         self._leaves(organization, users)
         self._teams(organization, users)
+        self._claims_fines_requests(organization, owner, users)
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
         self.stdout.write("  Organization : {} ({}, code {})".format(
@@ -84,6 +86,8 @@ class Command(BaseCommand):
         Attendance.objects.filter(organization=organization).delete()
         Holiday.objects.filter(organization=organization).delete()
         LeaveRequest.objects.filter(organization=organization).delete()
+        LeaveAllocation.objects.filter(organization=organization).delete()
+        LeaveType.objects.filter(organization=organization).delete()
         TeamMember.objects.filter(organization=organization).delete()
         for t in Team.objects.filter(organization=organization):
             TeamHierarchyLevel.objects.filter(team=t).delete()
@@ -240,25 +244,44 @@ class Command(BaseCommand):
         self.stdout.write("Seeded {} holidays.".format(count))
     def _leaves(self, organization, users):
         LeaveType.objects.filter(organization=organization).delete()
-        LeaveType(
-            organization=organization,
-            name="Casual Leave",
-            code="CL",
-            description="For personal work or vacation.",
-            is_paid=True,
-            allow_fractional=True
-        ).save()
-        LeaveType(
-            organization=organization,
-            name="Sick Leave",
-            code="SL",
-            description="For medical emergencies.",
-            is_paid=True,
-            allow_fractional=True
-        ).save()
-
         today = datetime.now(timezone.utc).date()
 
+        # Seed Leave Types
+        types_data = [
+            ("Casual Leave", "CL", "Casual time off", True, 12.0, "#4f46e5"),
+            ("Sick Leave", "SL", "Medical / sick time off", True, 10.0, "#059669"),
+            ("Privilege Leave", "PL", "Earned privilege leave", True, 15.0, "#d97706"),
+            ("Unpaid Leave", "LOP", "Loss of pay", False, 0.0, "#dc2626"),
+        ]
+        leave_types = {}
+        for name, code, desc, is_paid, default_amount, color in types_data:
+            lt = LeaveType.objects.filter(organization=organization, code=code).first()
+            if not lt:
+                lt = LeaveType(
+                    organization=organization,
+                    name=name,
+                    code=code,
+                    description=desc,
+                    is_paid=is_paid,
+                    is_active=True,
+                    color=color,
+                ).save()
+            leave_types[code] = lt
+
+            # Grant initial leave allocation to users
+            if default_amount > 0:
+                for u in users:
+                    period_key = f"{today.year}-{code}"
+                    if not LeaveAllocation.objects.filter(user=u, leave_type=lt, period_key=period_key).first():
+                        LeaveAllocation(
+                            organization=organization,
+                            user=u,
+                            leave_type=lt,
+                            year=today.year,
+                            frequency="yearly",
+                            amount=default_amount,
+                            period_key=period_key,
+                        ).save()
         dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
         if not dev_user:
             return
@@ -273,6 +296,7 @@ class Command(BaseCommand):
             LeaveRequest(
                 organization=organization,
                 employee=dev_user,
+                leave_type=leave_types.get("CL"),
                 start_date=start_dt,
                 end_date=end_dt,
                 reason="Personal work",
@@ -342,5 +366,72 @@ class Command(BaseCommand):
                 ).save()
 
         self.stdout.write("Seeded team 'Core Engineering' with 4 hierarchy levels and 3 members.")
+
+    def _claims_fines_requests(self, organization, owner, users):
+        dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
+        designer_user = next((u for u in users if u.email == "designer@acme.test"), None)
+        admin_user = next((u for u in users if u.email == "admin@acme.test"), None) or owner
+        today = datetime.now(timezone.utc)
+
+        # Seed Expense Claims
+        if dev_user and not ExpenseClaim.objects.filter(organization=organization, employee=dev_user).first():
+            ExpenseClaim(
+                organization=organization,
+                employee=dev_user,
+                expense_type=ExpenseClaim.TYPE_TRAVEL,
+                amount=1250.0,
+                expense_date=today - timedelta(days=2),
+                description="Client meeting travel and parking expense",
+                status=ExpenseClaim.STATUS_PENDING,
+            ).save()
+
+            ExpenseClaim(
+                organization=organization,
+                employee=dev_user,
+                expense_type=ExpenseClaim.TYPE_FOOD,
+                amount=450.0,
+                expense_date=today - timedelta(days=5),
+                description="Team lunch during sprint planning",
+                status=ExpenseClaim.STATUS_APPROVED,
+                processed_by=admin_user,
+                processed_at=today - timedelta(days=4),
+                admin_comment="Approved per company policy",
+            ).save()
+            self.stdout.write("Seeded sample expense claims.")
+
+        # Seed Fines
+        if dev_user and not Fine.objects.filter(organization=organization, employee=dev_user).first():
+            Fine(
+                organization=organization,
+                employee=dev_user,
+                amount=500.0,
+                reason="Late submission of weekly progress report",
+                date=today - timedelta(days=3),
+                status=Fine.STATUS_ACTIVE,
+                applied_by=admin_user,
+            ).save()
+            self.stdout.write("Seeded sample fine.")
+
+        # Seed Employee Requests
+        if dev_user and not EmployeeRequest.objects.filter(organization=organization, employee=dev_user).first():
+            EmployeeRequest(
+                organization=organization,
+                employee=dev_user,
+                request_type=EmployeeRequest.TYPE_LAPTOP,
+                description="My current laptop screen is flickering and needs replacement or hardware inspection.",
+                status=EmployeeRequest.STATUS_PENDING,
+            ).save()
+
+        if designer_user and not EmployeeRequest.objects.filter(organization=organization, employee=designer_user).first():
+            EmployeeRequest(
+                organization=organization,
+                employee=designer_user,
+                request_type=EmployeeRequest.TYPE_ID_CARD,
+                description="I lost my physical ID card and require a replacement.",
+                status=EmployeeRequest.STATUS_APPROVED,
+                processed_by=admin_user,
+                processed_at=today - timedelta(days=1),
+            ).save()
+            self.stdout.write("Seeded sample employee requests.")
 
 

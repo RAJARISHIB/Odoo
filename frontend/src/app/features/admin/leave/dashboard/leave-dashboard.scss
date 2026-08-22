@@ -1,0 +1,20 @@
+/* The expanded employee row: leave history beside the adjustment form.
+
+   These were inline `min-width: 320px` / `260px`, which overflowed the card on
+   a phone — the row sits inside a table cell inside a card, so by 375px the
+   available width is around 270px and the history pane alone was wider. */
+.detail-split {
+  align-items: flex-start;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.detail-history {
+  flex: 2 1 320px;
+  min-width: 0;
+}
+
+.detail-adjust {
+  flex: 1 1 260px;
+  min-width: 0;
+}

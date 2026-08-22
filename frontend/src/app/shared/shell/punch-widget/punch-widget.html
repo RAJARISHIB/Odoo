@@ -1,11 +1,18 @@
 @if (loaded()) {
-  <div class="punch" [class.is-in]="checkedIn()">
+  <div class="punch" [class.is-in]="checkedIn()" [class.is-done]="doneForNow()">
     <span class="dot" [attr.aria-hidden]="true"></span>
 
     @if (checkedIn()) {
       <span class="readout">
         <span class="elapsed mono">{{ elapsed() }}</span>
         <span class="since">since {{ sinceLabel() }}</span>
+      </span>
+    } @else if (doneForNow()) {
+      <!-- The day is finished, not unstarted: show what was banked and when
+           it ended, so a second check-in is a deliberate act. -->
+      <span class="readout">
+        <span class="elapsed mono">{{ todayLabel() }}</span>
+        <span class="since">out at {{ lastOutLabel() }}</span>
       </span>
     } @else {
       <span class="readout">
@@ -19,11 +26,11 @@
       type="button"
       [disabled]="busy()"
       (click)="punch()"
-      [attr.aria-label]="checkedIn() ? 'Check out' : 'Check in'"
-      [title]="checkedIn() ? 'Check out' : 'Check in'"
+      [attr.aria-label]="buttonLabel()"
+      [title]="buttonLabel()"
     >
       <app-icon [name]="checkedIn() ? 'logout' : 'login'" [strokeWidth]="2" />
-      <span class="punch-label">{{ checkedIn() ? 'Check out' : 'Check in' }}</span>
+      <span class="punch-label">{{ buttonLabel() }}</span>
     </button>
   </div>
 }

@@ -34,6 +34,17 @@
   animation: pulse-dot 2s infinite;
 }
 
+/* Day finished: neither "working" green nor "nothing recorded" red. A settled
+   slate dot says the record is complete without demanding attention. */
+.punch.is-done {
+  border-color: var(--border-strong);
+  background: var(--surface-alt);
+}
+
+.punch.is-done .dot {
+  background: var(--text-subtle);
+}
+
 .readout {
   display: flex;
   flex-direction: column;

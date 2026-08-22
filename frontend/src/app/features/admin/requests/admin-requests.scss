@@ -1,0 +1,154 @@
+.admin-requests-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--text-main);
+  }
+
+  .sub-text {
+    margin: 4px 0 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+}
+
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 8px 16px;
+
+  .filter-tabs {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--dur-fast);
+
+    &:hover {
+      background: var(--surface-alt);
+      color: var(--text-main);
+    }
+
+    &.active {
+      background: var(--primary-light, rgba(79, 70, 229, 0.1));
+      color: var(--primary);
+      font-weight: var(--weight-semibold);
+    }
+  }
+}
+
+.filter-type-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-row {
+  display: flex;
+  flex-direction: column;
+
+  .user-name {
+    font-weight: var(--weight-semibold);
+    color: var(--text-main);
+  }
+  .user-email {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+}
+
+.type-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+
+  &.type-id {
+    background: var(--primary-light, rgba(79, 70, 229, 0.1));
+    color: var(--primary);
+  }
+
+  &.type-laptop {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0284c7;
+  }
+
+  &.type-other {
+    background: var(--surface-alt);
+    color: var(--text-main);
+  }
+}
+
+.desc-cell {
+  max-width: 280px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.action-buttons {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.btn-xs {
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty-state, .loading-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.mt-1 {
+  margin-top: 4px;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-3 {
+  margin-top: 12px;
+}

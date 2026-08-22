@@ -227,3 +227,56 @@ a.person-card:active {
 .pager-card .pager {
   border-top: none;
 }
+
+/* ---------- responsive ---------- */
+@media (max-width: 720px) {
+  .toolbar {
+    gap: var(--space-2);
+  }
+
+  /* The search owns its own row; the two selects share the next one. Letting
+     them wrap freely put a 90px-wide department select next to the search. */
+  .search {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .toolbar select {
+    flex: 1 1 0;
+    min-width: 0;
+    /* Below 16px iOS Safari zooms on focus and never zooms back. */
+    font-size: 16px;
+    min-height: 42px;
+  }
+
+  .search input {
+    font-size: 16px;
+  }
+
+  .toolbar > .btn {
+    flex: 1 1 100%;
+  }
+
+  .person-card {
+    padding: var(--space-4) var(--space-3) var(--space-3);
+    gap: var(--space-2);
+  }
+
+  /* At two cards per row the 52px avatar and the 22px presence marker start
+     colliding with the name. */
+  .person-card .avatar.lg {
+    width: 44px;
+    height: 44px;
+    font-size: var(--text-md);
+  }
+
+  .presence {
+    top: var(--space-2);
+    right: var(--space-2);
+  }
+
+  .meta {
+    padding-top: var(--space-2);
+  }
+}

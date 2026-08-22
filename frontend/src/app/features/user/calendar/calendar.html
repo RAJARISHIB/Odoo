@@ -20,17 +20,17 @@
     </div>
     <div class="stat">
       <div class="label">Used Leave</div>
-      <div class="value text-success">{{ balance()?.used_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="value success">{{ balance()?.used_leave ?? 0 }} <small class="subtle">Days</small></div>
       <div class="hint">Approved requests this month</div>
     </div>
     <div class="stat">
       <div class="label">Pending Leave</div>
-      <div class="value text-warning">{{ balance()?.pending_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="value warning">{{ balance()?.pending_leave ?? 0 }} <small class="subtle">Days</small></div>
       <div class="hint">Awaiting approval</div>
     </div>
     <div class="stat">
       <div class="label">Remaining Balance</div>
-      <div class="value text-primary">{{ balance()?.remaining_leave ?? '-' }} <small class="subtle">Days</small></div>
+      <div class="value primary">{{ balance()?.remaining_leave ?? '-' }} <small class="subtle">Days</small></div>
       <div class="hint">Available to apply</div>
     </div>
   </div>
@@ -116,6 +116,30 @@
             </div>
           }
         </div>
+
+        <!-- Small screens only: the grid's cells are too narrow to name an
+             event, and a `title` tooltip is unreachable on touch. -->
+        <ul class="agenda">
+          @for (entry of agenda(); track entry.key) {
+            <li class="agenda-row" [class.is-today]="entry.isToday">
+              <span class="agenda-date mono">
+                <strong>{{ entry.date | date: 'd' }}</strong>
+                <span>{{ entry.date | date: 'EEE' }}</span>
+              </span>
+              <span class="agenda-mark" [class]="entry.kind">
+                <app-icon [name]="entry.icon" />
+              </span>
+              <span class="agenda-text">
+                <strong class="truncate">{{ entry.title }}</strong>
+                @if (entry.detail) {
+                  <span class="truncate subtle">{{ entry.detail }}</span>
+                }
+              </span>
+            </li>
+          } @empty {
+            <li class="agenda-empty subtle">Nothing scheduled this month.</li>
+          }
+        </ul>
       }
     </div>
   </div>
@@ -142,20 +166,20 @@
                 <th>Reason</th>
                 <th>Status</th>
                 <th>Submitted On</th>
-                <th>Action</th>
+                <th class="col-actions">Action</th>
               </tr>
             </thead>
             <tbody>
               @for (req of myRequests(); track req.id) {
                 <tr>
-                  <td>
+                  <td data-primary>
                     <strong>{{ req.start_date }}</strong>
                     <span class="muted"> &rarr; </span>
                     <strong>{{ req.end_date }}</strong>
                   </td>
-                  <td>{{ req.total_days }} {{ req.total_days === 1 ? 'day' : 'days' }}</td>
-                  <td>{{ req.reason }}</td>
-                  <td>
+                  <td data-label="Duration">{{ req.total_days }} {{ req.total_days === 1 ? 'day' : 'days' }}</td>
+                  <td data-label="Reason">{{ req.reason }}</td>
+                  <td data-label="Status">
                     <span
                       class="badge"
                       [class.warning]="req.status === 'PENDING'"
@@ -165,8 +189,8 @@
                       {{ req.status }}
                     </span>
                   </td>
-                  <td class="subtle">{{ req.created_at | date: 'mediumDate' }}</td>
-                  <td>
+                  <td class="subtle" data-label="Submitted">{{ req.created_at | date: 'mediumDate' }}</td>
+                  <td class="col-actions">
                     @if (req.status !== 'CANCELLED') {
                       <button class="btn ghost sm danger" type="button" (click)="cancelLeave(req)">
                         Cancel
@@ -197,7 +221,7 @@
       <form [formGroup]="applyForm" (ngSubmit)="submitLeaveApplication()">
         <div class="card-body">
           @if (formErrors()['general']) {
-            <div class="alert danger-alert mb-3">
+            <div class="alert error mb-3">
               {{ formErrors()['general'] }}
             </div>
           }
@@ -235,6 +259,7 @@
                 id="start_date"
                 type="date"
                 formControlName="start_date"
+                placeholder="YYYY-MM-DD"
                 [class.invalid]="applyForm.get('start_date')?.touched && (applyForm.get('start_date')?.invalid || formErrors()['start_date'])"
               />
               @if (formErrors()['start_date']) {
@@ -248,6 +273,7 @@
                 id="end_date"
                 type="date"
                 formControlName="end_date"
+                placeholder="YYYY-MM-DD"
                 [class.invalid]="applyForm.get('end_date')?.touched && (applyForm.get('end_date')?.invalid || formErrors()['end_date'])"
               />
               @if (formErrors()['end_date']) {
@@ -277,7 +303,7 @@
           <button class="btn ghost" type="button" (click)="closeApplyModal()" [disabled]="submitting()">
             Cancel
           </button>
-          <button class="btn primary" type="submit" [disabled]="submitting() || exceedsBalance()" [title]="exceedsBalance() ? 'This request exceeds your remaining balance for this leave type.' : ''">
+          <button class="btn" type="submit" [disabled]="submitting() || exceedsBalance()" [title]="exceedsBalance() ? 'This request exceeds your remaining balance for this leave type.' : ''">
             {{ submitting() ? 'Submitting...' : exceedsBalance() ? 'Insufficient balance' : 'Submit Request' }}
           </button>
         </div>

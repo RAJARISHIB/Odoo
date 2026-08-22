@@ -30,12 +30,12 @@
     </div>
   </div>
 
-  <div class="grid cols-2" style="margin-top: 16px">
+  <div class="grid cols-2 mt-4">
     <!-- Live feed -->
     <section class="card">
       <div class="card-head">
         <h3>Live activity</h3>
-        <span class="subtle">Pushed over websocket</span>
+        <span class="subtle">Updates as it happens</span>
       </div>
       @if (feed().length) {
         <ul class="feed">
@@ -100,7 +100,7 @@
 
   <!-- Team composition -->
   @if (stats(); as userStats) {
-    <section class="card" style="margin-top: 16px">
+    <section class="card mt-4">
       <div class="card-head">
         <h3>Team</h3>
         <a routerLink="/settings/people">Manage employees</a>

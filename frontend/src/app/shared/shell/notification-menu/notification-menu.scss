@@ -1,0 +1,218 @@
+:host {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Matches the topbar's other icon buttons; kept here rather than inherited so
+   the component stands on its own if it ever moves. */
+.tool {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  --icon-size: 19px;
+}
+
+.tool:hover,
+.tool[aria-expanded='true'] {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.count {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  /* Amber is 3.2:1 against white, so it carries near-black text, never white.
+     As a fill with dark ink it measures 5.5:1. */
+  background: var(--accent);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* ---------- panel ---------- */
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - var(--space-6));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-menu);
+  overflow: hidden;
+  animation: menu-in var(--dur-fast) var(--ease-out);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 11px var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-head strong {
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- list ---------- */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* Capped at 25 events, so this tops out around eight rows before scrolling. */
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
+.list li + li .row {
+  border-top: 1px solid var(--border);
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px var(--space-4);
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--surface-alt);
+}
+
+.row.is-static {
+  cursor: default;
+}
+
+.row.is-static:hover {
+  background: none;
+}
+
+.mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  --icon-size: 15px;
+}
+
+.mark.success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.mark.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.mark.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.mark.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.mark.primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.text strong {
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+}
+
+.text span {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.when {
+  flex: none;
+  font-size: var(--text-2xs);
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.empty-note {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.empty-note strong {
+  font-size: 13.5px;
+}
+
+.empty-note span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+
+/* On a phone the panel would otherwise hang off the right edge of the topbar. */
+@media (max-width: 560px) {
+  .panel {
+    position: fixed;
+    top: calc(var(--topbar-h) + 6px);
+    right: var(--space-3);
+    left: var(--space-3);
+    width: auto;
+    max-width: none;
+  }
+}

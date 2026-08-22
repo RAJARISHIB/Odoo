@@ -1,0 +1,366 @@
+/* =========================================================================
+   Responsive layer.
+
+   Loaded LAST so every rule here reliably overrides the desktop defaults in
+   _layout.scss and _components.scss at equal specificity. Nothing in this file
+   introduces new visual vocabulary — it only re-flows what already exists.
+
+   The four widths are the same ones the shell and topbar already use. They are
+   plain Sass variables rather than custom properties because a CSS @media
+   cannot read a custom property.
+
+     $wide   1100px  topbar search shrinks, punch widget goes icon-only
+     $compact 880px  sidebar becomes an overlay drawer (mirrors COMPACT_QUERY
+                     in core/services/layout.ts and $compact in app-shell.scss)
+     $small   720px  data tables stop being tables and become stacked cards
+     $tiny    520px  one column for everything; controls go full-bleed
+   ========================================================================= */
+
+$wide: 1100px;
+$compact: 880px;
+$small: 720px;
+$tiny: 520px;
+
+/* ---------- page frame -----------------------------------------------------
+   The desktop gutter (28px) is a quarter of a 375px screen once you count both
+   sides. clamp() walks it down to 14px on a phone without a breakpoint step. */
+@media (max-width: $compact) {
+  .page {
+    padding: var(--space-5) clamp(14px, 4vw, 28px);
+  }
+}
+
+@media (max-width: $small) {
+  .page-head {
+    /* Title and actions stop competing for one line: the actions drop below
+       and align left with the heading rather than hanging off the right. */
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .page-head h1 {
+    font-size: var(--text-lg);
+  }
+
+  .page-head .actions,
+  .page-head > .row {
+    width: 100%;
+  }
+
+  /* A lone action stretches; two or more share the row evenly. */
+  .page-head .actions > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+/* ---------- grids ----------------------------------------------------------
+   `auto-fit` already collapses these, but its floor is a hard minimum: a
+   190px track cannot fit twice in a 319px content box, so `cols-4` drops
+   straight from four columns to one and the stat row becomes a tall stack.
+   Two-up is the right density for a phone, so the floor is lowered explicitly
+   rather than left to auto-fit's arithmetic. */
+@media (max-width: $small) {
+  /* Stat tiles are short and read fine two-up even on the narrowest phone —
+     collapsing them to one column just makes a tall scroll of near-empty
+     rows, so `cols-4` never drops below two. */
+  .grid.cols-3,
+  .grid.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  /* Content panels, not tiles: one at a time. */
+  .grid.cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid.cards {
+    grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  }
+
+  /* A form laid out on `cols-2`/`cols-3` must never keep two inputs abreast —
+     the labels ellipsise long before the field is usable. */
+  form .grid.cols-2,
+  form .grid.cols-3,
+  form .grid.cols-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Spans authored for a 3-column form (`grid-column: span 3`) would overflow
+     a 1-column grid; the shorthand resets them all at once. */
+  form .grid > .field {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: $tiny) {
+  .grid.cols-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .stat .value {
+    font-size: var(--text-xl);
+  }
+}
+
+/* ---------- cards ---------- */
+@media (max-width: $small) {
+  .card-body {
+    padding: var(--space-4);
+  }
+
+  .card-head {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .card-foot {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+/* ---------- filters ----------
+   `.filters .field` carries `min-width: 160px`, which lands two cramped
+   controls per row on a phone. One per row is both wider and easier to hit. */
+@media (max-width: $small) {
+  .filters {
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .filters .field {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  /* The submit/clear pair stays on one shared row under the fields. */
+  .filters > .btn {
+    flex: 1 1 0;
+  }
+}
+
+/* ---------- touch targets --------------------------------------------------
+   `.btn.sm` is 6px/11px — about 28px tall, well under the 44px WCAG 2.5.5
+   target. Padding is left alone (it drives the visual size) and the floor is
+   set with min-height so nothing re-flows on desktop. */
+@media (max-width: $small) {
+  .btn {
+    min-height: 40px;
+  }
+
+  .btn.sm {
+    min-height: 36px;
+    padding-inline: var(--space-3);
+  }
+
+  .btn.icon {
+    min-width: 40px;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    /* 16px is the threshold below which iOS Safari zooms the viewport on
+       focus and never zooms back out. */
+    font-size: 16px;
+    min-height: 42px;
+  }
+}
+
+/* ---------- data tables ----------------------------------------------------
+   Below $small a table stops being a table. `.table-wrap` keeps the document
+   from scrolling sideways, but a 1036px seven-column grid inside a 318px
+   scroller is only technically usable: reaching the action buttons scrolls the
+   employee's name off screen, so you act on a row you can no longer identify.
+
+   Each row becomes a card and each cell a labelled line. The label comes from
+   `data-label` on the <td>, which is why every data cell in the feature
+   templates carries one — a cell without it renders full-bleed, which is what
+   the colspan empty-state rows want anyway. */
+@media (max-width: $small) {
+  .table-wrap {
+    /* No longer a scroller: the cards are already within the viewport. */
+    overflow-x: visible;
+  }
+
+  table.data,
+  table.data tbody,
+  table.data tr,
+  table.data td {
+    display: block;
+    width: 100%;
+  }
+
+  table.data thead {
+    /* Not merely hidden — removed. `display: block` on the table, tbody and
+       rows above already drops the table role, so a sr-only header row conveys
+       nothing to assistive tech that a column it no longer belongs to could
+       use. The per-cell `data-label` below is what carries the header text,
+       and generated `content` on ::before is announced by NVDA, JAWS and
+       VoiceOver alike.
+
+       `display: none` also keeps `white-space: nowrap` on the th from
+       projecting a ~1000px layout box off the right of the document. */
+    display: none;
+  }
+
+  table.data tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    padding: var(--space-2) 0;
+    margin-bottom: var(--space-3);
+  }
+
+  table.data tr:last-child {
+    margin-bottom: 0;
+  }
+
+  table.data tbody tr:hover {
+    background: var(--surface);
+  }
+
+  table.data td {
+    border-bottom: none;
+    padding: 5px var(--space-4);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  table.data td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    max-width: 118px;
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+  }
+
+  /* Empty-state and detail rows span the card and want no label gutter. */
+  table.data td:not([data-label]) {
+    display: block;
+    padding: 0;
+  }
+
+  table.data td:not([data-label])::before {
+    display: none;
+  }
+
+  /* The identity cell reads as the card's title rather than another field. */
+  table.data td[data-primary] {
+    display: block;
+    padding-block: var(--space-2);
+    margin-bottom: var(--space-1);
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-md);
+  }
+
+  table.data td[data-primary]::before {
+    display: none;
+  }
+
+  /* Actions become a real button row at the foot of the card. The desktop
+     `white-space: nowrap` would otherwise push them out of the card. */
+  table.data td.col-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    white-space: normal;
+    padding-top: var(--space-3);
+    margin-top: var(--space-1);
+    border-top: 1px solid var(--border);
+  }
+
+  table.data td.col-actions::before {
+    display: none;
+  }
+
+  table.data td.col-actions:empty {
+    display: none;
+  }
+
+  table.data td.col-actions > .btn {
+    flex: 1 1 auto;
+  }
+
+  /* A cell that holds only an empty-state block should not draw a card. */
+  table.data tr:has(> td[colspan]) {
+    border: none;
+    background: none;
+    padding: 0;
+  }
+}
+
+/* ---------- pagination ---------- */
+@media (max-width: $tiny) {
+  .pager {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .pager .row {
+    justify-content: center;
+  }
+}
+
+/* ---------- toasts ----------
+   Bottom-right is a desktop convention; on a phone the toast should span the
+   width so the message is not clipped to a 40-character column. */
+@media (max-width: $tiny) {
+  .toast-host {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+    max-width: none;
+  }
+}
+
+/* ---------- empty states ---------- */
+@media (max-width: $small) {
+  .empty {
+    padding: var(--space-8) var(--space-4);
+  }
+}
+
+/* ---------- modal ----------------------------------------------------------
+   A centred dialog on a short phone screen puts the submit button underneath
+   the on-screen keyboard, so below $tiny it becomes a bottom sheet with a
+   pinned footer. */
+@media (max-width: $tiny) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-card {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: sheet-up var(--dur-med) var(--ease-emphasized);
+  }
+
+  .modal-foot {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .modal-foot .btn {
+    flex: 1;
+  }
+}

@@ -1,0 +1,291 @@
+<div class="teams-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-group">
+        <h1 class="page-title">
+          <app-icon name="people" class="title-icon"></app-icon>
+          {{ teamData()?.team?.name || 'My Team' }}
+        </h1>
+        <p class="page-description">
+          {{ teamData()?.team?.description || 'Team hierarchy, member availability, and birthdays' }}
+        </p>
+      </div>
+
+      @if (auth.user()?.is_admin) {
+        <div class="header-actions">
+          <a routerLink="/settings/teams" class="btn btn-secondary">
+            <app-icon name="settings"></app-icon>
+            Manage Teams
+          </a>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading team workspace…</p>
+    </div>
+  } @else if (!teamData()?.team) {
+    <!-- Empty State -->
+    <div class="card empty-card">
+      <div class="empty-content">
+        <div class="empty-icon-wrap">
+          <app-icon name="people"></app-icon>
+        </div>
+        <h3>No Team Assigned</h3>
+        <p>You are not currently assigned to an active team in your organization.</p>
+        @if (auth.user()?.is_admin) {
+          <a routerLink="/settings/teams" class="btn btn-primary">Assign Employee to Team</a>
+        }
+      </div>
+    </div>
+  } @else {
+    <!-- Stat Summary Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon-wrap primary">
+          <app-icon name="people"></app-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Team Members</span>
+          <span class="stat-value">{{ teamData()?.members?.length || 0 }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap info">
+          <app-icon name="briefcase"></app-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Hierarchy Levels</span>
+          <span class="stat-value">{{ teamData()?.hierarchy_levels?.length || 0 }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap warning">
+          <app-icon name="calendar"></app-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Birthdays Today</span>
+          <span class="stat-value">{{ birthdays()?.birthdays_today?.length || 0 }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap success">
+          <app-icon name="clock"></app-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Current Week</span>
+          <span class="stat-value text-sm">{{ availability()?.start_date }} to {{ availability()?.end_date }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-nav">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'availability'"
+        (click)="activeTab.set('availability')"
+      >
+        <app-icon name="calendar"></app-icon>
+        Weekly Availability
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'roster'"
+        (click)="activeTab.set('roster')"
+      >
+        <app-icon name="people"></app-icon>
+        Team Roster
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'birthdays'"
+        (click)="activeTab.set('birthdays')"
+      >
+        <app-icon name="bell"></app-icon>
+        Birthdays
+        @if ((birthdays()?.birthdays_today?.length || 0) > 0) {
+          <span class="tab-badge">{{ birthdays()?.birthdays_today?.length }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- Tab 1: Weekly Availability Grid -->
+    @if (activeTab() === 'availability') {
+      <div class="card availability-card">
+        <div class="card-head">
+          <div>
+            <h3>Current Week Availability</h3>
+            <p class="sub-text">Live attendance, approved leave, and holiday schedule for your team.</p>
+          </div>
+          <div class="legend">
+            <span class="legend-item"><span class="dot present"></span> Present</span>
+            <span class="legend-item"><span class="dot on-leave"></span> On Leave</span>
+            <span class="legend-item"><span class="dot holiday"></span> Holiday</span>
+            <span class="legend-item"><span class="dot absent"></span> Absent</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data availability-table">
+            <thead>
+              <tr>
+                <th class="col-member">Team Member</th>
+                <th class="col-level">Level</th>
+                @for (dayDate of availability()?.days; track dayDate) {
+                  <th class="col-day">
+                    {{ dayDate | date: 'EEE, MMM d' }}
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of availability()?.members; track row.employee.id) {
+                <tr>
+                  <td class="col-member">
+                    <div class="member-profile">
+                      @if (row.employee.avatar_url) {
+                        <img [src]="row.employee.avatar_url" [alt]="row.employee.full_name" class="avatar-img" />
+                      } @else {
+                        <div class="avatar-initials">{{ getAvatarInitials(row.employee.full_name) }}</div>
+                      }
+                      <div class="member-names">
+                        <span class="name">{{ row.employee.full_name }}</span>
+                        <span class="designation">{{ row.employee.designation || 'Team Member' }}</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="col-level">
+                    @if (row.hierarchy_level) {
+                      <span class="badge badge-outline">{{ row.hierarchy_level.name }}</span>
+                    } @else {
+                      <span class="text-subtle">—</span>
+                    }
+                  </td>
+
+                  @for (slot of row.availability; track slot.date) {
+                    <td class="col-day">
+                      <span class="badge" [class]="getStatusBadgeClass(slot.status)">
+                        {{ slot.label }}
+                      </span>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Tab 2: Team Roster -->
+    @if (activeTab() === 'roster') {
+      <div class="roster-grid">
+        @for (m of teamData()?.members; track m.id) {
+          <div class="card member-card">
+            <div class="card-header-bar">
+              @if (m.hierarchy_level) {
+                <span class="badge badge-primary">Level {{ m.hierarchy_level.order }}: {{ m.hierarchy_level.name }}</span>
+              } @else {
+                <span class="badge badge-neutral">Member</span>
+              }
+            </div>
+            <div class="card-body text-center">
+              <div class="avatar-container">
+                @if (m.employee.avatar_url) {
+                  <img [src]="m.employee.avatar_url" [alt]="m.employee.full_name" class="avatar-lg" />
+                } @else {
+                  <div class="avatar-lg-initials">{{ getAvatarInitials(m.employee.full_name) }}</div>
+                }
+              </div>
+              <h4 class="member-name">{{ m.employee.full_name }}</h4>
+              <p class="member-role">{{ m.employee.designation || 'Team Member' }}</p>
+              <p class="member-email"><app-icon name="mail"></app-icon> {{ m.employee.email }}</p>
+              @if (m.employee.employee_id) {
+                <span class="employee-id-pill">ID: {{ m.employee.employee_id }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 3: Birthdays -->
+    @if (activeTab() === 'birthdays') {
+      <div class="birthdays-section">
+        <!-- Today's Birthdays -->
+        <div class="card birthday-card today-card">
+          <div class="card-head">
+            <h3>🎉 Birthdays Today</h3>
+          </div>
+          <div class="card-body">
+            @if ((birthdays()?.birthdays_today?.length || 0) === 0) {
+              <p class="empty-text">No team birthdays today.</p>
+            } @else {
+              <div class="birthday-list">
+                @for (item of birthdays()?.birthdays_today; track item.employee.id) {
+                  <div class="birthday-item today-item">
+                    <div class="avatar-wrap">
+                      @if (item.employee.avatar_url) {
+                        <img [src]="item.employee.avatar_url" [alt]="item.employee.full_name" class="avatar-img" />
+                      } @else {
+                        <div class="avatar-initials">{{ getAvatarInitials(item.employee.full_name) }}</div>
+                      }
+                      <span class="party-emoji">🎂</span>
+                    </div>
+                    <div class="bday-info">
+                      <h4>{{ item.employee.full_name }}</h4>
+                      <p>{{ item.employee.designation || 'Team Member' }}</p>
+                    </div>
+                    <span class="badge badge-success">Today!</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Upcoming Birthdays -->
+        <div class="card birthday-card">
+          <div class="card-head">
+            <h3>📅 Upcoming Birthdays (Next 7 Days)</h3>
+          </div>
+          <div class="card-body">
+            @if ((birthdays()?.upcoming_birthdays?.length || 0) === 0) {
+              <p class="empty-text">No upcoming birthdays in the next 7 days.</p>
+            } @else {
+              <div class="birthday-list">
+                @for (item of birthdays()?.upcoming_birthdays; track item.employee.id) {
+                  <div class="birthday-item">
+                    <div class="avatar-wrap">
+                      @if (item.employee.avatar_url) {
+                        <img [src]="item.employee.avatar_url" [alt]="item.employee.full_name" class="avatar-img" />
+                      } @else {
+                        <div class="avatar-initials">{{ getAvatarInitials(item.employee.full_name) }}</div>
+                      }
+                    </div>
+                    <div class="bday-info">
+                      <h4>{{ item.employee.full_name }}</h4>
+                      <p>{{ item.employee.designation || 'Team Member' }} &middot; {{ item.birthday_date | date: 'MMMM d' }}</p>
+                    </div>
+                    <span class="badge badge-info">In {{ item.days_until }} {{ item.days_until === 1 ? 'day' : 'days' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>
