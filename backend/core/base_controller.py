@@ -145,7 +145,6 @@ class BaseController:
             )
         return user
 
-<<<<<<< HEAD
     def require_any_permission(self, *permissions):
         """Restrict an action to users holding AT LEAST ONE of the specified permissions."""
         user = self.require_user()
@@ -158,15 +157,8 @@ class BaseController:
     def require_roles(self, *roles):
         """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
-        role_slug = getattr(user.role, 'slug', str(user.role or ''))
+        role_slug = getattr(user.role, 'slug', str(user.role or '')) if user and user.role else ""
         if role_slug not in roles:
-=======
-    def require_roles(self, *roles):
-        """Restrict an action to specific role slugs."""
-        user = self.require_user()
-        user_role_slug = self.role
-        if user_role_slug not in roles:
->>>>>>> 1c5cbf77f1ccf91637ea963d09731d15d13ff717
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
