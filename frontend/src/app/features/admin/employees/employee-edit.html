@@ -42,6 +42,16 @@
       </div>
     </div>
 
+    @if (isProtected()) {
+      <div class="alert warning mb-4">
+        <app-icon name="lock" />
+        <span>
+          You can't modify {{ person.full_name }} — they hold equal or higher privilege than your
+          own role. Only someone above them can make changes here.
+        </span>
+      </div>
+    }
+
     @if (issuedPassword(); as password) {
       <div class="card temp-password mb-4">
         <div class="card-body">
@@ -139,7 +149,7 @@
         </div>
 
         <div class="card-foot">
-          <button class="btn" type="submit" [disabled]="saving()">
+          <button class="btn" type="submit" [disabled]="saving() || isProtected()">
             {{ saving() ? 'Saving…' : 'Save changes' }}
           </button>
         </div>
@@ -154,7 +164,7 @@
             <strong>Reset password</strong>
             <span class="subtle">Issues a temporary password and forces a change at next sign-in.</span>
           </span>
-          <button class="btn ghost sm" type="button" (click)="resetPassword()">
+          <button class="btn ghost sm" type="button" [disabled]="isProtected()" (click)="resetPassword()">
             <app-icon name="lock" />Reset
           </button>
         </div>
@@ -170,12 +180,12 @@
               }}
             </span>
           </span>
-          <button class="btn ghost sm" type="button" (click)="toggleStatus()">
+          <button class="btn ghost sm" type="button" [disabled]="isProtected()" (click)="toggleStatus()">
             {{ person.status === 'active' ? 'Suspend' : 'Activate' }}
           </button>
         </div>
 
-        @if (!isSelf()) {
+        @if (!isSelf() && !isProtected()) {
           <div class="action is-danger">
             <span>
               <strong>Remove from the organization</strong>

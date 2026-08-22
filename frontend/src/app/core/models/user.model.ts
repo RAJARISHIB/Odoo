@@ -6,6 +6,23 @@ export type Panel = 'admin' | 'user';
 /** Roles that land in the admin panel - keep in sync with `Role.ADMIN_PANEL`. */
 export const ADMIN_ROLES: Role[] = ['super_admin', 'admin', 'hr', 'manager'];
 
+/**
+ * `User.role` is typed below as a plain slug because that's how most of the
+ * app treats it, but `apps/users/models.py::User.to_dict()` actually returns
+ * `{id, name, slug}` once a role is a real document (which, post-RBAC
+ * migration, it always is) - `role: Role` on the interface is aspirational,
+ * not what the wire sends. Untyped input on purpose: this narrows either
+ * shape down to the slug, for the couple of call sites that got bitten by
+ * the mismatch (a `.replace()` on an object throws). It does not paper over
+ * every affected call site - most of the app still compares/displays
+ * `user.role` directly assuming a string, which is the same bug lying
+ * dormant; this is a targeted fix, not a full audit.
+ */
+export function roleSlug(role: unknown): Role {
+  if (typeof role === 'string') return role as Role;
+  return (role as { slug?: Role } | null | undefined)?.slug ?? 'employee';
+}
+
 export interface User {
   id: string;
   /** System-generated sign-in ID, e.g. OIJODO20220001. Never editable. */

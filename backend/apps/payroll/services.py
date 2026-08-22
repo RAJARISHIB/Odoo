@@ -161,7 +161,7 @@ def upsert_role_template(organization, data: dict) -> RoleSalaryTemplate:
         is_deleted=False,
     )
     for emp_payroll in role_payrolls:
-        if emp_payroll.employee and emp_payroll.employee.role == role_val:
+        if emp_payroll.employee and getattr(emp_payroll.employee.role, "slug", str(emp_payroll.employee.role or "")) == role_val:
             emp_payroll.role_template = template
             emp_payroll.monthly_wage = template.monthly_wage
             emp_payroll.yearly_wage = template.yearly_wage
@@ -189,7 +189,8 @@ def get_employee_payroll(organization, user: User) -> EmployeePayroll:
     payroll = EmployeePayroll.objects.filter(organization=organization, employee=user, is_deleted=False).first()
     if not payroll:
         # Check if role salary template exists for employee's role
-        role_tpl = RoleSalaryTemplate.objects.filter(organization=organization, role=user.role, is_deleted=False).first()
+        role_slug = getattr(user.role, "slug", str(user.role or "")) if user and user.role else ""
+        role_tpl = RoleSalaryTemplate.objects.filter(organization=organization, role=role_slug, is_deleted=False).first()
         monthly_wage = role_tpl.monthly_wage if role_tpl else 50000.0
         components_data = [c.to_dict() for c in role_tpl.components] if role_tpl else get_default_salary_components(monthly_wage)
 
@@ -255,7 +256,8 @@ def assign_employee_payroll(organization, data: dict) -> EmployeePayroll:
 
     role_template = None
     if salary_source == EmployeePayroll.SOURCE_ROLE:
-        role_template = RoleSalaryTemplate.objects.filter(organization=organization, role=user.role, is_deleted=False).first()
+        role_slug = getattr(user.role, "slug", str(user.role or "")) if user and user.role else ""
+        role_template = RoleSalaryTemplate.objects.filter(organization=organization, role=role_slug, is_deleted=False).first()
         if not role_template and data.get("role_template_id"):
             tid = validate_object_id(data["role_template_id"], "role_template_id")
             role_template = RoleSalaryTemplate.objects.filter(id=tid, organization=organization, is_deleted=False).first()

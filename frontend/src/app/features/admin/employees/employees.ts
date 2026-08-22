@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiErrorBody, EMPTY_PAGE_META, PageMeta } from '../../../core/models/api.model';
 import { Auth } from '../../../core/services/auth';
 import { Realtime } from '../../../core/services/realtime';
-import { Role, User } from '../../../core/models/user.model';
+import { Role, User, roleSlug } from '../../../core/models/user.model';
 import { Toast } from '../../../core/services/toast';
 import { Users } from '../../../core/services/users';
 import { RouterLink } from '@angular/router';
@@ -51,6 +51,9 @@ export class Employees {
   protected readonly sentInviteInfo = signal<{ email: string; invite_url: string } | null>(null);
 
   protected readonly roles: Role[] = ['employee', 'manager', 'hr', 'admin', 'super_admin'];
+  /** `roleSlug` bound as a field so the template can call it - see the
+      comment on its definition for why this is needed at all. */
+  protected readonly roleSlug = roleSlug;
 
   protected readonly filters = this.fb.nonNullable.group({
     search: [''],

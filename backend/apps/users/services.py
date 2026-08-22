@@ -17,7 +17,7 @@ from apps.users.models import EmailVerificationToken, PasswordResetToken, Refres
 from core.audit import record as audit_record
 from core.constants import AuditAction, Permissions, RealtimeEvent, Role as RoleEnum, UserStatus
 from core.identifiers import generate_login_id, organization_code, split_full_name
-from core.exceptions import AuthenticationError, Conflict, NotFound, ValidationError
+from core.exceptions import AuthenticationError, Conflict, NotFound, PermissionDenied, ValidationError
 from core.mailer import send as send_email
 from core.security import (
     TOKEN_TYPE_MFA_PENDING,
@@ -562,8 +562,38 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
     return user, temporary_password
 
 
+# Ranked strictly, not by ADMIN_PANEL membership: two roles both being
+# "admin-panel" roles doesn't mean either may act on the other.
+_ROLE_RANK = {
+    RoleEnum.SUPER_ADMIN: 4,
+    RoleEnum.ADMIN: 3,
+    RoleEnum.HR: 2,
+    RoleEnum.MANAGER: 1,
+    RoleEnum.EMPLOYEE: 0,
+}
+
+
+def _role_rank(user: User) -> int:
+    slug = getattr(user.role, "slug", None)
+    return _ROLE_RANK.get(slug, 0)
+
+
+def assert_editable_by(editor: User, target: User) -> None:
+    """An admin may act on anyone ranked strictly below them - never a peer,
+    never a superior.  Applies uniformly, including two `super_admin`s: one
+    cannot silently demote or delete another without their consent.  A no-op
+    for self-edits and for internal calls with no editor (e.g. the
+    self-service profile update, which never touches role/status anyway)."""
+    if editor is None or str(editor.id) == str(target.id):
+        return
+    if _role_rank(editor) <= _role_rank(target):
+        raise PermissionDenied("You cannot modify a user with equal or higher privilege.")
+
+
 def update_user(user: User, data: dict, *, editor: User = None) -> User:
     """Patch a user.  Only whitelisted fields are writable over the API."""
+    assert_editable_by(editor, user)
+
     editable = (
         "first_name", "last_name", "phone", "designation",
         "employee_id", "avatar_url", "preferences",

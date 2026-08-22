@@ -51,8 +51,8 @@ class Command(BaseCommand):
         for r_slug, r_name, perms in [
             (RoleEnum.SUPER_ADMIN, "Super Admin", list(Permissions.ALL)),
             (RoleEnum.ADMIN, "Admin", list(Permissions.ALL)),
-            (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN)]),
-            (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW]),
+            (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN, Permissions.PAYROLL_VIEW_ALL, Permissions.PAYROLL_MANAGE, Permissions.CLAIMS_VIEW_ALL, Permissions.CLAIMS_MANAGE)]),
+            (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW, Permissions.CLAIMS_VIEW_ALL, Permissions.CLAIMS_MANAGE]),
             (RoleEnum.EMPLOYEE, "Employee", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.ORG_VIEW])
         ]:
             roles[r_slug] = Role.objects.filter(organization=organization, slug=r_slug).first()
@@ -94,6 +94,7 @@ class Command(BaseCommand):
         EmployeePayroll.objects.filter(organization=organization).delete()
         PayrollDocument.objects.filter(organization=organization).delete()
         RoleSalaryTemplate.objects.filter(organization=organization).delete()
+        Role.objects.filter(organization=organization).delete()
         for t in Team.objects.filter(organization=organization):
             TeamHierarchyLevel.objects.filter(team=t).delete()
             t.delete()
@@ -446,14 +447,14 @@ class Command(BaseCommand):
 
         # Seed Role Salary Templates
         tpl_dev = payroll_services.upsert_role_template(organization, {
-            "role": Role.EMPLOYEE,
+            "role": RoleEnum.EMPLOYEE,
             "designation": "Software Engineer",
             "monthly_wage": 60000.0,
             "employee_pf_rate": 12.0,
             "professional_tax": 200.0,
         })
         tpl_admin = payroll_services.upsert_role_template(organization, {
-            "role": Role.ADMIN,
+            "role": RoleEnum.ADMIN,
             "designation": "Head of Engineering",
             "monthly_wage": 120000.0,
             "employee_pf_rate": 12.0,

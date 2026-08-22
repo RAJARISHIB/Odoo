@@ -135,7 +135,7 @@ class EmployeePayroll(BaseDocument):
                 "email": self.employee.email,
                 "employee_id": self.employee.employee_id,
                 "designation": self.employee.designation,
-                "role": self.employee.role,
+                "role": getattr(self.employee.role, "slug", str(self.employee.role or "")),
             }
         data["components"] = [c.to_dict() for c in (self.components or [])]
         data["monthly_wage"] = round(float(self.monthly_wage or 0), 2)

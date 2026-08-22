@@ -74,20 +74,11 @@
               <td class="col-actions">
                 @if (request.status === 'PENDING') {
                   <div class="actions-flex">
-                    <select
-                      class="approve-type"
-                      aria-label="Leave type to approve as"
-                      [value]="request.leave_type_id ?? ''"
-                      (change)="setApproveType(request.id, $any($event.target).value)"
-                    >
-                      <option value="">Unspecified</option>
-                      @for (type of types(); track type.id) {
-                        <option [value]="type.id">{{ type.name }}</option>
-                      }
-                    </select>
-                    <button class="btn success sm" type="button" (click)="approve(request)">Approve</button>
-                    <button class="btn danger sm" type="button" (click)="reject(request)">Reject</button>
+                    <button class="btn success sm" type="button" (click)="openApproveModal(request)">Approve</button>
+                    <button class="btn danger sm" type="button" (click)="openRejectModal(request)">Reject</button>
                   </div>
+                } @else {
+                  <span class="subtle">Processed</span>
                 }
               </td>
             </tr>
@@ -119,4 +110,100 @@
       </div>
     }
   </section>
+
+  <!-- Approve Modal -->
+  @if (selectedApproveRequest(); as req) {
+    <div class="modal-backdrop" (click)="closeModals()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Approve Leave Request</h3>
+          <button class="btn-icon" type="button" (click)="closeModals()">
+            <app-icon name="x"></app-icon>
+          </button>
+        </div>
+        <form [formGroup]="approveForm" (ngSubmit)="confirmApprove()">
+          <div class="modal-body">
+            <div class="request-summary-box">
+              <div class="summary-row">
+                <span class="summary-label">Employee:</span>
+                <strong>{{ req.employee_info?.name ?? 'Employee' }}</strong>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Duration:</span>
+                <span>{{ req.start_date }} to {{ req.end_date }} (<strong>{{ req.total_days }} day(s)</strong>)</span>
+              </div>
+              @if (req.reason) {
+                <div class="summary-row">
+                  <span class="summary-label">Reason:</span>
+                  <span>{{ req.reason }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="field" style="margin-top: 16px;">
+              <label for="approve_leave_type">Attributed Leave Type</label>
+              <select id="approve_leave_type" formControlName="leave_type_id">
+                <option value="">Default / Unspecified</option>
+                @for (type of types(); track type.id) {
+                  <option [value]="type.id">{{ type.name }} ({{ type.code }})</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn ghost" (click)="closeModals()">Cancel</button>
+            <button type="submit" class="btn success">Confirm Approval</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Reject Modal -->
+  @if (selectedRejectRequest(); as req) {
+    <div class="modal-backdrop" (click)="closeModals()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Reject Leave Request</h3>
+          <button class="btn-icon" type="button" (click)="closeModals()">
+            <app-icon name="x"></app-icon>
+          </button>
+        </div>
+        <form [formGroup]="rejectForm" (ngSubmit)="confirmReject()">
+          <div class="modal-body">
+            <div class="request-summary-box warning">
+              <div class="summary-row">
+                <span class="summary-label">Employee:</span>
+                <strong>{{ req.employee_info?.name ?? 'Employee' }}</strong>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Duration:</span>
+                <span>{{ req.start_date }} to {{ req.end_date }} (<strong>{{ req.total_days }} day(s)</strong>)</span>
+              </div>
+              @if (req.reason) {
+                <div class="summary-row">
+                  <span class="summary-label">Reason:</span>
+                  <span>{{ req.reason }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="field" style="margin-top: 16px;">
+              <label for="reject_comment">Reason for Rejection (Optional)</label>
+              <textarea
+                id="reject_comment"
+                formControlName="comment"
+                rows="3"
+                placeholder="e.g. Critical project deadline, please reschedule..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn ghost" (click)="closeModals()">Cancel</button>
+            <button type="submit" class="btn danger">Confirm Reject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

@@ -3,7 +3,7 @@ from django.http import FileResponse
 
 from apps.claims import services
 from core.base_controller import BaseController
-from core.constants import Role
+from core.constants import Permissions
 
 
 class ExpenseClaimsController(BaseController):
@@ -28,19 +28,19 @@ class ExpenseClaimsController(BaseController):
 
     # Admin actions
     def admin_list(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_VIEW_ALL)
         queryset = services.list_admin_claims(self.user.organization, status=self.param("status"))
         return self.paginated(queryset)
 
     def approve(self, claim_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         claim = services.approve_claim(
             self.user.organization, claim_id, admin_user=self.user, comment=self.field("comment", "")
         )
         return self.ok(claim.to_dict(), "Expense claim approved.")
 
     def reject(self, claim_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         claim = services.reject_claim(
             self.user.organization, claim_id, admin_user=self.user, comment=self.field("comment", "")
         )
@@ -57,17 +57,17 @@ class FinesController(BaseController):
 
     # Admin actions
     def admin_list(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_VIEW_ALL)
         queryset = services.list_admin_fines(self.user.organization, employee_id=self.param("employee_id"))
         return self.paginated(queryset)
 
     def create(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         fine = services.create_fine(self.user.organization, admin_user=self.user, data=self.data)
         return self.created(fine.to_dict(), "Fine applied successfully.")
 
     def update(self, fine_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         status = self.field("status", "CANCELLED")
         fine = services.update_fine_status(self.user.organization, fine_id, status)
         return self.ok(fine.to_dict(), "Fine status updated.")
@@ -95,7 +95,7 @@ class EmployeeRequestsController(BaseController):
 
     # Admin actions
     def admin_list(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_VIEW_ALL)
         queryset = services.list_admin_requests(
             self.user.organization,
             status=self.param("status"),
@@ -104,12 +104,12 @@ class EmployeeRequestsController(BaseController):
         return self.paginated(queryset)
 
     def approve(self, request_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         req = services.approve_request(self.user.organization, request_id, admin_user=self.user)
         return self.ok(req.to_dict(), "Employee request approved.")
 
     def reject(self, request_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR, Role.MANAGER)
+        self.require_permissions(Permissions.CLAIMS_MANAGE)
         req = services.reject_request(
             self.user.organization,
             request_id,

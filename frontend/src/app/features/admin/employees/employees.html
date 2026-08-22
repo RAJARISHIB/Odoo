@@ -203,7 +203,7 @@
                 </a>
               </td>
               <td data-label="Login ID"><code class="mono">{{ user.login_id }}</code></td>
-              <td data-label="Role"><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
+              <td data-label="Role"><span class="badge primary">{{ roleSlug(user.role).replace('_', ' ') }}</span></td>
               <td data-label="Designation">{{ user.designation || '—' }}</td>
               <td data-label="Status"><span class="badge" [class]="user.status">{{ user.status }}</span></td>
               <td class="subtle" data-label="Last login">{{ user.last_login_at ? (user.last_login_at | slice: 0 : 10) : 'Never' }}</td>

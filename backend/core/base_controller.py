@@ -175,10 +175,10 @@ class BaseController:
         return user
 
     def require_roles(self, *roles):
-        """Restrict an action to specific role slugs."""
+        """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
-        user_role_slug = self.role
-        if user_role_slug not in roles:
+        role_slug = getattr(user.role, 'slug', str(user.role or '')) if user and user.role else ""
+        if role_slug not in roles:
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
@@ -206,7 +206,6 @@ class BaseController:
 
     def require_super_admin(self):
         return self.require_roles(Role.SUPER_ADMIN)
-
     @property
     def is_admin(self) -> bool:
         return bool(self.user and getattr(self.user.role, "slug", str(self.user.role)) in Role.ADMIN_PANEL)
@@ -217,7 +216,8 @@ class BaseController:
 
     def assert_same_organization(self, document):
         """Block cross-tenant access.  Super admins are exempt."""
-        if self.role == Role.SUPER_ADMIN:
+        role_slug = getattr(self.role, 'slug', str(self.role or ''))
+        if role_slug == Role.SUPER_ADMIN:
             return document
         target_org = getattr(document, "organization", None)
         if target_org is None or self.organization_id is None:
@@ -235,7 +235,8 @@ class BaseController:
     def scoped(self, document_class):
         """Queryset pre-filtered to live documents in the caller's organization."""
         queryset = document_class.objects.filter(is_deleted=False)
-        if self.role != Role.SUPER_ADMIN and self.organization_id:
+        role_slug = getattr(self.role, 'slug', str(self.role or ''))
+        if role_slug != Role.SUPER_ADMIN and self.organization_id:
             queryset = queryset.filter(organization=self.organization_id)
         return queryset
 
@@ -285,6 +286,39 @@ class BaseController:
             org_id or self.organization_id, event, payload,
             actor_id=self.user.id if self.user else None,
         )
+
+    def notify_relevant(self, event: str, payload: dict = None, *, subject_user=None, department=None, org_id=None):
+        """Like `emit_to_admins`, but scoped down from every admin-panel user
+        to whoever actually has a reason to see this event: the org's own
+        oversight roles (`super_admin`/`admin`/`hr` - unaffected, they already
+        see everything and should keep doing so) plus, for an event about one
+        employee, that employee's own manager(s) via the team hierarchy; or
+        for an event about a department, that department's members. A plain
+        `manager` with no relationship to the subject no longer gets it.
+
+        Deferred imports: `core` stays app-agnostic, importing `apps.*` only
+        inside the method that needs them rather than at module load time.
+        """
+        from apps.teams.services import get_managers_of
+        from apps.users.models import Role as RoleDoc, User
+
+        org = org_id or self.organization_id
+        oversight_roles = list(RoleDoc.objects.filter(
+            organization=org, slug__in=(Role.SUPER_ADMIN, Role.ADMIN, Role.HR),
+        ))
+        recipient_ids = {
+            str(u.id) for u in User.objects.filter(organization=org, role__in=oversight_roles, is_deleted=False)
+        }
+
+        if subject_user is not None:
+            recipient_ids.update(get_managers_of(org, subject_user))
+        if department is not None:
+            recipient_ids.update(
+                str(u.id) for u in User.objects.filter(organization=org, department=department, is_deleted=False)
+            )
+
+        for user_id in recipient_ids:
+            self.emit_to_user(user_id, event, payload)
 
     # -----------------------------------------------------------------
     # Audit trail (accountability, not debugging - see `core.audit`)

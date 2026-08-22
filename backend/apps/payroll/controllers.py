@@ -4,7 +4,7 @@ from django.http import FileResponse
 
 from apps.payroll import services
 from core.base_controller import BaseController
-from core.constants import Role
+from core.constants import Permissions
 
 
 class PayrollController(BaseController):
@@ -36,45 +36,45 @@ class PayrollController(BaseController):
 
     # --- Admin Role Templates ---
     def list_templates(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_VIEW_ALL)
         queryset = services.list_role_templates(self.user.organization)
         return self.paginated(queryset)
 
     def get_template(self, template_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_VIEW_ALL)
         template = services.get_role_template(self.user.organization, template_id)
         return self.ok(template.to_dict())
 
     def upsert_template(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_MANAGE)
         template = services.upsert_role_template(self.user.organization, self.data)
         return self.ok(template.to_dict(), "Role salary template saved successfully.")
 
     def preview_calculation(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_MANAGE)
         res = services.preview_salary_calculation(self.data)
         return self.ok(res)
 
     # --- Admin Employee Payroll Assignments ---
     def list_employee_payrolls(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_VIEW_ALL)
         queryset = services.list_all_employee_payrolls(self.user.organization)
         return self.paginated(queryset)
 
     def get_employee_payroll_admin(self, user_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_VIEW_ALL)
         user = self.get_target_user(user_id)
         payroll = services.get_employee_payroll(self.user.organization, user)
         return self.ok(payroll.to_dict())
 
     def assign_employee_payroll(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_MANAGE)
         payroll = services.assign_employee_payroll(self.user.organization, self.data)
         return self.ok(payroll.to_dict(), "Employee payroll saved successfully.")
 
     # --- Admin Payroll Documents ---
     def list_documents_admin(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_VIEW_ALL)
         queryset = services.list_admin_documents(
             self.user.organization,
             employee_id=self.param("employee_id"),
@@ -83,7 +83,7 @@ class PayrollController(BaseController):
         return self.paginated(queryset)
 
     def upload_document_admin(self):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_MANAGE)
         file_obj = self.file("file", required=True)
         doc = services.upload_payroll_document(
             self.user.organization, uploader=self.user, data=self.data, file_obj=file_obj
@@ -91,6 +91,6 @@ class PayrollController(BaseController):
         return self.created(doc.to_dict(), "Payroll document uploaded successfully.")
 
     def delete_document_admin(self, document_id: str):
-        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require_permissions(Permissions.PAYROLL_MANAGE)
         services.delete_payroll_document(self.user.organization, document_id)
         return self.ok({}, "Payroll document deleted.")

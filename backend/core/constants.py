@@ -160,6 +160,14 @@ class Permissions:
     AUDIT_VIEW = 'audit.view'
     SECURITY_MANAGE = 'security.manage'
 
+    # Payroll
+    PAYROLL_VIEW_ALL = 'payroll.view_all'
+    PAYROLL_MANAGE = 'payroll.manage'
+
+    # Claims, fines & employee requests
+    CLAIMS_VIEW_ALL = 'claims.view_all'
+    CLAIMS_MANAGE = 'claims.manage'
+
     ALL = (
         USERS_VIEW, USERS_CREATE, USERS_EDIT, USERS_DELETE, USERS_RESET_PASSWORD,
         ATTENDANCE_PUNCH, ATTENDANCE_VIEW_OWN, ATTENDANCE_VIEW_TEAM, ATTENDANCE_VIEW_ALL, ATTENDANCE_MANAGE,
@@ -167,6 +175,8 @@ class Permissions:
         ORG_VIEW, ORG_MANAGE, DEPARTMENTS_MANAGE,
         ROLES_VIEW, ROLES_MANAGE, ROLES_ASSIGN,
         AUDIT_VIEW, SECURITY_MANAGE,
+        PAYROLL_VIEW_ALL, PAYROLL_MANAGE,
+        CLAIMS_VIEW_ALL, CLAIMS_MANAGE,
     )
 
     CATALOG = [
@@ -228,6 +238,22 @@ class Permissions:
             'permissions': [
                 {'key': AUDIT_VIEW, 'label': 'View Audit Log', 'description': 'Read the security audit trail.'},
                 {'key': SECURITY_MANAGE, 'label': 'Manage Security Settings', 'description': 'Manage organization-wide security settings.'}
+            ]
+        },
+        {
+            'module': 'payroll',
+            'label': 'Payroll',
+            'permissions': [
+                {'key': PAYROLL_VIEW_ALL, 'label': 'View All Payroll', 'description': 'View salary templates, assignments and documents for any employee.'},
+                {'key': PAYROLL_MANAGE, 'label': 'Manage Payroll', 'description': 'Configure salary templates, assign employee payroll, and manage payroll documents.'}
+            ]
+        },
+        {
+            'module': 'claims',
+            'label': 'Claims, Fines & Requests',
+            'permissions': [
+                {'key': CLAIMS_VIEW_ALL, 'label': 'View All Claims', 'description': 'View expense claims, fines and requests for any employee.'},
+                {'key': CLAIMS_MANAGE, 'label': 'Manage Claims', 'description': 'Approve or reject expense claims, fines and employee requests.'}
             ]
         }
     ]

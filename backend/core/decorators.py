@@ -76,8 +76,8 @@ def roles_required(*roles):
             if request.method == "OPTIONS":
                 return view(request, *args, **kwargs)
             user = request.auth_user
-            user_role_slug = getattr(user.role, "slug", str(user.role)) if user and user.role else None
-            if user_role_slug not in roles:
+            role_slug = getattr(user.role, "slug", str(user.role or "")) if user and user.role else ""
+            if role_slug not in roles:
                 raise PermissionDenied(
                     "Requires one of these roles: {}.".format(", ".join(roles))
                 )
@@ -117,6 +117,28 @@ def permissions_required(*permissions):
             return view(request, *args, **kwargs)
 
         wrapper.required_permissions = permissions
+        return wrapper
+
+    return decorator
+
+
+def any_permission_required(*permissions):
+    """Require an authenticated user holding at least one of the specified permissions."""
+
+    def decorator(view):
+        @auth_required
+        @functools.wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if request.method == "OPTIONS":
+                return view(request, *args, **kwargs)
+            user = request.auth_user
+            if not any(user.has_permission(p) for p in permissions):
+                raise PermissionDenied(
+                    "Requires at least one of these permissions: {}.".format(", ".join(permissions))
+                )
+            return view(request, *args, **kwargs)
+
+        wrapper.required_any_permissions = permissions
         return wrapper
 
     return decorator
