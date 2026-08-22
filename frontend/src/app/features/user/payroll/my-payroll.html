@@ -1,0 +1,168 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>My Payroll & Salary Details</h1>
+      <p>View your salary structure, earnings, deductions, and download payslips.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">Loading your payroll information...</div>
+  } @else if (payroll(); as pay) {
+    <!-- Top Summary Cards -->
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="label">Monthly Base Wage</div>
+        <div class="value primary">{{ pay.monthly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</div>
+        <div class="hint">Fixed Monthly Base</div>
+      </div>
+      <div class="stat">
+        <div class="label">Annual Wage (CTC)</div>
+        <div class="value">{{ pay.yearly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</div>
+        <div class="hint">12 x Monthly Base</div>
+      </div>
+      <div class="stat">
+        <div class="label">Gross Salary</div>
+        <div class="value success">{{ pay.gross_salary | currency: 'INR' : 'symbol' : '1.0-0' }}</div>
+        <div class="hint">Sum of all Earnings</div>
+      </div>
+      <div class="stat">
+        <div class="label">Net Salary (Take Home)</div>
+        <div class="value primary">{{ pay.net_salary | currency: 'INR' : 'symbol' : '1.0-0' }}</div>
+        <div class="hint">After PF & Tax Deductions</div>
+      </div>
+    </div>
+
+    <!-- Salary Breakdown Layout -->
+    <div class="payroll-grid">
+      <!-- Earnings Card -->
+      <div class="card">
+        <div class="card-head">
+          <h3>Salary Components (Earnings)</h3>
+          <span class="badge primary">{{ pay.salary_source === 'ROLE' ? 'Role Salary' : 'Custom Salary' }}</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Component Name</th>
+                <th>Calculation Rule</th>
+                <th class="text-right">Monthly Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of pay.components; track c.name) {
+                <tr>
+                  <td><strong>{{ c.name }}</strong></td>
+                  <td>
+                    @if (c.is_fixed_allowance_remainder) {
+                      <span class="subtle">Remaining Balance</span>
+                    } @else if (c.calculation_type === 'PERCENTAGE') {
+                      <span>{{ c.value }}% of {{ c.depends_on || 'Wage' }}</span>
+                    } @else {
+                      <span>Fixed Amount</span>
+                    }
+                  </td>
+                  <td class="text-right mono">
+                    <strong>{{ c.calculated_amount | currency: 'INR' : 'symbol' : '1.0-0' }}</strong>
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2"><strong>Total Gross Earnings</strong></td>
+                <td class="text-right mono"><strong>{{ pay.gross_salary | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Deductions Card -->
+      <div class="card">
+        <div class="card-head">
+          <h3>Deductions & Contributions</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Deduction Item</th>
+                <th>Rate / Rule</th>
+                <th class="text-right">Monthly Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Employee Provident Fund (PF)</strong></td>
+                <td>{{ pay.employee_pf_rate }}% of {{ pay.pf_base_component || 'Basic Salary' }}</td>
+                <td class="text-right mono text-danger">{{ pay.employee_pf_amount | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+              </tr>
+              <tr>
+                <td><strong>Professional Tax</strong></td>
+                <td>Fixed Statutory Tax</td>
+                <td class="text-right mono text-danger">{{ pay.professional_tax | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+              </tr>
+              @if (pay.other_deductions > 0) {
+                <tr>
+                  <td><strong>Other Deductions</strong></td>
+                  <td>Fixed Deduction</td>
+                  <td class="text-right mono text-danger">{{ pay.other_deductions | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2"><strong>Total Deductions</strong></td>
+                <td class="text-right mono text-danger"><strong>{{ pay.total_deductions | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="card-foot note">
+          <span>Employer PF Contribution: <strong>{{ pay.employer_pf_amount | currency: 'INR' : 'symbol' : '1.0-0' }}</strong> (Paid by Organization)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payroll Documents Section -->
+    <div class="card mt-6">
+      <div class="card-head">
+        <h3>My Payroll Documents & Payslips</h3>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Document Title</th>
+              <th>Type</th>
+              <th>Period</th>
+              <th>Uploaded Date</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of documents(); track doc.id) {
+              <tr>
+                <td><strong>{{ doc.title }}</strong></td>
+                <td><span class="badge info">{{ doc.document_type }}</span></td>
+                <td>{{ doc.payroll_month || 'N/A' }} {{ doc.payroll_year || '' }}</td>
+                <td class="subtle">{{ doc.created_at | date: 'mediumDate' }}</td>
+                <td class="text-right">
+                  <button class="btn ghost sm" (click)="downloadDoc(doc)">
+                    <app-icon name="file" /> Download
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-cell">No payslips or payroll documents uploaded yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

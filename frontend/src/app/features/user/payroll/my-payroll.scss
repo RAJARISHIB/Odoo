@@ -1,0 +1,45 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.payroll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: var(--space-6);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.empty-cell {
+  text-align: center;
+  padding: var(--space-6);
+  color: var(--text-muted);
+}
+
+.note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.mt-6 {
+  margin-top: var(--space-6);
+}
+
+.loading-state {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-muted);
+}

@@ -15,6 +15,7 @@ from apps.attendance.models import Attendance, WorkSession
 from apps.claims.models import EmployeeRequest, ExpenseClaim, Fine
 from apps.leaves.models import Holiday, LeaveAllocation, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
+from apps.payroll.models import EmployeePayroll, PayrollDocument, RoleSalaryTemplate
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
 from apps.users.models import RefreshToken, User
 from core.constants import AttendanceSource, AttendanceStatus, Role, UserStatus
@@ -52,6 +53,7 @@ class Command(BaseCommand):
         self._leaves(organization, users)
         self._teams(organization, users)
         self._claims_fines_requests(organization, owner, users)
+        self._payroll(organization, owner, users)
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
         self.stdout.write("  Organization : {} ({}, code {})".format(
@@ -75,6 +77,9 @@ class Command(BaseCommand):
         LeaveAllocation.objects.filter(organization=organization).delete()
         LeaveType.objects.filter(organization=organization).delete()
         TeamMember.objects.filter(organization=organization).delete()
+        EmployeePayroll.objects.filter(organization=organization).delete()
+        PayrollDocument.objects.filter(organization=organization).delete()
+        RoleSalaryTemplate.objects.filter(organization=organization).delete()
         for t in Team.objects.filter(organization=organization):
             TeamHierarchyLevel.objects.filter(team=t).delete()
             t.delete()
@@ -420,5 +425,82 @@ class Command(BaseCommand):
                 processed_at=today - timedelta(days=1),
             ).save()
             self.stdout.write("Seeded sample employee requests.")
+
+    def _payroll(self, organization, owner, users):
+        from apps.payroll import services as payroll_services
+        dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
+        admin_user = next((u for u in users if u.email == "admin@acme.test"), None) or owner
+
+        # Seed Role Salary Templates
+        tpl_dev = payroll_services.upsert_role_template(organization, {
+            "role": Role.EMPLOYEE,
+            "designation": "Software Engineer",
+            "monthly_wage": 60000.0,
+            "employee_pf_rate": 12.0,
+            "professional_tax": 200.0,
+        })
+        tpl_admin = payroll_services.upsert_role_template(organization, {
+            "role": Role.ADMIN,
+            "designation": "Head of Engineering",
+            "monthly_wage": 120000.0,
+            "employee_pf_rate": 12.0,
+            "professional_tax": 200.0,
+        })
+        self.stdout.write("Seeded role salary templates.")
+
+        # Seed Employee Payrolls
+        if dev_user:
+            payroll_services.assign_employee_payroll(organization, {
+                "employee_id": str(dev_user.id),
+                "salary_source": "ROLE",
+                "role_template_id": str(tpl_dev.id),
+            })
+
+        if admin_user:
+            payroll_services.assign_employee_payroll(organization, {
+                "employee_id": str(admin_user.id),
+                "salary_source": "MANUAL",
+                "monthly_wage": 135000.0,
+                "employee_pf_rate": 12.0,
+                "professional_tax": 200.0,
+            })
+
+        # Seed sample valid payslip PDF document
+        if dev_user:
+            class ValidPdfFile:
+                name = "August_2026_Payslip.pdf"
+                size = 313
+                def chunks(self):
+                    yield (
+                        b"%PDF-1.4\n"
+                        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+                        b"2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n"
+                        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\n"
+                        b"xref\n"
+                        b"0 4\n"
+                        b"0000000000 65535 f\n"
+                        b"0000000009 00000 n\n"
+                        b"0000000052 00000 n\n"
+                        b"0000000101 00000 n\n"
+                        b"trailer<</Size 4/Root 1 0 R>>\n"
+                        b"startxref\n"
+                        b"178\n"
+                        b"%%EOF\n"
+                    )
+
+            payroll_services.upload_payroll_document(
+                organization,
+                uploader=admin_user,
+                data={
+                    "employee_id": str(dev_user.id),
+                    "document_type": "PAYSLIP",
+                    "title": "August 2026 Payslip",
+                    "payroll_month": "2026-08",
+                    "payroll_year": 2026,
+                },
+                file_obj=ValidPdfFile(),
+            )
+            self.stdout.write("Seeded sample payslip PDF document.")
+        self.stdout.write("Seeded employee payroll records.")
 
 
