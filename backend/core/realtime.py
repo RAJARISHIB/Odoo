@@ -46,8 +46,20 @@ BROADCAST_CHANNEL = "broadcast"
 # ---------------------------------------------------------------------------
 # Publishing
 # ---------------------------------------------------------------------------
+import threading
+
+
+def _do_publish(url, message, headers, timeout):
+    try:
+        response = requests.post(url, json=message, headers=headers, timeout=timeout)
+        if response.status_code >= 400:
+            logger.warning("Realtime publish rejected (%s): %s", response.status_code, response.text[:200])
+    except Exception as exc:
+        logger.warning("Realtime hub unreachable (%s): %s", url, exc)
+
+
 def publish(channels, event: str, payload: dict = None, *, actor_id=None) -> bool:
-    """Send one event to one or more channels.  Returns True when accepted."""
+    """Send one event to one or more channels asynchronously."""
     if not settings.REALTIME["ENABLED"]:
         return False
 
@@ -65,25 +77,16 @@ def publish(channels, event: str, payload: dict = None, *, actor_id=None) -> boo
     }
 
     url = settings.REALTIME["HTTP_URL"].rstrip("/") + "/internal/publish"
-    try:
-        response = requests.post(
-            url,
-            json=message,
-            headers={
-                "Content-Type": "application/json",
-                "x-internal-key": settings.REALTIME["INTERNAL_API_KEY"],
-            },
-            timeout=settings.REALTIME["TIMEOUT_SECONDS"],
-        )
-        if response.status_code >= 400:
-            logger.warning(
-                "Realtime publish rejected (%s): %s", response.status_code, response.text[:200]
-            )
-            return False
-        return True
-    except requests.RequestException as exc:
-        logger.warning("Realtime hub unreachable (%s): %s", url, exc)
-        return False
+    headers = {
+        "Content-Type": "application/json",
+        "x-internal-key": settings.REALTIME["INTERNAL_API_KEY"],
+    }
+    threading.Thread(
+        target=_do_publish,
+        args=(url, message, headers, 1),
+        daemon=True,
+    ).start()
+    return True
 
 
 def notify_user(user_id, event: str, payload: dict = None, *, actor_id=None) -> bool:

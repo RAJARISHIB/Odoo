@@ -55,10 +55,11 @@ def record(*, action: str, actor=None, actor_role: str = "", organization=None,
     """Write one audit event.  Never raises - a logging failure must not
     break the request that triggered it (mirrors `core.mailer.send`)."""
     try:
+        role_slug = actor_role or (getattr(actor.role, "slug", str(actor.role)) if actor and actor.role else "")
         AuditLog(
             organization=organization or (actor.organization if actor else None),
             actor=actor,
-            actor_role=actor_role or (actor.role if actor else ""),
+            actor_role=role_slug,
             action=action,
             resource_type=resource_type,
             resource_id=str(resource_id) if resource_id else "",

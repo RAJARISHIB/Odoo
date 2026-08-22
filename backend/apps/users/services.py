@@ -595,12 +595,15 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
     assert_editable_by(editor, user)
 
     editable = (
-        "first_name", "last_name", "phone", "designation",
+        "first_name", "last_name", "designation",
         "employee_id", "avatar_url", "preferences",
     )
     for field in editable:
         if field in data:
             setattr(user, field, data[field])
+
+    if "phone" in data:
+        user.phone = validate_phone(data["phone"]) if data["phone"] else ""
 
     if "date_of_birth" in data:
         raw_dob = data["date_of_birth"]
