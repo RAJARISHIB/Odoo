@@ -1,0 +1,128 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Today at a glance</h1>
+      <p>{{ overview()?.date ?? '' }} &middot; live attendance across the organization.</p>
+    </div>
+    <button class="btn ghost sm" type="button" (click)="reload()">Refresh</button>
+  </div>
+
+  <div class="grid cols-4">
+    <div class="stat">
+      <div class="label">Headcount</div>
+      <div class="value">{{ overview()?.headcount ?? '—' }}</div>
+      <div class="hint">Active employees</div>
+    </div>
+    <div class="stat">
+      <div class="label">Checked in now</div>
+      <div class="value">{{ overview()?.currently_checked_in ?? '—' }}</div>
+      <div class="hint">Currently working</div>
+    </div>
+    <div class="stat">
+      <div class="label">Marked today</div>
+      <div class="value">{{ overview()?.marked ?? '—' }}</div>
+      <div class="hint">{{ overview()?.not_marked ?? 0 }} not marked</div>
+    </div>
+    <div class="stat">
+      <div class="label">Hours logged</div>
+      <div class="value">{{ overview()?.total_hours ?? 0 }}</div>
+      <div class="hint">Across the org today</div>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top: 16px">
+    <!-- Live feed -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Live activity</h3>
+        <span class="subtle">Pushed over websocket</span>
+      </div>
+      @if (feed().length) {
+        <ul class="feed">
+          @for (entry of feed(); track entry.id) {
+            <li>
+              <span class="badge" [class]="entry.tone">&bull;</span>
+              <span class="spacer">
+                <strong>{{ entry.text }}</strong>
+                @if (entry.detail) {
+                  <span class="subtle"> — {{ entry.detail }}</span>
+                }
+              </span>
+              <span class="subtle">{{ entry.at | date: 'shortTime' }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="empty">
+          <strong>Nothing yet</strong>
+          Check-ins appear here the moment they happen.
+        </div>
+      }
+    </section>
+
+    <!-- Breakdown -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Status breakdown</h3>
+        <a routerLink="/admin/attendance">View board</a>
+      </div>
+      <div class="card-body">
+        @if (overview(); as data) {
+          <div class="breakdown">
+            @for (item of data.counts | keyvalue; track item.key) {
+              @if (item.value) {
+                <div class="row">
+                  <span class="badge" [class]="item.key">{{ item.key.replace('_', ' ') }}</span>
+                  <span class="spacer"></span>
+                  <strong class="mono">{{ item.value }}</strong>
+                </div>
+              }
+            }
+          </div>
+        } @else {
+          <div class="skeleton" style="margin-bottom: 8px"></div>
+          <div class="skeleton" style="width: 70%"></div>
+        }
+
+        <h3 style="margin: 20px 0 10px">Departments</h3>
+        @for (department of departments(); track department.department_id) {
+          <div class="row" style="padding: 5px 0">
+            <span>{{ department.name }}</span>
+            <span class="spacer"></span>
+            <strong class="mono">{{ department.headcount }}</strong>
+          </div>
+        } @empty {
+          <p class="muted">No departments yet.</p>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- Team composition -->
+  @if (stats(); as userStats) {
+    <section class="card" style="margin-top: 16px">
+      <div class="card-head">
+        <h3>Team</h3>
+        <a routerLink="/admin/employees">Manage employees</a>
+      </div>
+      <div class="card-body row" style="gap: 26px">
+        <div>
+          <div class="label subtle">Total</div>
+          <strong style="font-size: 20px">{{ userStats.total }}</strong>
+        </div>
+        <div>
+          <div class="label subtle">Active</div>
+          <strong style="font-size: 20px">{{ userStats.active }}</strong>
+        </div>
+        @for (role of userStats.by_role | keyvalue; track role.key) {
+          @if (role.value) {
+            <div>
+              <div class="label subtle">{{ role.key.replace('_', ' ') }}</div>
+              <strong style="font-size: 20px">{{ role.value }}</strong>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+</div>

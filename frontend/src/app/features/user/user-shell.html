@@ -1,0 +1,50 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">HR</span>
+      <span>
+        {{ auth.organization()?.name ?? 'HRMS Portal' }}
+        <small>Employee</small>
+      </span>
+    </div>
+
+    <nav>
+      <span class="section">Workspace</span>
+      @for (item of navItems; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <span class="ico">{{ item.icon }}</span>{{ item.label }}
+        </a>
+      }
+
+      @if (auth.isAdmin()) {
+        <span class="section">Admin</span>
+        <a routerLink="/admin/dashboard">
+          <span class="ico">&#8599;</span>Admin panel
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <span class="avatar">{{ initials() }}</span>
+        <span class="who">
+          <strong>{{ auth.user()?.full_name }}</strong>
+          <span>{{ auth.user()?.designation ?? auth.user()?.role?.replace('_', ' ') }}</span>
+        </span>
+        <button class="btn ghost sm" type="button" (click)="signOut()" title="Sign out">&#8618;</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h2>{{ title() }}</h2>
+      <span class="spacer"></span>
+      <app-realtime-indicator />
+    </header>
+
+    <div class="content">
+      <router-outlet />
+    </div>
+  </div>
+</div>

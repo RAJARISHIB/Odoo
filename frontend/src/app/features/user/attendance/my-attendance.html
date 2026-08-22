@@ -1,0 +1,116 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>My attendance</h1>
+      <p>Your check-ins, hours and day statuses.</p>
+    </div>
+  </div>
+
+  @if (summary(); as stats) {
+    <div class="grid cols-4" style="margin-bottom: 16px">
+      <div class="stat">
+        <div class="label">Days recorded</div>
+        <div class="value">{{ stats.days_recorded }}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Total hours</div>
+        <div class="value">{{ stats.total_hours }}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Present</div>
+        <div class="value">{{ stats.counts.present }}</div>
+        <div class="hint">{{ stats.counts.half_day }} half days</div>
+      </div>
+      <div class="stat">
+        <div class="label">Late</div>
+        <div class="value">{{ stats.counts.late }}</div>
+        <div class="hint">{{ stats.counts.absent }} absent</div>
+      </div>
+    </div>
+  }
+
+  <section class="card">
+    <div class="card-head">
+      <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+        <div class="field">
+          <label>From</label>
+          <input type="date" formControlName="date_from" />
+        </div>
+        <div class="field">
+          <label>To</label>
+          <input type="date" formControlName="date_to" />
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select formControlName="status">
+            <option value="">Any</option>
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn sm" type="submit">Filter</button>
+        <button class="btn ghost sm" type="button" (click)="resetFilters()">Clear</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>First in</th>
+            <th>Last out</th>
+            <th>Sessions</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (record of rows(); track record.id) {
+            <tr>
+              <td class="mono">{{ record.date | date: 'EEE, d MMM y' }}</td>
+              <td>
+                <span class="badge" [class]="record.status">{{ statusLabels[record.status] }}</span>
+                @if (record.late_minutes) { <span class="subtle"> +{{ record.late_minutes }}m</span> }
+              </td>
+              <td class="mono">{{ record.first_check_in ? (record.first_check_in | date: 'shortTime') : '—' }}</td>
+              <td class="mono">
+                @if (record.is_checked_in) {
+                  <span class="badge success">Running</span>
+                } @else {
+                  {{ record.last_check_out ? (record.last_check_out | date: 'shortTime') : '—' }}
+                }
+              </td>
+              <td>{{ record.sessions.length }}</td>
+              <td class="mono">{{ record.total_hours }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty">
+                  <strong>{{ loading() ? 'Loading…' : 'Nothing here yet' }}</strong>
+                  @if (!loading()) { Check in from your dashboard to start a record. }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (meta().total_pages > 1) {
+      <div class="pager">
+        <span>Page {{ meta().page }} of {{ meta().total_pages }}</span>
+        <span class="row">
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_previous" (click)="goToPage(meta().page - 1)">
+            Previous
+          </button>
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_next" (click)="goToPage(meta().page + 1)">
+            Next
+          </button>
+        </span>
+      </div>
+    }
+  </section>
+</div>

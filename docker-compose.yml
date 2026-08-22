@@ -1,0 +1,13 @@
+# Local MongoDB for development. Run: docker compose up -d
+services:
+  mongo:
+    image: mongo:7
+    container_name: hrms-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - hrms-mongo-data:/data/db
+
+volumes:
+  hrms-mongo-data:

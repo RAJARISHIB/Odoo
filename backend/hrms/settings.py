@@ -1,0 +1,133 @@
+"""
+Django settings for the HRMS Portal API.
+
+Persistence is MongoDB via mongoengine, so the Django ORM / migrations stack is
+intentionally not used.  `DATABASES` is left empty and the contrib apps that
+require a relational backend (admin, auth, sessions, contenttypes) are not
+installed.  Password hashing still works because `django.contrib.auth.hashers`
+is a standalone utility module.
+"""
+from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from core.env import env_bool, env_int, env_list, env_str
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / ".env")
+
+# ---------------------------------------------------------------------------
+# Core
+# ---------------------------------------------------------------------------
+SECRET_KEY = env_str("DJANGO_SECRET_KEY", "dev-insecure-django-secret-key")
+DEBUG = env_bool("DJANGO_DEBUG", True)
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
+
+INSTALLED_APPS = [
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "core",
+    "apps.users",
+    "apps.organization",
+    "apps.attendance",
+]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "core.middleware.RequestContextMiddleware",
+    "core.middleware.ExceptionHandlerMiddleware",
+]
+
+ROOT_URLCONF = "hrms.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {"context_processors": []},
+    },
+]
+
+WSGI_APPLICATION = "hrms.wsgi.application"
+ASGI_APPLICATION = "hrms.asgi.application"
+
+# No relational database - see module docstring.
+DATABASES = {}
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# MongoDB (mongoengine)
+# ---------------------------------------------------------------------------
+MONGO = {
+    "URI": env_str("MONGO_URI", "mongodb://localhost:27017"),
+    "DB_NAME": env_str("MONGO_DB_NAME", "hrms"),
+}
+
+# ---------------------------------------------------------------------------
+# Auth / JWT.  JWT_SECRET must match the Express WSS server so it can verify
+# the same access tokens on the websocket handshake.
+# ---------------------------------------------------------------------------
+JWT = {
+    "SECRET": env_str("JWT_SECRET", "change-me-in-production-super-secret"),
+    "ALGORITHM": env_str("JWT_ALGORITHM", "HS256"),
+    "ISSUER": "hrms-api",
+    "ACCESS_TTL": timedelta(minutes=env_int("JWT_ACCESS_TTL_MIN", 60)),
+    "REFRESH_TTL": timedelta(days=env_int("JWT_REFRESH_TTL_DAYS", 7)),
+}
+
+# ---------------------------------------------------------------------------
+# Realtime (Express WSS) - Django pushes messages here over internal HTTP.
+# ---------------------------------------------------------------------------
+REALTIME = {
+    "HTTP_URL": env_str("REALTIME_HTTP_URL", "http://localhost:4000"),
+    "INTERNAL_API_KEY": env_str("INTERNAL_API_KEY", "change-me-internal-service-key"),
+    "TIMEOUT_SECONDS": env_int("REALTIME_TIMEOUT_SECONDS", 5),
+    "ENABLED": env_bool("REALTIME_ENABLED", True),
+}
+
+# ---------------------------------------------------------------------------
+# API conventions
+# ---------------------------------------------------------------------------
+API = {
+    "DEFAULT_PAGE_SIZE": env_int("API_DEFAULT_PAGE_SIZE", 20),
+    "MAX_PAGE_SIZE": env_int("API_MAX_PAGE_SIZE", 100),
+}
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", ["http://localhost:4200"])
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "user-agent",
+    "x-request-id",
+]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "[{asctime}] {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

@@ -1,0 +1,156 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { Observable, tap } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+import { ADMIN_ROLES, AuthTokens, LoginResponse, Organization, Permissions, SessionResponse, User } from '../models/user.model';
+import { Api } from './api';
+import { ApiResponse } from '../models/api.model';
+import { Realtime } from './realtime';
+import { TokenStorage } from './token-storage';
+import { environment } from '../../../environments/environment';
+
+/**
+ * Session state for the whole app.
+ *
+ * Holds the signed-in user as a signal (templates read it directly), owns the
+ * login/logout lifecycle, and starts or stops the websocket connection so the
+ * socket's life matches the session's.
+ */
+@Injectable({ providedIn: 'root' })
+export class Auth {
+  private readonly api = inject(Api);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly storage = inject(TokenStorage);
+  private readonly realtime = inject(Realtime);
+
+  private readonly userSignal = signal<User | null>(this.storage.user);
+  private readonly organizationSignal = signal<Organization | null>(null);
+  private readonly permissionsSignal = signal<Permissions | null>(null);
+
+  readonly user = this.userSignal.asReadonly();
+  readonly organization = this.organizationSignal.asReadonly();
+  readonly permissions = this.permissionsSignal.asReadonly();
+
+  readonly isAuthenticated = computed(() => !!this.userSignal() && !!this.storage.accessToken);
+  readonly isAdmin = computed(() => {
+    const user = this.userSignal();
+    return !!user && ADMIN_ROLES.includes(user.role);
+  });
+  readonly panel = computed(() => (this.isAdmin() ? 'admin' : 'user'));
+  /** Where this user belongs after signing in. */
+  readonly homeRoute = computed(() => (this.isAdmin() ? '/admin' : '/app'));
+
+  // -----------------------------------------------------------------
+  // Session lifecycle
+  // -----------------------------------------------------------------
+  login(email: string, password: string): Observable<LoginResponse> {
+    return this.api.post<LoginResponse>('auth/login', { email, password }).pipe(
+      tap((result) => this.startSession(result.tokens, result.user)),
+    );
+  }
+
+  /** Bootstrap signup: creates the organization and its first super admin. */
+  register(payload: {
+    organization_name: string;
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+  }): Observable<LoginResponse> {
+    return this.api.post<LoginResponse>('auth/register', payload).pipe(
+      tap((result) => this.startSession(result.tokens, result.user)),
+    );
+  }
+
+  /** Re-read the session from the server - used by the app initialiser. */
+  loadSession(): Observable<SessionResponse> {
+    return this.api.get<SessionResponse>('auth/me').pipe(
+      tap((session) => {
+        this.userSignal.set(session.user);
+        this.organizationSignal.set(session.organization);
+        this.permissionsSignal.set(session.permissions);
+        this.storage.saveUser(session.user);
+        this.realtime.connect(this.storage.accessToken!, session.user.panel);
+      }),
+    );
+  }
+
+  logout(navigate = true): void {
+    const refreshToken = this.storage.refreshToken;
+    if (refreshToken) {
+      // Fire and forget: the local session ends either way.
+      this.api.post('auth/logout', { refresh_token: refreshToken }).subscribe({
+        error: () => undefined,
+      });
+    }
+    this.endSession();
+    if (navigate) this.router.navigate(['/auth/login']);
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<unknown> {
+    return this.api.post('auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  }
+
+  // -----------------------------------------------------------------
+  // Tokens
+  // -----------------------------------------------------------------
+  /**
+   * Exchange the refresh token for a new pair.
+   *
+   * Called by the auth interceptor on a 401. It uses `HttpClient` directly so
+   * the request skips the interceptor and cannot recurse.
+   */
+  refreshTokens(): Observable<AuthTokens> {
+    const refreshToken = this.storage.refreshToken;
+    if (!refreshToken) throw new Error('No refresh token available.');
+
+    return this.http
+      .post<ApiResponse<LoginResponse>>(`${environment.apiUrl}/auth/refresh`, {
+        refresh_token: refreshToken,
+      })
+      .pipe(
+        map((response) => response.data),
+        tap((result) => {
+          this.storage.save(result.tokens, result.user);
+          this.userSignal.set(result.user);
+          this.realtime.connect(result.tokens.access_token, result.user.panel);
+        }),
+        map((result) => result.tokens),
+      );
+  }
+
+  get accessToken(): string | null {
+    return this.storage.accessToken;
+  }
+
+  updateCurrentUser(user: User): void {
+    this.userSignal.set(user);
+    this.storage.saveUser(user);
+  }
+
+  // -----------------------------------------------------------------
+  // Internals
+  // -----------------------------------------------------------------
+  private startSession(tokens: AuthTokens, user: User): void {
+    this.storage.save(tokens, user);
+    this.userSignal.set(user);
+    this.realtime.connect(tokens.access_token, user.panel);
+    // Login returns the user only; `/auth/me` fills in the organization and
+    // permission flags the shells and guards read.
+    this.loadSession().subscribe({ error: () => undefined });
+  }
+
+  private endSession(): void {
+    this.storage.clear();
+    this.userSignal.set(null);
+    this.organizationSignal.set(null);
+    this.permissionsSignal.set(null);
+    this.realtime.disconnect();
+  }
+}

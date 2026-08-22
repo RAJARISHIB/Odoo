@@ -1,0 +1,166 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Employees</h1>
+      <p>{{ meta().total }} people in your organization.</p>
+    </div>
+    <button class="btn" type="button" (click)="toggleForm()">
+      {{ showForm() ? 'Cancel' : '+ Add employee' }}
+    </button>
+  </div>
+
+  @if (lastTempPassword(); as temp) {
+    <div class="card temp-password">
+      <div class="card-body row">
+        <span class="spacer">
+          <strong>Temporary password for {{ temp.email }}:</strong>
+          <code>{{ temp.password }}</code>
+          <span class="subtle"> — shown once, share it securely.</span>
+        </span>
+        <button class="btn ghost sm" type="button" (click)="dismissTempPassword()">Dismiss</button>
+      </div>
+    </div>
+  }
+
+  @if (showForm()) {
+    <section class="card" style="margin-bottom: 16px">
+      <div class="card-head"><h3>New employee</h3></div>
+      <form class="card-body" [formGroup]="form" (ngSubmit)="create()" novalidate>
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <input id="first_name" formControlName="first_name" />
+            @if (formErrors()['first_name']) { <div class="error">{{ formErrors()['first_name'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <input id="last_name" formControlName="last_name" />
+          </div>
+          <div class="field">
+            <label for="new_email">Email</label>
+            <input id="new_email" type="email" formControlName="email" />
+            @if (formErrors()['email']) { <div class="error">{{ formErrors()['email'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="designation">Designation</label>
+            <input id="designation" formControlName="designation" placeholder="Software Engineer" />
+          </div>
+          <div class="field">
+            <label for="employee_id">Employee ID</label>
+            <input id="employee_id" formControlName="employee_id" placeholder="EMP007" />
+          </div>
+          <div class="field">
+            <label for="role">Role</label>
+            <select id="role" formControlName="role">
+              @for (role of roles; track role) {
+                <option [value]="role">{{ role.replace('_', ' ') }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="password">Password <span class="subtle">(optional)</span></label>
+            <input id="password" type="text" formControlName="password" placeholder="Auto-generated if blank" />
+            @if (formErrors()['password']) { <div class="error">{{ formErrors()['password'] }}</div> }
+          </div>
+        </div>
+        <button class="btn" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Create employee' }}
+        </button>
+      </form>
+    </section>
+  }
+
+  <section class="card">
+    <div class="card-head">
+      <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+        <div class="field">
+          <input formControlName="search" placeholder="Search name, email or ID" />
+        </div>
+        <div class="field">
+          <select formControlName="role">
+            <option value="">All roles</option>
+            @for (role of roles; track role) {
+              <option [value]="role">{{ role.replace('_', ' ') }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <select formControlName="status">
+            <option value="">Any status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="invited">Invited</option>
+          </select>
+        </div>
+        <button class="btn sm" type="submit">Filter</button>
+        <button class="btn ghost sm" type="button" (click)="resetFilters()">Clear</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Role</th>
+            <th>Designation</th>
+            <th>Status</th>
+            <th>Last login</th>
+            <th style="text-align: right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of rows(); track user.id) {
+            <tr>
+              <td>
+                <div class="row" style="flex-wrap: nowrap">
+                  <span class="avatar">{{ initials(user) }}</span>
+                  <span>
+                    <strong>{{ user.full_name }}</strong>
+                    <div class="subtle">{{ user.email }}</div>
+                  </span>
+                </div>
+              </td>
+              <td><span class="badge primary">{{ user.role.replace('_', ' ') }}</span></td>
+              <td>{{ user.designation || '—' }}</td>
+              <td><span class="badge" [class]="user.status">{{ user.status }}</span></td>
+              <td class="subtle">{{ user.last_login_at ? (user.last_login_at | slice: 0 : 10) : 'Never' }}</td>
+              <td style="text-align: right; white-space: nowrap">
+                <button class="btn ghost sm" type="button" (click)="resetPassword(user)">Reset</button>
+                <button class="btn ghost sm" type="button" (click)="toggleStatus(user)">
+                  {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                </button>
+                @if (user.id !== auth.user()?.id) {
+                  <button class="btn ghost sm" type="button" (click)="remove(user)">Remove</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty">
+                  <strong>{{ loading() ? 'Loading…' : 'No employees found' }}</strong>
+                  @if (!loading()) { Try clearing the filters, or add someone. }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (meta().total_pages > 1) {
+      <div class="pager">
+        <span>Page {{ meta().page }} of {{ meta().total_pages }} &middot; {{ meta().total }} total</span>
+        <span class="row">
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_previous" (click)="goToPage(meta().page - 1)">
+            Previous
+          </button>
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_next" (click)="goToPage(meta().page + 1)">
+            Next
+          </button>
+        </span>
+      </div>
+    }
+  </section>
+</div>

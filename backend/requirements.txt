@@ -1,0 +1,7 @@
+Django==5.1.5
+mongoengine==0.29.1
+pymongo==4.10.1
+PyJWT==2.10.1
+django-cors-headers==4.6.0
+python-dotenv==1.0.1
+requests==2.32.3

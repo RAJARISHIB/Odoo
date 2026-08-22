@@ -1,0 +1,103 @@
+.auth-shell {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+}
+
+.brand-pane {
+  background: linear-gradient(150deg, #4f46e5, #6d28d9 55%, #9333ea);
+  color: #fff;
+  padding: 46px 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-weight: 650;
+  font-size: 17px;
+}
+
+.brand .mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 18%);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+
+.pitch {
+  margin-top: auto;
+}
+
+.pitch h1 {
+  font-size: 34px;
+  line-height: 1.2;
+  margin-bottom: 14px;
+  color: #fff;
+}
+
+.pitch p {
+  color: rgb(255 255 255 / 82%);
+  max-width: 44ch;
+  margin: 0;
+  font-size: 15px;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 auto;
+  display: grid;
+  gap: 11px;
+  color: rgb(255 255 255 / 88%);
+}
+
+.features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.features span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 20%);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  flex: none;
+}
+
+.form-pane {
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+  background: var(--bg);
+}
+
+@media (max-width: 900px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-pane {
+    padding: 28px;
+    gap: 22px;
+  }
+
+  .pitch h1 {
+    font-size: 26px;
+  }
+
+  .features {
+    display: none;
+  }
+}

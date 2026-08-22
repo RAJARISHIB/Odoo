@@ -1,0 +1,31 @@
+# ---- Python / Django ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+staticfiles/
+media/
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+.angular/
+dist/
+.nx/
+
+# ---- Env / secrets ----
+.env
+.env.local
+*.pem
+
+# ---- Editors / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+logs/
+*.log

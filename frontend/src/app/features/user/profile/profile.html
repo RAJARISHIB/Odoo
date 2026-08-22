@@ -1,0 +1,79 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Profile</h1>
+      <p>Your details and sign-in credentials.</p>
+    </div>
+  </div>
+
+  <div class="grid cols-2">
+    <section class="card">
+      <div class="card-head"><h3>Personal details</h3></div>
+      <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="grid cols-2">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <input id="first_name" formControlName="first_name" />
+            @if (profileErrors()['first_name']) { <div class="error">{{ profileErrors()['first_name'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <input id="last_name" formControlName="last_name" />
+          </div>
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input id="phone" formControlName="phone" />
+            @if (profileErrors()['phone']) { <div class="error">{{ profileErrors()['phone'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="designation">Designation</label>
+            <input id="designation" formControlName="designation" />
+          </div>
+        </div>
+
+        <div class="row readonly">
+          <div>
+            <div class="label subtle">Email</div>
+            <strong>{{ auth.user()?.email }}</strong>
+          </div>
+          <div>
+            <div class="label subtle">Role</div>
+            <span class="badge primary">{{ auth.user()?.role?.replace('_', ' ') }}</span>
+          </div>
+          <div>
+            <div class="label subtle">Employee ID</div>
+            <strong>{{ auth.user()?.employee_id || '—' }}</strong>
+          </div>
+        </div>
+
+        <button class="btn" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="card" style="align-self: start">
+      <div class="card-head"><h3>Change password</h3></div>
+      <form class="card-body" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+        <div class="field">
+          <label for="current_password">Current password</label>
+          <input id="current_password" type="password" formControlName="current_password" autocomplete="current-password" />
+          @if (passwordErrors()['current_password']) {
+            <div class="error">{{ passwordErrors()['current_password'] }}</div>
+          }
+        </div>
+        <div class="field">
+          <label for="new_password">New password</label>
+          <input id="new_password" type="password" formControlName="new_password" autocomplete="new-password" />
+          @if (passwordErrors()['new_password']) {
+            <div class="error">{{ passwordErrors()['new_password'] }}</div>
+          }
+        </div>
+        <p class="subtle">Changing your password signs you out of every device.</p>
+        <button class="btn" type="submit" [disabled]="changingPassword()">
+          {{ changingPassword() ? 'Updating…' : 'Update password' }}
+        </button>
+      </form>
+    </section>
+  </div>
+</div>
