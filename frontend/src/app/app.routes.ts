@@ -67,6 +67,22 @@ export const routes: Routes = [
         path: 'organization',
         loadComponent: () => import('./features/admin/organization/organization-settings').then((m) => m.OrganizationSettings),
       },
+      {
+        path: 'leave/requests',
+        loadComponent: () => import('./features/admin/leave/requests/leave-requests').then((m) => m.LeaveRequests),
+      },
+      {
+        path: 'leave/configuration',
+        loadComponent: () => import('./features/admin/leave/configuration/leave-configuration').then((m) => m.LeaveConfiguration),
+      },
+      {
+        path: 'leave/holidays',
+        loadComponent: () => import('./features/admin/leave/holidays/holiday-calendar').then((m) => m.HolidayCalendar),
+      },
+      {
+        path: 'leave/dashboard',
+        loadComponent: () => import('./features/admin/leave/dashboard/leave-dashboard').then((m) => m.LeaveDashboard),
+      },
     ],
   },
 

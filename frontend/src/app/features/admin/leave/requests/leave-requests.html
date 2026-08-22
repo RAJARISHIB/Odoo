@@ -1,0 +1,120 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Leave requests</h1>
+      <p>{{ meta().total }} request(s) across the organization.</p>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+        <div class="field">
+          <input formControlName="search" placeholder="Search employee" />
+        </div>
+        <div class="field">
+          <select formControlName="status">
+            <option value="">Any status</option>
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <select formControlName="leave_type_id">
+            <option value="">Any leave type</option>
+            @for (type of types(); track type.id) {
+              <option [value]="type.id">{{ type.name }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn sm" type="submit">Filter</button>
+        <button class="btn ghost sm" type="button" (click)="resetFilters()">Clear</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Leave type</th>
+            <th>Period</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Requested</th>
+            <th style="text-align: right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (request of rows(); track request.id) {
+            <tr>
+              <td>
+                <strong>{{ request.employee_info?.name ?? '—' }}</strong>
+                <div class="subtle">{{ request.employee_info?.employee_id || request.employee_info?.email }}</div>
+              </td>
+              <td>
+                @if (request.leave_type_name) {
+                  <span class="badge primary">{{ request.leave_type_name }}</span>
+                } @else {
+                  <span class="subtle">Unspecified</span>
+                }
+              </td>
+              <td class="mono">{{ request.start_date }} &rarr; {{ request.end_date }}</td>
+              <td class="mono">{{ request.total_days }}</td>
+              <td>{{ request.reason || '—' }}</td>
+              <td>
+                <span class="badge" [class]="request.status.toLowerCase()">{{ statusLabels[request.status] }}</span>
+                @if (request.status === 'REJECTED' && request.review_comment) {
+                  <div class="subtle">{{ request.review_comment }}</div>
+                }
+              </td>
+              <td class="subtle">{{ request.created_at | date: 'mediumDate' }}</td>
+              <td style="text-align: right; white-space: nowrap">
+                @if (request.status === 'PENDING') {
+                  <select
+                    class="mono"
+                    style="display: inline-block; width: auto; padding: 5px 8px; margin-right: 6px"
+                    [value]="request.leave_type_id ?? ''"
+                    (change)="setApproveType(request.id, $any($event.target).value)"
+                  >
+                    <option value="">Unspecified</option>
+                    @for (type of types(); track type.id) {
+                      <option [value]="type.id">{{ type.name }}</option>
+                    }
+                  </select>
+                  <button class="btn success sm" type="button" (click)="approve(request)">Approve</button>
+                  <button class="btn danger sm" type="button" (click)="reject(request)">Reject</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8">
+                <div class="empty">
+                  <strong>{{ loading() ? 'Loading…' : 'No leave requests found' }}</strong>
+                  @if (!loading()) { Try clearing the filters. }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (meta().total_pages > 1) {
+      <div class="pager">
+        <span>Page {{ meta().page }} of {{ meta().total_pages }} &middot; {{ meta().total }} requests</span>
+        <span class="row">
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_previous" (click)="goToPage(meta().page - 1)">
+            Previous
+          </button>
+          <button class="btn ghost sm" type="button" [disabled]="!meta().has_next" (click)="goToPage(meta().page + 1)">
+            Next
+          </button>
+        </span>
+      </div>
+    }
+  </section>
+</div>

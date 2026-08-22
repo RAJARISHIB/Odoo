@@ -19,6 +19,12 @@
           <span class="ico">{{ item.icon }}</span>{{ item.label }}
         </a>
       }
+      <span class="section">Time off</span>
+      @for (item of leaveNavItems; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <span class="ico">{{ item.icon }}</span>{{ item.label }}
+        </a>
+      }
       <span class="section">Me</span>
       <a routerLink="/app/dashboard">
         <span class="ico">&#8599;</span>My employee view

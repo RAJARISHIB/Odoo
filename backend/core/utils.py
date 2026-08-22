@@ -63,6 +63,16 @@ def seconds_to_hours(seconds) -> float:
     return round((seconds or 0) / 3600.0, 2)
 
 
+def round_leave(value) -> float:
+    """Consistent 2dp rounding for leave-day quantities.
+
+    Leave days are plain floats (0.5, 1.5, ...); every arithmetic result is
+    passed through this before being stored or returned so accumulated
+    additions never drift (`1.5 + 1.5` must stay `3.0`, not `3.0000000000000004`).
+    """
+    return round(float(value or 0), 2)
+
+
 def deep_merge(base: dict, override: dict) -> dict:
     """Recursive dict merge - used for partial settings updates."""
     result = dict(base or {})

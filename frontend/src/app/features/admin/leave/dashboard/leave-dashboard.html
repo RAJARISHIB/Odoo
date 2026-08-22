@@ -1,0 +1,184 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Leave dashboard</h1>
+      <p>Employee-wise leave utilization for {{ filters.getRawValue().year }}.</p>
+    </div>
+  </div>
+
+  <div class="grid cols-4">
+    <div class="stat">
+      <div class="label">Employees</div>
+      <div class="value">{{ summary()?.total_employees ?? '—' }}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Allocated</div>
+      <div class="value">{{ summary()?.total_allocated ?? 0 }}</div>
+      <div class="hint">days</div>
+    </div>
+    <div class="stat">
+      <div class="label">Used</div>
+      <div class="value">{{ summary()?.total_used ?? 0 }}</div>
+      <div class="hint">days</div>
+    </div>
+    <div class="stat">
+      <div class="label">Pending requests</div>
+      <div class="value">{{ summary()?.total_pending_requests ?? 0 }}</div>
+      <div class="hint">{{ summary()?.total_pending_days ?? 0 }} day(s)</div>
+    </div>
+  </div>
+
+  <section class="card" style="margin-top: 16px">
+    <div class="card-head">
+      <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+        <div class="field">
+          <label>Year</label>
+          <input type="number" formControlName="year" style="width: 100px" />
+        </div>
+        <div class="field">
+          <label>Leave type</label>
+          <select formControlName="leave_type_id">
+            <option value="">Every type</option>
+            @for (type of types(); track type.id) {
+              <option [value]="type.id">{{ type.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Employee</label>
+          <input formControlName="search" placeholder="Search name or employee ID" />
+        </div>
+        <button class="btn sm" type="submit">Filter</button>
+        <button class="btn ghost sm" type="button" (click)="resetFilters()">Clear</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Allocated</th>
+            <th>Used</th>
+            <th>Pending</th>
+            <th>Remaining</th>
+            <th style="min-width: 160px">Utilization</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of summary()?.rows ?? []; track row.user_id) {
+            <tr style="cursor: pointer" (click)="toggleRow(row)">
+              <td>
+                <strong>{{ row.employee_name }}</strong>
+                <div class="subtle">{{ row.employee_id || row.role }}</div>
+              </td>
+              <td class="mono">{{ row.allocated }}</td>
+              <td class="mono">{{ row.used }}</td>
+              <td class="mono">{{ row.pending }}</td>
+              <td class="mono">{{ row.remaining }}</td>
+              <td>
+                <div class="row" style="gap: 8px">
+                  <div class="meter" style="flex: 1">
+                    <span [class]="meterClass(row.utilization_percentage)" [style.width.%]="row.utilization_percentage"></span>
+                  </div>
+                  <span class="mono subtle">{{ row.utilization_percentage }}%</span>
+                </div>
+              </td>
+            </tr>
+            @if (expandedUserId() === row.user_id) {
+              <tr>
+                <td colspan="6" style="padding: 0; background: var(--surface-alt)">
+                  <div class="card-body">
+                    @if (loadingEmployee()) {
+                      <div class="skeleton"></div>
+                    } @else if (employeeSummary(); as detail) {
+                      <div class="grid cols-3" style="margin-bottom: 16px">
+                        @for (balance of detail.balances; track balance.leave_type_id) {
+                          <div class="stat">
+                            <div class="label">{{ balance.leave_type_name }}</div>
+                            <div class="value" style="font-size: 18px">
+                              {{ balance.remaining }} <span class="subtle">/ {{ balance.allocated }}</span>
+                            </div>
+                            <div class="hint">Used {{ balance.used }} &middot; Pending {{ balance.pending }}</div>
+                            <div class="meter" style="margin-top: 8px">
+                              <span [class]="meterClass(balance.utilization_percentage)" [style.width.%]="balance.utilization_percentage"></span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+
+                      <div class="row" style="align-items: flex-start; gap: 20px; flex-wrap: wrap">
+                        <div style="flex: 2; min-width: 320px">
+                          <h3 style="margin-bottom: 8px">Leave history</h3>
+                          <table class="data">
+                            <thead>
+                              <tr>
+                                <th>Period</th>
+                                <th>Days</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (item of detail.history; track item.id) {
+                                <tr>
+                                  <td class="mono">{{ item.start_date }} &rarr; {{ item.end_date }}</td>
+                                  <td class="mono">{{ item.total_days }}</td>
+                                  <td>{{ item.leave_type_name || '—' }}</td>
+                                  <td><span class="badge" [class]="item.status.toLowerCase()">{{ item.status }}</span></td>
+                                </tr>
+                              } @empty {
+                                <tr><td colspan="4" class="subtle">No leave history yet.</td></tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div style="flex: 1; min-width: 260px">
+                          <h3 style="margin-bottom: 8px">Adjust balance</h3>
+                          <form [formGroup]="adjustForm" (ngSubmit)="saveAdjustment()" novalidate (click)="$event.stopPropagation()">
+                            <div class="field">
+                              <label>Leave type</label>
+                              <select formControlName="leave_type_id">
+                                <option value="">Select</option>
+                                @for (type of types(); track type.id) {
+                                  <option [value]="type.id">{{ type.name }}</option>
+                                }
+                              </select>
+                              @if (adjustErrors()['leave_type_id']) { <div class="error">{{ adjustErrors()['leave_type_id'] }}</div> }
+                            </div>
+                            <div class="field">
+                              <label>Amount (+/-)</label>
+                              <input type="number" step="0.5" formControlName="amount" />
+                              @if (adjustErrors()['amount']) { <div class="error">{{ adjustErrors()['amount'] }}</div> }
+                            </div>
+                            <div class="field">
+                              <label>Reason</label>
+                              <input formControlName="reason" placeholder="Carry-forward from last year" />
+                              @if (adjustErrors()['reason']) { <div class="error">{{ adjustErrors()['reason'] }}</div> }
+                            </div>
+                            <button class="btn sm" type="submit" [disabled]="adjustSaving()">
+                              {{ adjustSaving() ? 'Saving…' : 'Record adjustment' }}
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty">
+                  <strong>{{ loading() ? 'Loading…' : 'No data for this selection' }}</strong>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

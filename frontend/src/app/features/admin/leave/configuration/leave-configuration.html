@@ -1,0 +1,252 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Leave configuration</h1>
+      <p>Define leave types and how much each role accrues.</p>
+    </div>
+    <div class="tabs">
+      <button type="button" [class.active]="tab() === 'types'" (click)="setTab('types')">Leave types</button>
+      <button type="button" [class.active]="tab() === 'rules'" (click)="setTab('rules')">Allocation rules</button>
+    </div>
+  </div>
+
+  @if (tab() === 'types') {
+    <div class="row" style="justify-content: flex-end; margin-bottom: 12px">
+      <button class="btn" type="button" (click)="toggleTypeForm()">
+        {{ showTypeForm() && !editingTypeId() ? 'Cancel' : '+ Add leave type' }}
+      </button>
+    </div>
+
+    @if (showTypeForm()) {
+      <section class="card" style="margin-bottom: 16px">
+        <div class="card-head"><h3>{{ editingTypeId() ? 'Edit leave type' : 'New leave type' }}</h3></div>
+        <form class="card-body" [formGroup]="typeForm" (ngSubmit)="saveType()" novalidate>
+          <div class="grid cols-3">
+            <div class="field">
+              <label for="lt_name">Name</label>
+              <input id="lt_name" formControlName="name" placeholder="Casual Leave" />
+              @if (typeErrors()['name']) { <div class="error">{{ typeErrors()['name'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="lt_code">Code</label>
+              <input id="lt_code" formControlName="code" placeholder="CL" />
+              @if (typeErrors()['code']) { <div class="error">{{ typeErrors()['code'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="lt_desc">Description</label>
+              <input id="lt_desc" formControlName="description" />
+            </div>
+            <div class="field">
+              <label for="lt_min_unit">Minimum unit (days)</label>
+              <select id="lt_min_unit" formControlName="min_unit">
+                <option [ngValue]="0.5">0.5 (half day)</option>
+                <option [ngValue]="1">1 (full day)</option>
+              </select>
+              @if (typeErrors()['min_unit']) { <div class="error">{{ typeErrors()['min_unit'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="lt_max">Max days per request</label>
+              <input id="lt_max" type="number" step="0.5" formControlName="max_days_per_request" placeholder="No limit" />
+            </div>
+            <div class="field row" style="margin-top: 24px; gap: 18px">
+              <label class="row" style="gap: 6px; margin: 0">
+                <input type="checkbox" formControlName="is_paid" style="width: auto" /> Paid
+              </label>
+              <label class="row" style="gap: 6px; margin: 0">
+                <input type="checkbox" formControlName="allow_fractional" style="width: auto" /> Fractional
+              </label>
+              <label class="row" style="gap: 6px; margin: 0">
+                <input type="checkbox" formControlName="requires_approval" style="width: auto" /> Requires approval
+              </label>
+            </div>
+          </div>
+          <button class="btn" type="submit" [disabled]="savingType()">
+            {{ savingType() ? 'Saving…' : 'Save leave type' }}
+          </button>
+        </form>
+      </section>
+    }
+
+    <section class="card">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Paid</th>
+              <th>Fractional</th>
+              <th>Min unit</th>
+              <th>Max/request</th>
+              <th>Approval</th>
+              <th>Status</th>
+              <th style="text-align: right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (type of types(); track type.id) {
+              <tr>
+                <td><strong>{{ type.name }}</strong></td>
+                <td><code class="mono">{{ type.code }}</code></td>
+                <td>{{ type.is_paid ? 'Yes' : 'No' }}</td>
+                <td>{{ type.allow_fractional ? 'Yes' : 'No' }}</td>
+                <td class="mono">{{ type.min_unit }}</td>
+                <td class="mono">{{ type.max_days_per_request ?? '—' }}</td>
+                <td>{{ type.requires_approval ? 'Required' : 'Auto' }}</td>
+                <td><span class="badge" [class]="type.is_active ? 'active' : 'suspended'">{{ type.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td style="text-align: right; white-space: nowrap">
+                  <button class="btn ghost sm" type="button" (click)="toggleTypeForm(type)">Edit</button>
+                  <button class="btn ghost sm" type="button" (click)="toggleTypeActive(type)">
+                    {{ type.is_active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9">
+                  <div class="empty">
+                    <strong>{{ loading() ? 'Loading…' : 'No leave types yet' }}</strong>
+                    @if (!loading()) { Add one to start configuring allocation. }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if (tab() === 'rules') {
+    <section class="card" style="margin-bottom: 16px">
+      <div class="card-head"><h3>Generate accrual</h3></div>
+      <form class="card-body row" [formGroup]="generateForm" (ngSubmit)="generate()" style="align-items: flex-end">
+        <div class="field">
+          <label for="gen_year">Year</label>
+          <input id="gen_year" type="number" formControlName="year" style="width: 100px" />
+        </div>
+        <div class="field">
+          <label for="gen_freq">Frequency</label>
+          <select id="gen_freq" formControlName="frequency">
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        @if (generateForm.getRawValue().frequency === 'monthly') {
+          <div class="field">
+            <label for="gen_month">Month</label>
+            <input id="gen_month" type="number" min="1" max="12" formControlName="month" style="width: 90px" />
+          </div>
+        }
+        <button class="btn" type="submit" [disabled]="generating()">
+          {{ generating() ? 'Generating…' : 'Generate' }}
+        </button>
+        @if (lastGenerated(); as result) {
+          <span class="subtle">
+            {{ result.period }}: +{{ result.created }} new, {{ result.skipped }} already credited.
+          </span>
+        }
+      </form>
+    </section>
+
+    <div class="row" style="justify-content: flex-end; margin-bottom: 12px">
+      <button class="btn" type="button" (click)="toggleRuleForm()">
+        {{ showRuleForm() ? 'Cancel' : '+ Add rule' }}
+      </button>
+    </div>
+
+    @if (showRuleForm()) {
+      <section class="card" style="margin-bottom: 16px">
+        <div class="card-head"><h3>New allocation rule</h3></div>
+        <form class="card-body" [formGroup]="ruleForm" (ngSubmit)="saveRule()" novalidate>
+          <div class="grid cols-3">
+            <div class="field">
+              <label for="rule_type">Leave type</label>
+              <select id="rule_type" formControlName="leave_type_id">
+                <option value="">Select a leave type</option>
+                @for (type of types(); track type.id) {
+                  <option [value]="type.id">{{ type.name }}</option>
+                }
+              </select>
+              @if (ruleErrors()['leave_type_id']) { <div class="error">{{ ruleErrors()['leave_type_id'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="rule_role">Role</label>
+              <select id="rule_role" formControlName="role">
+                @for (role of roles; track role) {
+                  <option [value]="role">{{ role.replace('_', ' ') }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="rule_amount">Amount (days)</label>
+              <input id="rule_amount" type="number" step="0.5" min="0.5" formControlName="amount" />
+              @if (ruleErrors()['amount']) { <div class="error">{{ ruleErrors()['amount'] }}</div> }
+            </div>
+            <div class="field">
+              <label for="rule_freq">Frequency</label>
+              <select id="rule_freq" formControlName="frequency">
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rule_effective">Effective from</label>
+              <input id="rule_effective" type="date" formControlName="effective_from" />
+              @if (ruleErrors()['effective_from']) { <div class="error">{{ ruleErrors()['effective_from'] }}</div> }
+            </div>
+          </div>
+          <button class="btn" type="submit" [disabled]="savingRule()">
+            {{ savingRule() ? 'Saving…' : 'Save rule' }}
+          </button>
+        </form>
+      </section>
+    }
+
+    <section class="card">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Leave type</th>
+              <th>Role</th>
+              <th>Amount</th>
+              <th>Frequency</th>
+              <th>Effective from</th>
+              <th>Effective to</th>
+              <th>Status</th>
+              <th style="text-align: right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rule of rules(); track rule.id) {
+              <tr>
+                <td>{{ typeName(rule.leave_type_id) }}</td>
+                <td><span class="badge primary">{{ rule.role.replace('_', ' ') }}</span></td>
+                <td class="mono">{{ rule.amount }}</td>
+                <td>{{ rule.frequency }}</td>
+                <td class="mono">{{ rule.effective_from | date: 'mediumDate' }}</td>
+                <td class="mono">{{ rule.effective_to ? (rule.effective_to | date: 'mediumDate') : '—' }}</td>
+                <td><span class="badge" [class]="rule.is_active ? 'active' : 'suspended'">{{ rule.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td style="text-align: right">
+                  <button class="btn ghost sm" type="button" (click)="toggleRuleActive(rule)">
+                    {{ rule.is_active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8">
+                  <div class="empty">
+                    <strong>No allocation rules yet</strong>
+                    Add one to start crediting leave by role.
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

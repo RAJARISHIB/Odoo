@@ -51,6 +51,16 @@ class Panel:
     ALL = (ADMIN, USER)
 
 
+class LeaveAllocationFrequency:
+    """How often a `LeaveAllocationRule` credits leave. Used by the admin leave
+    module only - see apps/leaves/models.py."""
+
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+
+    ALL = (MONTHLY, YEARLY)
+
+
 class RealtimeEvent:
     """Event names published to the websocket hub.  Keep in sync with the
     Angular `RealtimeService` and `realtime/src/lib/events.js`."""
@@ -61,6 +71,12 @@ class RealtimeEvent:
     USER_CREATED = "user.created"
     USER_UPDATED = "user.updated"
     USER_STATUS_CHANGED = "user.status_changed"
+    LEAVE_REQUEST_CREATED = "leave.request_created"
+    LEAVE_REQUEST_UPDATED = "leave.request_updated"
+    LEAVE_TYPE_UPDATED = "leave.type_updated"
+    LEAVE_ALLOCATION_UPDATED = "leave.allocation_updated"
+    LEAVE_BALANCE_UPDATED = "leave.balance_updated"
+    HOLIDAY_UPDATED = "holiday.updated"
     ORG_UPDATED = "organization.updated"
     NOTIFICATION = "notification"
     SYSTEM_ANNOUNCEMENT = "system.announcement"

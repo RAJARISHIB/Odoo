@@ -18,7 +18,13 @@ export type DomainEventName =
   | 'user.status_changed'
   | 'organization.updated'
   | 'notification'
-  | 'system.announcement';
+  | 'system.announcement'
+  | 'leave.request_created'
+  | 'leave.request_updated'
+  | 'leave.type_updated'
+  | 'leave.allocation_updated'
+  | 'leave.balance_updated'
+  | 'holiday.updated';
 
 export interface ServerMessage<T = unknown> {
   id: string;

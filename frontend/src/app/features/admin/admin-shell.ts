@@ -38,6 +38,15 @@ export class AdminShell {
     { label: 'Organization', path: '/admin/organization', icon: '⚙' },
   ];
 
+  /** Admin leave module - kept as a separate group so the existing `navItems`
+   * section above is untouched. */
+  protected readonly leaveNavItems: NavItem[] = [
+    { label: 'Leave requests', path: '/admin/leave/requests', icon: '✓' },
+    { label: 'Leave configuration', path: '/admin/leave/configuration', icon: '☰' },
+    { label: 'Holiday calendar', path: '/admin/leave/holidays', icon: '☼' },
+    { label: 'Leave dashboard', path: '/admin/leave/dashboard', icon: '◔' },
+  ];
+
   protected readonly title = signal(this.titleForUrl(this.router.url));
 
   /** Unread realtime events, shown as a count next to the connection badge. */
@@ -63,6 +72,7 @@ export class AdminShell {
   }
 
   private titleForUrl(url: string): string {
-    return this.navItems.find((item) => url.startsWith(item.path))?.label ?? 'Admin';
+    const item = [...this.navItems, ...this.leaveNavItems].find((entry) => url.startsWith(entry.path));
+    return item?.label ?? 'Admin';
   }
 }

@@ -1,0 +1,93 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Holiday calendar</h1>
+      <p>Government, festival, company and optional holidays.</p>
+    </div>
+    <div class="row">
+      <button class="btn ghost sm" type="button" (click)="changeYear(-1)">&larr;</button>
+      <strong style="min-width: 48px; text-align: center">{{ year() }}</strong>
+      <button class="btn ghost sm" type="button" (click)="changeYear(1)">&rarr;</button>
+      <button class="btn" type="button" (click)="toggleForm()">
+        {{ showForm() && !editingId() ? 'Cancel' : '+ Add holiday' }}
+      </button>
+    </div>
+  </div>
+
+  @if (showForm()) {
+    <section class="card" style="margin-bottom: 16px">
+      <div class="card-head"><h3>{{ editingId() ? 'Edit holiday' : 'New holiday' }}</h3></div>
+      <form class="card-body" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="grid cols-3">
+          <div class="field">
+            <label for="h_name">Holiday name</label>
+            <input id="h_name" formControlName="name" placeholder="Independence Day" />
+            @if (formErrors()['name']) { <div class="error">{{ formErrors()['name'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="h_date">Date</label>
+            <input id="h_date" type="date" formControlName="date" />
+            @if (formErrors()['date']) { <div class="error">{{ formErrors()['date'] }}</div> }
+          </div>
+          <div class="field">
+            <label for="h_type">Type</label>
+            <select id="h_type" formControlName="type">
+              @for (type of types; track type) {
+                <option [value]="type">{{ typeLabels[type] }}</option>
+              }
+            </select>
+          </div>
+          <div class="field" style="grid-column: span 3">
+            <label for="h_desc">Description</label>
+            <input id="h_desc" formControlName="description" />
+          </div>
+        </div>
+        <button class="btn" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save holiday' }}
+        </button>
+      </form>
+    </section>
+  }
+
+  <section class="card">
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Holiday</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th style="text-align: right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (holiday of holidays(); track holiday.id) {
+            <tr>
+              <td><strong>{{ holiday.name }}</strong></td>
+              <td class="mono">{{ holiday.date | date: 'mediumDate' }}</td>
+              <td><span class="badge info">{{ typeLabels[holiday.type] }}</span></td>
+              <td class="subtle">{{ holiday.description || '—' }}</td>
+              <td style="text-align: right">
+                @if (isPast(holiday)) {
+                  <span class="subtle" title="Past holidays are protected">Locked</span>
+                } @else {
+                  <button class="btn ghost sm" type="button" (click)="toggleForm(holiday)">Edit</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="empty">
+                  <strong>{{ loading() ? 'Loading…' : 'No holidays for ' + year() }}</strong>
+                  @if (!loading()) { Add one above. }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
