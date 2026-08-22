@@ -195,6 +195,18 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
         organization.logo_url = save_image(logo, "logos/{}".format(organization.id))
         organization.save()
 
+    # Provision default roles for the new organization
+    roles = {}
+    for r_slug, r_name, perms in [
+        (RoleEnum.SUPER_ADMIN, "Super Admin", list(Permissions.ALL)),
+        (RoleEnum.ADMIN, "Admin", list(Permissions.ALL)),
+        (RoleEnum.HR, "HR Manager", [p for p in Permissions.ALL if p.startswith('users.') or p.startswith('leaves.') or p in (Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_MANAGE, Permissions.ORG_VIEW, Permissions.DEPARTMENTS_MANAGE, Permissions.ROLES_VIEW, Permissions.ROLES_ASSIGN)]),
+        (RoleEnum.MANAGER, "Manager", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.ATTENDANCE_VIEW_TEAM, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.LEAVES_VIEW_TEAM, Permissions.LEAVES_APPROVE, Permissions.ORG_VIEW]),
+        (RoleEnum.EMPLOYEE, "Employee", [Permissions.USERS_VIEW, Permissions.ATTENDANCE_PUNCH, Permissions.ATTENDANCE_VIEW_OWN, Permissions.LEAVES_APPLY, Permissions.LEAVES_VIEW_OWN, Permissions.ORG_VIEW])
+    ]:
+        from apps.users.models import Role
+        roles[r_slug] = Role(organization=organization, name=r_name, slug=r_slug, is_system=True, permissions=perms).save()
+
     joined_at = datetime.now(timezone.utc)
     user = User(
         organization=organization,
@@ -203,7 +215,7 @@ def register_organization(data: dict, *, logo=None, ip_address: str = "", user_a
         first_name=first_name,
         last_name=last_name,
         phone=data.get("phone", ""),
-        role=Role.SUPER_ADMIN,
+        role=roles[RoleEnum.SUPER_ADMIN],
         status=UserStatus.ACTIVE,
         date_of_joining=joined_at,
     )
@@ -409,7 +421,9 @@ def search_users(organization: Organization, *, search: str = None, role: str = 
             }
         )
     if role:
-        queryset = queryset.filter(role=validate_choice(role, Role.ALL, "role"))
+        role_doc = Role.objects.filter(organization=organization, id=role).first()
+        if role_doc:
+            queryset = queryset.filter(role=role_doc)
     if status:
         queryset = queryset.filter(status=validate_choice(status, UserStatus.ALL, "status"))
     if department_id:

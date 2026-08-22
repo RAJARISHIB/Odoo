@@ -142,7 +142,7 @@ class BaseController:
             )
         return user
 
-    def require_roles(self, *roles):
+    def _deprecated_require_roles(self, *roles):
         """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
         if not hasattr(user.role, 'slug') or user.role.slug not in roles:
@@ -151,11 +151,11 @@ class BaseController:
             )
         return user
 
-    def require_admin(self):
+    def _deprecated_require_admin(self):
         """Any role that has access to the admin panel."""
         return self.require_roles(*Role.ADMIN_PANEL)
 
-    def require_super_admin(self):
+    def _deprecated_require_super_admin(self):
         return self.require_roles(Role.SUPER_ADMIN)
 
     @property
