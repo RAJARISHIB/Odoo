@@ -35,3 +35,11 @@ This file is a living document intended for AI assistants and developers contrib
 - Payroll & Compensation module
 - File/Document uploads (e.g., offer letters, medical certificates)
 - System email delivery (currently passwords and invites are just returned in the HTTP response for dev simplicity)
+
+
+### 4. Dynamic Role-Based Access Control (RBAC) & Team Filtering
+- **Database Model**: `Role` is a MongoEngine document assigned per organization. `user.role` is a `ReferenceField`, so legacy code using `user.role == 'manager'` string comparisons is strictly prohibited.
+- **Granular Checks**: Use `user.has_permission(Permissions.LEAVES_APPROVE)` inside services. Controllers use the decorators `@permissions_required(...)` or the helper `self.require_any_permission(...)` instead of `@roles_required`.
+- **Manager Delegation (Hierarchy Filtering)**: By default, users with `Permissions.ORG_MANAGE` can perform administrative actions (e.g. approve leaves) for the *entire* organization. Users with only module-specific approval permissions (e.g., `Permissions.LEAVES_APPROVE`) act as "Managers".
+- **Subordinate Resolution**: To prevent cross-team leaking, Manager endpoints must filter database queries using `apps.teams.services.get_subordinate_ids(organization, user)`. This function resolves direct and indirect subordinates by checking the `TeamHierarchyLevel` order inside the `TeamMember` assignments (where a lower order number means higher rank, e.g. 1 = Lead, 2 = Developer).
+- **Frontend Compatibility**: The Angular client currently expects legacy boolean capability flags (`can_manage_users`, etc.). To maintain compatibility, `AuthController._permissions(user)` acts as an adapter, translating the granular database permissions into the boolean flags the UI `capabilityGuard` requires.
