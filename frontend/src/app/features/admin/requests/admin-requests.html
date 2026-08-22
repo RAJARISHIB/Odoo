@@ -1,0 +1,153 @@
+<div class="admin-requests-page">
+  <div class="page-header">
+    <div>
+      <h2>Incoming Employee Requests</h2>
+      <p class="sub-text">Review and process requests for ID cards, laptops, and company services.</p>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar card">
+    <div class="filter-tabs">
+      <button class="tab-btn" [class.active]="statusFilter() === 'PENDING'" (click)="onStatusFilterChange('PENDING')">
+        Pending Requests
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'APPROVED'" (click)="onStatusFilterChange('APPROVED')">
+        Approved
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'REJECTED'" (click)="onStatusFilterChange('REJECTED')">
+        Rejected
+      </button>
+      <button class="tab-btn" [class.active]="statusFilter() === 'ALL'" (click)="onStatusFilterChange('ALL')">
+        All Statuses
+      </button>
+    </div>
+
+    <div class="filter-type-select">
+      <label class="text-xs text-muted font-medium mr-2">Type Filter:</label>
+      <select [value]="typeFilter()" (change)="onTypeFilterChange($any($event.target).value)" class="form-select select-sm">
+        <option value="ALL">All Request Types</option>
+        <option value="id_card">ID Card Requests</option>
+        <option value="laptop">Laptop Requests</option>
+        <option value="other">Other Requests</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading incoming employee requests...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Request Type</th>
+              <th>Description</th>
+              <th>Date Submitted</th>
+              <th>Attachment</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (req of requests(); track req.id) {
+              <tr>
+                <td>
+                  <div class="user-row">
+                    <span class="user-name">{{ req.employee?.full_name || 'Employee' }}</span>
+                    <span class="user-email">{{ req.employee?.email || '' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-pill" [class.type-id]="req.request_type === 'id_card'" [class.type-laptop]="req.request_type === 'laptop'" [class.type-other]="req.request_type === 'other'">
+                    {{ getLabelForType(req.request_type) }}
+                  </span>
+                </td>
+                <td class="desc-cell">{{ req.description }}</td>
+                <td>{{ req.created_at | date:'dd MMM yyyy, HH:mm' }}</td>
+                <td>
+                  @if (req.has_attachment) {
+                    <button class="btn-link" (click)="downloadAttachment(req)">
+                      <app-icon name="paperclip"></app-icon> Attachment
+                    </button>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge" [class.badge-warning]="req.status === 'PENDING'" [class.badge-success]="req.status === 'APPROVED'" [class.badge-danger]="req.status === 'REJECTED'">
+                    {{ req.status }}
+                  </span>
+                  @if (req.rejection_reason) {
+                    <div class="sub-text text-danger mt-1">Reason: {{ req.rejection_reason }}</div>
+                  }
+                </td>
+                <td style="text-align: right;">
+                  @if (req.status === 'PENDING') {
+                    <div class="action-buttons">
+                      <button class="btn btn-success btn-xs" (click)="openApproveModal(req)">Approve</button>
+                      <button class="btn btn-danger btn-xs" (click)="openRejectModal(req)">Reject</button>
+                    </div>
+                  } @else {
+                    <span class="text-muted text-xs">Processed</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty-state">No {{ statusFilter().toLowerCase() }} requests found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Approve Modal -->
+  @if (showApproveModal()) {
+    <div class="modal-backdrop" (click)="showApproveModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Approve Employee Request</h3>
+          <button class="btn-icon" (click)="showApproveModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <div class="modal-body">
+          <p>Approve <strong>{{ getLabelForType(selectedRequest()!.request_type) }}</strong> request submitted by <strong>{{ selectedRequest()?.employee?.full_name }}</strong>?</p>
+          <p class="sub-text mt-2"><strong>Description:</strong> {{ selectedRequest()?.description }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showApproveModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-success" (click)="confirmApprove()">Confirm Approve</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Reject Modal -->
+  @if (showRejectModal()) {
+    <div class="modal-backdrop" (click)="showRejectModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Reject Employee Request</h3>
+          <button class="btn-icon" (click)="showRejectModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="rejectForm" (ngSubmit)="confirmReject()">
+          <div class="modal-body">
+            <p>Reject <strong>{{ getLabelForType(selectedRequest()!.request_type) }}</strong> request submitted by <strong>{{ selectedRequest()?.employee?.full_name }}</strong>?</p>
+            <div class="form-group mt-3">
+              <label>Rejection Reason (Optional)</label>
+              <textarea formControlName="rejection_reason" class="form-control" rows="3" placeholder="Provide a reason for rejecting this request..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showRejectModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-danger">Confirm Reject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

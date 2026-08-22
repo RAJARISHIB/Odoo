@@ -621,29 +621,161 @@ table.data .col-actions {
    component that uses it today because the manual-attendance and new-employee
    forms are the next things that should become dialogs instead of inline
    cards that push the page down. */
+/* ---------- modal ---------------------------------------------------------- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: var(--z-menu);
+  z-index: var(--z-menu, 1000);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
-  background: var(--scrim);
-  backdrop-filter: blur(2px);
-  animation: scrim-in var(--dur-fast) var(--ease-out);
+  padding: var(--space-4, 16px);
+  background: var(--scrim, rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(4px);
+  animation: scrim-in var(--dur-fast, 150ms) var(--ease-out, ease-out);
 }
 
 .modal-card {
+  background: var(--surface);
+  color: var(--text-main, var(--text));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
   width: 100%;
   max-width: 520px;
-  max-height: calc(100vh - var(--space-8));
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  animation: menu-in var(--dur-med) var(--ease-out);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg, 0 20px 25px -5px rgba(0, 0, 0, 0.3));
+  animation: menu-in var(--dur-med, 200ms) var(--ease-out, ease-out);
+
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h3 {
+      margin: 0;
+      font-size: var(--text-md, 16px);
+      font-weight: var(--weight-semibold, 600);
+      color: var(--text-main, var(--text));
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius-sm, 6px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: var(--surface-alt);
+        color: var(--text-main, var(--text));
+      }
+    }
+  }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-alt);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
 }
 
 .modal-foot {
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+/* ---------- form controls ---------- */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: var(--text-xs, 12px);
+    font-weight: var(--weight-semibold, 600);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.form-control, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text-main, var(--text));
+  font-family: inherit;
+  font-size: var(--text-sm, 14px);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light, rgba(79, 70, 229, 0.15));
+    background: var(--surface);
+  }
+
+  &::placeholder {
+    color: var(--text-subtle, #9ca3af);
+  }
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+input[type="file"].form-control {
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &::file-selector-button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-main, var(--text));
+    padding: 4px 10px;
+    font-size: var(--text-xs, 12px);
+    font-weight: var(--weight-medium, 500);
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--surface-alt);
+    }
+  }
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+
+  .flex-1 {
+    flex: 1;
+  }
 }

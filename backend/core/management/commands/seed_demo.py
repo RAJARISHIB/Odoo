@@ -12,6 +12,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
+from apps.claims.models import EmployeeRequest, ExpenseClaim, Fine
 from apps.leaves.models import Holiday, LeaveAllocation, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
@@ -50,6 +51,7 @@ class Command(BaseCommand):
         self._holidays(organization)
         self._leaves(organization, users)
         self._teams(organization, users)
+        self._claims_fines_requests(organization, owner, users)
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
         self.stdout.write("  Organization : {} ({}, code {})".format(
@@ -351,5 +353,72 @@ class Command(BaseCommand):
                 ).save()
 
         self.stdout.write("Seeded team 'Core Engineering' with 4 hierarchy levels and 3 members.")
+
+    def _claims_fines_requests(self, organization, owner, users):
+        dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
+        designer_user = next((u for u in users if u.email == "designer@acme.test"), None)
+        admin_user = next((u for u in users if u.email == "admin@acme.test"), None) or owner
+        today = datetime.now(timezone.utc)
+
+        # Seed Expense Claims
+        if dev_user and not ExpenseClaim.objects.filter(organization=organization, employee=dev_user).first():
+            ExpenseClaim(
+                organization=organization,
+                employee=dev_user,
+                expense_type=ExpenseClaim.TYPE_TRAVEL,
+                amount=1250.0,
+                expense_date=today - timedelta(days=2),
+                description="Client meeting travel and parking expense",
+                status=ExpenseClaim.STATUS_PENDING,
+            ).save()
+
+            ExpenseClaim(
+                organization=organization,
+                employee=dev_user,
+                expense_type=ExpenseClaim.TYPE_FOOD,
+                amount=450.0,
+                expense_date=today - timedelta(days=5),
+                description="Team lunch during sprint planning",
+                status=ExpenseClaim.STATUS_APPROVED,
+                processed_by=admin_user,
+                processed_at=today - timedelta(days=4),
+                admin_comment="Approved per company policy",
+            ).save()
+            self.stdout.write("Seeded sample expense claims.")
+
+        # Seed Fines
+        if dev_user and not Fine.objects.filter(organization=organization, employee=dev_user).first():
+            Fine(
+                organization=organization,
+                employee=dev_user,
+                amount=500.0,
+                reason="Late submission of weekly progress report",
+                date=today - timedelta(days=3),
+                status=Fine.STATUS_ACTIVE,
+                applied_by=admin_user,
+            ).save()
+            self.stdout.write("Seeded sample fine.")
+
+        # Seed Employee Requests
+        if dev_user and not EmployeeRequest.objects.filter(organization=organization, employee=dev_user).first():
+            EmployeeRequest(
+                organization=organization,
+                employee=dev_user,
+                request_type=EmployeeRequest.TYPE_LAPTOP,
+                description="My current laptop screen is flickering and needs replacement or hardware inspection.",
+                status=EmployeeRequest.STATUS_PENDING,
+            ).save()
+
+        if designer_user and not EmployeeRequest.objects.filter(organization=organization, employee=designer_user).first():
+            EmployeeRequest(
+                organization=organization,
+                employee=designer_user,
+                request_type=EmployeeRequest.TYPE_ID_CARD,
+                description="I lost my physical ID card and require a replacement.",
+                status=EmployeeRequest.STATUS_APPROVED,
+                processed_by=admin_user,
+                processed_at=today - timedelta(days=1),
+            ).save()
+            self.stdout.write("Seeded sample employee requests.")
 
 

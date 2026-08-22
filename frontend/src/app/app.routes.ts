@@ -135,6 +135,27 @@ export const routes: Routes = [
       },
 
       {
+        path: 'claims',
+        title: 'Expense Claims',
+        data: { breadcrumb: 'Claims' },
+        loadComponent: () => import('./features/user/claims/claims').then((m) => m.ClaimsComponent),
+      },
+
+      {
+        path: 'fines',
+        title: 'My Fines',
+        data: { breadcrumb: 'Fines' },
+        loadComponent: () => import('./features/user/fines/fines').then((m) => m.FinesComponent),
+      },
+
+      {
+        path: 'requests',
+        title: 'Employee Requests',
+        data: { breadcrumb: 'Requests' },
+        loadComponent: () => import('./features/user/requests/requests').then((m) => m.EmployeeRequestsComponent),
+      },
+
+      {
         path: 'me',
         title: 'My profile',
         data: { breadcrumb: 'My profile' },
@@ -161,6 +182,30 @@ export const routes: Routes = [
             canActivate: [capabilityGuard('can_manage_organization')],
             loadComponent: () =>
               import('./features/admin/teams/manage-teams').then((m) => m.ManageTeams),
+          },
+          {
+            path: 'claims-approvals',
+            title: 'Claim approvals',
+            data: { breadcrumb: 'Claim approvals' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/claims/admin-claims').then((m) => m.AdminClaimsComponent),
+          },
+          {
+            path: 'fines-management',
+            title: 'Fines setup',
+            data: { breadcrumb: 'Fines setup' },
+            canActivate: [capabilityGuard('can_manage_users')],
+            loadComponent: () =>
+              import('./features/admin/fines/admin-fines').then((m) => m.AdminFinesComponent),
+          },
+          {
+            path: 'incoming-requests',
+            title: 'Incoming requests',
+            data: { breadcrumb: 'Incoming requests' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/requests/admin-requests').then((m) => m.AdminRequestsComponent),
           },
           {
             path: 'people',

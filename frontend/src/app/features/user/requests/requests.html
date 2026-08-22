@@ -1,0 +1,104 @@
+<div class="requests-page">
+  <div class="page-header">
+    <div>
+      <h2>Employee Requests</h2>
+      <p class="sub-text">Submit requests for company hardware, ID cards, or services.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openNewRequestModal()">
+      <app-icon name="plus"></app-icon> New Request
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading employee requests...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Request Type</th>
+              <th>Description</th>
+              <th>Date Submitted</th>
+              <th>Attachment</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (req of requests(); track req.id) {
+              <tr>
+                <td>
+                  <span class="type-pill" [class.type-id]="req.request_type === 'id_card'" [class.type-laptop]="req.request_type === 'laptop'" [class.type-other]="req.request_type === 'other'">
+                    {{ getLabelForType(req.request_type) }}
+                  </span>
+                </td>
+                <td class="desc-cell">{{ req.description }}</td>
+                <td>{{ req.created_at | date:'dd MMM yyyy, HH:mm' }}</td>
+                <td>
+                  @if (req.has_attachment) {
+                    <button class="btn-link" (click)="downloadAttachment(req)">
+                      <app-icon name="paperclip"></app-icon> Attachment
+                    </button>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge" [class.badge-warning]="req.status === 'PENDING'" [class.badge-success]="req.status === 'APPROVED'" [class.badge-danger]="req.status === 'REJECTED'">
+                    {{ req.status }}
+                  </span>
+                  @if (req.rejection_reason) {
+                    <div class="sub-text text-danger mt-1">Reason: {{ req.rejection_reason }}</div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-state">No requests submitted yet. Click "New Request" to create one.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- New Request Modal -->
+  @if (showNewRequestModal()) {
+    <div class="modal-backdrop" (click)="showNewRequestModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Create Employee Request</h3>
+          <button class="btn-icon" (click)="showNewRequestModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="requestForm" (ngSubmit)="submitRequest()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Select Request Type (Exactly One) *</label>
+              <select formControlName="request_type" class="form-control">
+                @for (opt of requestTypeOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Request Details & Description *</label>
+              <textarea formControlName="description" class="form-control" rows="4" placeholder="Explain your exact requirement (e.g., lost ID card replacement, laptop hardware issue, external monitor)..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Supporting File / Image (Optional)</label>
+              <input type="file" (change)="onFileSelected($event)" class="form-control file-input" />
+              <p class="sub-text mt-1">Attach ID card photo, error screenshot, or supporting document.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showNewRequestModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="requestForm.invalid">Submit Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

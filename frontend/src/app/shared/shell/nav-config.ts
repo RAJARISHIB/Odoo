@@ -35,8 +35,9 @@ export const NAV: readonly NavSection[] = [
       { label: 'My Team', path: '/teams', icon: 'people' },
       { label: 'Attendance', path: '/attendance', icon: 'clock' },
       { label: 'Time off', path: '/time-off', icon: 'calendar' },
-      // Approving leave is a recurring job, not configuration - it belongs
-      // next to Time off rather than buried in Settings.
+      { label: 'Claims', path: '/claims', icon: 'file' },
+      { label: 'Fines', path: '/fines', icon: 'warning' },
+      { label: 'Requests', path: '/requests', icon: 'mail' },
       {
         label: 'Approvals',
         path: '/time-off/requests',
@@ -50,6 +51,9 @@ export const NAV: readonly NavSection[] = [
     items: [
       { label: 'Overview', path: '/settings/overview', icon: 'dashboard', requires: ['can_view_all_attendance'] },
       { label: 'Teams setup', path: '/settings/teams', icon: 'people', requires: ['can_manage_organization'] },
+      { label: 'Claim approvals', path: '/settings/claims-approvals', icon: 'file', requires: ['can_manage_organization'] },
+      { label: 'Fines setup', path: '/settings/fines-management', icon: 'warning', requires: ['can_manage_users'] },
+      { label: 'Incoming requests', path: '/settings/incoming-requests', icon: 'mail', requires: ['can_manage_organization'] },
       { label: 'Leave insights', path: '/settings/leave-insights', icon: 'plane', requires: ['can_view_all_attendance'] },
       { label: 'People', path: '/settings/people', icon: 'briefcase', requires: ['can_manage_users'] },
       { label: 'Leave policy', path: '/settings/leave-policy', icon: 'settings', requires: ['can_manage_organization'] },

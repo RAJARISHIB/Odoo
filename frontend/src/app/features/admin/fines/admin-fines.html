@@ -1,0 +1,110 @@
+<div class="admin-fines-page">
+  <div class="page-header">
+    <div>
+      <h2>Fines Management</h2>
+      <p class="sub-text">Apply fines to employees for policy violations or manage active fines.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openApplyFineModal()">
+      <app-icon name="plus"></app-icon> Apply Fine
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state card">Loading fines...</div>
+  } @else {
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Amount</th>
+              <th>Reason</th>
+              <th>Date Applied</th>
+              <th>Applied By</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fine of fines(); track fine.id) {
+              <tr>
+                <td>
+                  <div class="user-row">
+                    <span class="user-name">{{ fine.employee?.full_name || 'Employee' }}</span>
+                    <span class="user-email">{{ fine.employee?.email || '' }}</span>
+                  </div>
+                </td>
+                <td class="font-bold text-danger">{{ fine.amount | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="desc-cell">{{ fine.reason }}</td>
+                <td>{{ fine.date | date:'dd MMM yyyy' }}</td>
+                <td>{{ fine.applied_by?.full_name || 'Admin' }}</td>
+                <td>
+                  <span class="badge" [class.badge-danger]="fine.status === 'ACTIVE'" [class.badge-secondary]="fine.status === 'CANCELLED'">
+                    {{ fine.status }}
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  @if (fine.status === 'ACTIVE') {
+                    <button class="btn btn-danger btn-xs" (click)="cancelFine(fine)">Cancel Fine</button>
+                  } @else {
+                    <span class="text-muted text-xs">Cancelled</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty-state">No fines found. Click "Apply Fine" to issue a new fine.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Apply Fine Modal -->
+  @if (showApplyFineModal()) {
+    <div class="modal-backdrop" (click)="showApplyFineModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Apply Fine to Employee</h3>
+          <button class="btn-icon" (click)="showApplyFineModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="fineForm" (ngSubmit)="applyFine()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Select Employee *</label>
+              <select formControlName="employee_id" class="form-control">
+                <option value="">-- Choose Employee --</option>
+                @for (u of users(); track u.id) {
+                  <option [value]="u.id">{{ u.full_name }} ({{ u.email }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Fine Amount (₹) *</label>
+                <input type="number" formControlName="amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Date *</label>
+                <input type="date" formControlName="date" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Reason for Fine *</label>
+              <textarea formControlName="reason" class="form-control" rows="3" placeholder="Explain the violation or reason for applying this fine..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showApplyFineModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="fineForm.invalid">Apply Fine</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
