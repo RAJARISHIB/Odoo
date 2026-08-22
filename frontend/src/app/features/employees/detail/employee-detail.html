@@ -35,7 +35,7 @@
 
           <div class="row badges">
             <span class="badge" [class]="p.status">{{ p.status }}</span>
-            <span class="badge">{{ p.role.replace('_', ' ') }}</span>
+            <span class="badge">{{ roleLabel() }}</span>
             @if (isSelf()) {
               <span class="badge primary">This is you</span>
             }

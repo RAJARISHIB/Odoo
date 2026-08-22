@@ -5,7 +5,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Attendance as AttendanceApi } from '../../../core/services/attendance';
 import { AttendanceSummary } from '../../../core/models/attendance.model';
 import { Auth } from '../../../core/services/auth';
-import { Department, User } from '../../../core/models/user.model';
+import { Department, User, roleSlug } from '../../../core/models/user.model';
 import { Icon } from '../../../shared/icon/icon';
 import { Organizations, Users } from '../../../core/services/users';
 
@@ -44,6 +44,12 @@ export class EmployeeDetail {
     () => this.auth.permissions()?.can_view_all_attendance === true,
   );
   protected readonly isSelf = computed(() => this.auth.user()?.id === this.person()?.id);
+
+  protected readonly roleLabel = computed(() => {
+    const r = this.person()?.role;
+    if (!r) return '';
+    return roleSlug(r).replace('_', ' ');
+  });
 
   protected readonly initials = computed(() => {
     const p = this.person();
