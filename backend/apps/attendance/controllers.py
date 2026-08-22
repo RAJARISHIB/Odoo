@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Attendance controllers.
 
 Punch endpoints emit realtime events so the admin panel's live board updates
@@ -6,7 +11,7 @@ without polling.
 from apps.attendance import services
 from apps.users.services import get_user_in_org
 from core.base_controller import BaseController
-from core.constants import AttendanceSource, RealtimeEvent, Role
+from core.constants import AttendanceSource, RealtimeEvent, Role, Permissions
 
 
 class AttendanceController(BaseController):

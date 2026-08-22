@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Leave controllers."""
 from datetime import date
 
@@ -94,7 +99,7 @@ class LeaveController(BaseController):
 # here - the Angular guards are a UX convenience only.
 # =============================================================================
 from apps.users.services import get_user_in_org
-from core.constants import Role
+from core.constants import Role, Permissions
 from core.validators import parse_int
 
 

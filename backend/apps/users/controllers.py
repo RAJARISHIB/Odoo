@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """User + auth controllers.
 
 Each public method maps 1:1 to a route in `apps/users/urls.py`.  They read the
@@ -7,7 +12,7 @@ the standard envelope.
 from apps.users import services
 from apps.users.models import User
 from core.base_controller import BaseController
-from core.constants import RealtimeEvent, Role
+from core.constants import RealtimeEvent, Role, Permissions
 from core.exceptions import ValidationError
 from core.realtime import panel_channel, user_channel
 

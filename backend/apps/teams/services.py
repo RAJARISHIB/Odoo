@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Teams domain business logic."""
 import calendar
 from datetime import date, datetime, time, timedelta, timezone

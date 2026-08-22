@@ -140,6 +140,10 @@ CORS_ALLOW_HEADERS = [
     "x-request-id",
 ]
 
+# Create logs directory
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -148,6 +152,45 @@ LOGGING = {
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+        "file_users": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "users.log",
+            "formatter": "standard",
+        },
+        "file_attendance": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "attendance.log",
+            "formatter": "standard",
+        },
+        "file_leaves": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "leaves.log",
+            "formatter": "standard",
+        },
+        "file_organization": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "organization.log",
+            "formatter": "standard",
+        },
+        "file_core": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "core.log",
+            "formatter": "standard",
+        },
+        "file_error": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "error.log",
+            "formatter": "standard",
+            "level": "ERROR",
+        },
     },
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "apps.users": {"handlers": ["console", "file_users", "file_error"], "level": "INFO", "propagate": False},
+        "apps.attendance": {"handlers": ["console", "file_attendance", "file_error"], "level": "INFO", "propagate": False},
+        "apps.leaves": {"handlers": ["console", "file_leaves", "file_error"], "level": "INFO", "propagate": False},
+        "apps.organization": {"handlers": ["console", "file_organization", "file_error"], "level": "INFO", "propagate": False},
+        "core": {"handlers": ["console", "file_core", "file_error"], "level": "INFO", "propagate": False},
+        "django": {"handlers": ["console", "file_error"], "level": "INFO", "propagate": False},
+    },
+    "root": {"handlers": ["console", "file_error"], "level": "INFO"},
 }

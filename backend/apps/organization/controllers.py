@@ -1,7 +1,12 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Organization + department controllers."""
 from apps.organization import services
 from core.base_controller import BaseController
-from core.constants import RealtimeEvent, Role
+from core.constants import RealtimeEvent, Role, Permissions
 
 
 class OrganizationController(BaseController):

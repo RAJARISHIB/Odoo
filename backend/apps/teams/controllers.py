@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 """Teams controllers."""
 from apps.teams import services
 from core.base_controller import BaseController
