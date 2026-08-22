@@ -237,23 +237,24 @@ cross-tenant access raises 403 — a super admin is the only exemption.
 
 ---
 
-## Documentation
+## Feature Documentation
 
-- [`docs/api.md`](docs/api.md) - every endpoint, with request/response examples
-- [`docs/realtime.md`](docs/realtime.md) - websocket protocol, channels, and the
-  planned messaging paths
+- [`payroll.md`](payroll.md) / [`docs/payroll.md`](docs/payroll.md) — HRMS Payroll Module (Role templates, salary dependency engine, PF & Tax, payslips)
+- [`teams.md`](teams.md) / [`docs/teams.md`](docs/teams.md) — Teams & Organizational Hierarchy Module (Teams, ranks, hierarchy tree, transfers)
+- [`claims.md`](claims.md) / [`docs/claims.md`](docs/claims.md) — Expense Claims, Fines, and Employee Requests Module
+- [`docs/api.md`](docs/api.md) — REST API reference and request/response envelope specs
+- [`docs/realtime.md`](docs/realtime.md) — Websocket protocol, channels, and event hub specification
 
 ---
 
 ## Current scope
 
-Implemented: authentication (login by ID or email, organization signup with a
-logo, system-generated login IDs and first-time passwords, forced password
-change, refresh rotation, logout, sessions, password reset), the employee
-directory, organization
-and department management, attendance (check-in/out, history, summaries, admin
-corrections, daily overview), and realtime delivery of all of it.
-
-Deliberately left for later: leave management, payroll, file uploads, email
-delivery for invites (the temporary password is returned in the API response
-instead), and a Redis-backed hub for running more than one websocket node.
+Implemented:
+- Authentication & Sessions (Login ID / email, org registration, forced password change, refresh rotation, session revoking).
+- Employee Directory & User Profile management.
+- Teams & Organizational Hierarchy management (custom rank levels, hierarchy trees, employee transfers).
+- Attendance System (check-in/out, work sessions, daily summaries, admin overview).
+- Leave Management System (leave allocations, leave types, leave requests, approval workflow).
+- Expense Claims, Fines, & Employee Requests System (reimbursement claims, administrative fines, hardware & ID card request queues).
+- Full HRMS Payroll Module (role-level templates, employee payroll assignment with ROLE vs MANUAL protection, salary calculation dependency engine, PF & Tax deductions, payslips and CTC document management).
+- Realtime WebSocket event hub for live UI synchronization.
