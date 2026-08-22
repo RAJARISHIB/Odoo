@@ -5,7 +5,7 @@ a domain decision lives here, so the same logic can be reused from a management
 command, a seed script or a background job.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from django.conf import settings
 
@@ -23,6 +23,7 @@ from core.security import (
 from core.storage import save_image
 from core.utils import random_password, slugify
 from core.validators import (
+    parse_date,
     parse_datetime,
     validate_choice,
     validate_email,
@@ -291,6 +292,12 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
         status=data.get("status", UserStatus.ACTIVE),
         must_change_password=temporary_password is not None,
     )
+    if data.get("date_of_birth"):
+        dob_d = parse_date(data["date_of_birth"], "date_of_birth")
+        if dob_d > date.today():
+            raise ValidationError("Date of birth cannot be in the future.", details={"date_of_birth": "Must be today or in the past."})
+        user.date_of_birth = datetime.combine(dob_d, time.min, tzinfo=timezone.utc)
+
     if data.get("department_id"):
         user.department = _department_or_404(organization, data["department_id"])
     if data.get("reporting_to_id"):
@@ -316,6 +323,16 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
     for field in editable:
         if field in data:
             setattr(user, field, data[field])
+
+    if "date_of_birth" in data:
+        raw_dob = data["date_of_birth"]
+        if raw_dob in (None, ""):
+            user.date_of_birth = None
+        else:
+            dob_d = parse_date(raw_dob, "date_of_birth")
+            if dob_d > date.today():
+                raise ValidationError("Date of birth cannot be in the future.", details={"date_of_birth": "Must be today or in the past."})
+            user.date_of_birth = datetime.combine(dob_d, time.min, tzinfo=timezone.utc)
 
     # Role and status are privileged, and nobody may demote themselves.
     if "role" in data and editor and editor.role in (Role.SUPER_ADMIN, Role.ADMIN):

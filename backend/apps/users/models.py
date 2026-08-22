@@ -42,6 +42,7 @@ class User(BaseDocument):
     employee_id = StringField(max_length=40)
     designation = StringField(max_length=120)
     date_of_joining = DateTimeField(null=True)
+    date_of_birth = DateTimeField(null=True)
     reporting_to = ReferenceField("self", null=True)
 
     role = StringField(required=True, choices=Role.ALL, default=Role.EMPLOYEE)
@@ -102,6 +103,10 @@ class User(BaseDocument):
         data["full_name"] = self.full_name
         data["panel"] = self.panel
         data["is_admin"] = self.is_admin
+        if self.date_of_birth:
+            data["date_of_birth"] = self.date_of_birth.strftime("%Y-%m-%d")
+        else:
+            data["date_of_birth"] = None
         return data
 
     def __repr__(self):

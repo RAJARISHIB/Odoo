@@ -7,13 +7,14 @@ Creates one organization, two departments, one admin, one HR, three employees
 and a fortnight of attendance history.
 """
 import random
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
 from apps.leaves.models import Holiday, LeaveRequest
 from apps.organization.models import Department, Organization
+from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
 from apps.users.models import RefreshToken, User
 from core.constants import AttendanceSource, AttendanceStatus, Role, UserStatus
 from core.identifiers import generate_login_id, organization_code
@@ -48,6 +49,7 @@ class Command(BaseCommand):
         self._attendance(organization, [owner] + users, options["days"])
         self._holidays(organization)
         self._leaves(organization, users)
+        self._teams(organization, users)
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
         self.stdout.write("  Organization : {} ({}, code {})".format(
@@ -68,6 +70,10 @@ class Command(BaseCommand):
         Attendance.objects.filter(organization=organization).delete()
         Holiday.objects.filter(organization=organization).delete()
         LeaveRequest.objects.filter(organization=organization).delete()
+        TeamMember.objects.filter(organization=organization).delete()
+        for t in Team.objects.filter(organization=organization):
+            TeamHierarchyLevel.objects.filter(team=t).delete()
+            t.delete()
         for user in User.objects.filter(organization=organization):
             RefreshToken.objects.filter(user=user).delete()
         User.objects.filter(organization=organization).delete()
@@ -241,4 +247,68 @@ class Command(BaseCommand):
                 status=LeaveRequest.STATUS_PENDING,
             ).save()
             self.stdout.write("Seeded sample leave request for dev@acme.test.")
+
+    def _teams(self, organization, users):
+        today = datetime.now(timezone.utc).date()
+
+        # Set sample dates of birth
+        dob_map = {
+            "dev@acme.test": datetime.combine(date(1995, today.month, today.day), time.min, tzinfo=timezone.utc),
+            "designer@acme.test": datetime.combine(date(1996, (today + timedelta(days=3)).month, (today + timedelta(days=3)).day), time.min, tzinfo=timezone.utc),
+            "manager@acme.test": datetime.combine(date(1992, (today + timedelta(days=5)).month, (today + timedelta(days=5)).day), time.min, tzinfo=timezone.utc),
+        }
+
+        for u in users:
+            if u.email in dob_map and not u.date_of_birth:
+                u.date_of_birth = dob_map[u.email]
+                u.save()
+
+        # Seed Team
+        team = Team.objects.filter(organization=organization, name="Core Engineering").first()
+        if not team:
+            team = Team(
+                organization=organization,
+                name="Core Engineering",
+                description="Core product and software engineering team",
+                status=Team.STATUS_ACTIVE,
+            ).save()
+
+        # Seed Hierarchy Levels
+        hierarchy_levels = [
+            ("Engineering Lead", 1),
+            ("Senior Developer", 2),
+            ("Developer", 3),
+            ("Intern", 4),
+        ]
+        level_objs = {}
+        for name, order in hierarchy_levels:
+            lvl = TeamHierarchyLevel.objects.filter(team=team, name=name).first()
+            if not lvl:
+                lvl = TeamHierarchyLevel(
+                    team=team,
+                    name=name,
+                    order=order,
+                    is_active=True,
+                ).save()
+            level_objs[name] = lvl
+
+        # Assign Members
+        assignments = [
+            ("manager@acme.test", "Engineering Lead"),
+            ("dev@acme.test", "Developer"),
+            ("designer@acme.test", "Developer"),
+        ]
+        for email, lvl_name in assignments:
+            u = next((usr for usr in users if usr.email == email), None)
+            if u and not TeamMember.objects.filter(team=team, employee=u, is_active=True).first():
+                TeamMember(
+                    organization=organization,
+                    team=team,
+                    employee=u,
+                    hierarchy_level=level_objs.get(lvl_name),
+                    is_active=True,
+                ).save()
+
+        self.stdout.write("Seeded team 'Core Engineering' with 4 hierarchy levels and 3 members.")
+
 
