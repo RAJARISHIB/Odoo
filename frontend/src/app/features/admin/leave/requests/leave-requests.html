@@ -73,19 +73,21 @@
               <td class="subtle" data-label="Requested">{{ request.created_at | date: 'mediumDate' }}</td>
               <td class="col-actions">
                 @if (request.status === 'PENDING') {
-                  <select
-                    class="mono approve-type"
-                    aria-label="Leave type to approve as"
-                    [value]="request.leave_type_id ?? ''"
-                    (change)="setApproveType(request.id, $any($event.target).value)"
-                  >
-                    <option value="">Unspecified</option>
-                    @for (type of types(); track type.id) {
-                      <option [value]="type.id">{{ type.name }}</option>
-                    }
-                  </select>
-                  <button class="btn success sm" type="button" (click)="approve(request)">Approve</button>
-                  <button class="btn danger sm" type="button" (click)="reject(request)">Reject</button>
+                  <div class="actions-flex">
+                    <select
+                      class="approve-type"
+                      aria-label="Leave type to approve as"
+                      [value]="request.leave_type_id ?? ''"
+                      (change)="setApproveType(request.id, $any($event.target).value)"
+                    >
+                      <option value="">Unspecified</option>
+                      @for (type of types(); track type.id) {
+                        <option [value]="type.id">{{ type.name }}</option>
+                      }
+                    </select>
+                    <button class="btn success sm" type="button" (click)="approve(request)">Approve</button>
+                    <button class="btn danger sm" type="button" (click)="reject(request)">Reject</button>
+                  </div>
                 }
               </td>
             </tr>
