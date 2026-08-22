@@ -54,7 +54,7 @@ def create_access_token(user) -> tuple:
     claims = {
         "sub": str(user.id),
         "email": user.email,
-        "role": user.role,
+        "role": user.role.slug if getattr(user, "role", None) and not isinstance(user.role, str) else user.role,
         "org_id": str(user.organization.id) if user.organization else None,
         "name": user.full_name,
     }

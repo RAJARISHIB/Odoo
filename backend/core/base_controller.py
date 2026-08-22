@@ -132,11 +132,20 @@ class BaseController:
         if not self.user:
             raise AuthenticationError()
         return self.user
+    def require_permissions(self, *permissions):
+        """Restrict an action to users holding ALL the specified permissions."""
+        user = self.require_user()
+        missing = [p for p in permissions if not user.has_permission(p)]
+        if missing:
+            raise PermissionDenied(
+                "This action requires permissions: {}.".format(", ".join(missing))
+            )
+        return user
 
     def require_roles(self, *roles):
-        """Restrict an action to specific roles."""
+        """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
-        if user.role not in roles:
+        if not hasattr(user.role, 'slug') or user.role.slug not in roles:
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
@@ -151,7 +160,8 @@ class BaseController:
 
     @property
     def is_admin(self) -> bool:
-        return bool(self.user and self.user.role in Role.ADMIN_PANEL)
+        return bool(self.user and hasattr(self.user.role, 'slug') and self.user.role.slug in Role.ADMIN_PANEL)
+
 
     def is_self(self, user_id) -> bool:
         return bool(self.user and str(self.user.id) == str(user_id))

@@ -10,8 +10,8 @@ from datetime import date, datetime, timezone
 from django.conf import settings
 
 from apps.organization.models import Organization
-from apps.users.models import RefreshToken, User
-from core.constants import Role, UserStatus
+from apps.users.models import RefreshToken, User, Role
+from core.constants import Role as RoleEnum, UserStatus, Permissions, RealtimeEvent
 from core.identifiers import generate_login_id, organization_code, split_full_name
 from core.exceptions import AuthenticationError, Conflict, NotFound, ValidationError
 from core.security import (
@@ -421,3 +421,96 @@ def _department_or_404(organization: Organization, department_id: str):
     if not department:
         raise NotFound("Department not found.")
     return department
+
+
+# ---------------------------------------------------------------------------
+# Roles
+# ---------------------------------------------------------------------------
+from django.utils.text import slugify
+from core.realtime import notify_user
+
+def list_roles(organization):
+    return Role.objects.filter(organization=organization).all()
+
+def get_role(organization, role_id: str):
+    return Role.objects.filter(id=role_id, organization=organization).first()
+
+def get_role_users_count(role):
+    return User.objects.filter(role=role, is_deleted=False).count()
+
+def create_role(organization, name: str, description: str, permissions: list):
+    slug = slugify(name)
+    if Role.objects.filter(organization=organization, slug=slug).first():
+        raise ValidationError("A role with a similar name already exists.", code="duplicate_role")
+        
+    invalid_perms = set(permissions) - set(Permissions.ALL)
+    if invalid_perms:
+        raise ValidationError(f"Invalid permissions: {invalid_perms}")
+
+    role = Role(
+        organization=organization,
+        name=name,
+        slug=slug,
+        description=description,
+        permissions=list(set(permissions)),
+        is_system=False
+    ).save()
+    return role
+
+def update_role(organization, role_id: str, name: str = None, description: str = None, permissions: list = None):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+    
+    if role.is_system and name and name != role.name:
+        raise ValidationError("Cannot rename system roles.", code="system_role")
+
+    if name and not role.is_system:
+        role.name = name
+        role.slug = slugify(name)
+    
+    if description is not None:
+        role.description = description
+        
+    if permissions is not None:
+        invalid_perms = set(permissions) - set(Permissions.ALL)
+        if invalid_perms:
+            raise ValidationError(f"Invalid permissions: {invalid_perms}")
+        role.permissions = list(set(permissions))
+        
+    role.save()
+    
+    # Notify users with this role
+    # RealtimeService.publish(...)
+    
+    return role
+
+def delete_role(organization, role_id: str):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+        
+    if role.is_system:
+        raise ValidationError("Cannot delete system roles.", code="system_role")
+        
+    if get_role_users_count(role) > 0:
+        raise ValidationError("Cannot delete role while users are assigned to it.", code="role_in_use")
+        
+    role.delete()
+
+def assign_role(organization, role_id: str, user_ids: list):
+    role = get_role(organization, role_id)
+    if not role:
+        raise ValidationError("Role not found.", code="not_found")
+        
+    users = User.objects.filter(organization=organization, id__in=user_ids, is_deleted=False)
+    for user in users:
+        user.role = role
+        user.save()
+        # Revoke tokens if role downgraded? Optional for now.
+        
+        # Notify
+        try:
+            notify_user(user.id, RealtimeEvent.USER_UPDATED, user.to_dict())
+        except Exception:
+            pass

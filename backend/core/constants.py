@@ -80,3 +80,100 @@ class RealtimeEvent:
     ORG_UPDATED = "organization.updated"
     NOTIFICATION = "notification"
     SYSTEM_ANNOUNCEMENT = "system.announcement"
+
+class Permissions:
+    # Users & Directory
+    USERS_VIEW = 'users.view'
+    USERS_CREATE = 'users.create'
+    USERS_EDIT = 'users.edit'
+    USERS_DELETE = 'users.delete'
+    USERS_RESET_PASSWORD = 'users.reset_password'
+
+    # Attendance
+    ATTENDANCE_PUNCH = 'attendance.punch'
+    ATTENDANCE_VIEW_OWN = 'attendance.view_own'
+    ATTENDANCE_VIEW_TEAM = 'attendance.view_team'
+    ATTENDANCE_VIEW_ALL = 'attendance.view_all'
+    ATTENDANCE_MANAGE = 'attendance.manage'
+
+    # Leaves
+    LEAVES_APPLY = 'leaves.apply'
+    LEAVES_VIEW_OWN = 'leaves.view_own'
+    LEAVES_VIEW_TEAM = 'leaves.view_team'
+    LEAVES_VIEW_ALL = 'leaves.view_all'
+    LEAVES_APPROVE = 'leaves.approve'
+    LEAVES_MANAGE_TYPES = 'leaves.manage_types'
+
+    # Organization
+    ORG_VIEW = 'org.view'
+    ORG_MANAGE = 'org.manage'
+    DEPARTMENTS_MANAGE = 'departments.manage'
+
+    # Roles
+    ROLES_VIEW = 'roles.view'
+    ROLES_MANAGE = 'roles.manage'
+    ROLES_ASSIGN = 'roles.assign'
+
+    ALL = (
+        USERS_VIEW, USERS_CREATE, USERS_EDIT, USERS_DELETE, USERS_RESET_PASSWORD,
+        ATTENDANCE_PUNCH, ATTENDANCE_VIEW_OWN, ATTENDANCE_VIEW_TEAM, ATTENDANCE_VIEW_ALL, ATTENDANCE_MANAGE,
+        LEAVES_APPLY, LEAVES_VIEW_OWN, LEAVES_VIEW_TEAM, LEAVES_VIEW_ALL, LEAVES_APPROVE, LEAVES_MANAGE_TYPES,
+        ORG_VIEW, ORG_MANAGE, DEPARTMENTS_MANAGE,
+        ROLES_VIEW, ROLES_MANAGE, ROLES_ASSIGN
+    )
+
+    CATALOG = [
+        {
+            'module': 'users',
+            'label': 'Users & Directory',
+            'permissions': [
+                {'key': USERS_VIEW, 'label': 'View Users', 'description': 'Browse employee directory and view profiles.'},
+                {'key': USERS_CREATE, 'label': 'Create Users', 'description': 'Add or invite new employees.'},
+                {'key': USERS_EDIT, 'label': 'Edit Users', 'description': 'Modify employee profiles and assignments.'},
+                {'key': USERS_DELETE, 'label': 'Delete Users', 'description': 'Deactivate or archive employee accounts.'},
+                {'key': USERS_RESET_PASSWORD, 'label': 'Reset Passwords', 'description': 'Trigger manual password resets for employees.'}
+            ]
+        },
+        {
+            'module': 'attendance',
+            'label': 'Attendance',
+            'permissions': [
+                {'key': ATTENDANCE_PUNCH, 'label': 'Check In/Out', 'description': 'Allow user to punch in and out.'},
+                {'key': ATTENDANCE_VIEW_OWN, 'label': 'View Own Attendance', 'description': 'View personal punch logs.'},
+                {'key': ATTENDANCE_VIEW_TEAM, 'label': 'View Team Attendance', 'description': 'View attendance for direct reports.'},
+                {'key': ATTENDANCE_VIEW_ALL, 'label': 'View All Attendance', 'description': 'View organization-wide attendance records.'},
+                {'key': ATTENDANCE_MANAGE, 'label': 'Manage Attendance', 'description': 'Manually correct or approve punch times.'}
+            ]
+        },
+        {
+            'module': 'leaves',
+            'label': 'Leaves & Time Off',
+            'permissions': [
+                {'key': LEAVES_APPLY, 'label': 'Apply for Leave', 'description': 'Submit leave requests for oneself.'},
+                {'key': LEAVES_VIEW_OWN, 'label': 'View Own Leaves', 'description': 'View own leave history and balances.'},
+                {'key': LEAVES_VIEW_TEAM, 'label': 'View Team Leaves', 'description': 'View team leave calendar.'},
+                {'key': LEAVES_VIEW_ALL, 'label': 'View All Leaves', 'description': 'View organization-wide leave calendar.'},
+                {'key': LEAVES_APPROVE, 'label': 'Approve Leaves', 'description': 'Approve or reject leave applications.'},
+                {'key': LEAVES_MANAGE_TYPES, 'label': 'Manage Leave Types', 'description': 'Configure leave categories and quotas.'}
+            ]
+        },
+        {
+            'module': 'organization',
+            'label': 'Organization & Departments',
+            'permissions': [
+                {'key': ORG_VIEW, 'label': 'View Organization', 'description': 'View organization details and departments.'},
+                {'key': ORG_MANAGE, 'label': 'Manage Organization', 'description': 'Update company profile and settings.'},
+                {'key': DEPARTMENTS_MANAGE, 'label': 'Manage Departments', 'description': 'Create, edit, and delete departments.'}
+            ]
+        },
+        {
+            'module': 'roles',
+            'label': 'Roles & Access Control',
+            'permissions': [
+                {'key': ROLES_VIEW, 'label': 'View Roles', 'description': 'View roles and assigned permissions.'},
+                {'key': ROLES_MANAGE, 'label': 'Manage Roles', 'description': 'Create, edit, and delete custom roles.'},
+                {'key': ROLES_ASSIGN, 'label': 'Assign Roles', 'description': 'Assign roles to employees.'}
+            ]
+        }
+    ]
+
