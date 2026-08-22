@@ -96,6 +96,17 @@ header p {
   object-fit: contain;
 }
 
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.label-row .subtle {
+  font-size: var(--text-xs);
+}
+
 .hint-row {
   margin-top: 6px;
   gap: var(--space-2);

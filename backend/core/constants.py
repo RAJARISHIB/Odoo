@@ -61,6 +61,48 @@ class LeaveAllocationFrequency:
     ALL = (MONTHLY, YEARLY)
 
 
+class AuditAction:
+    """Security-relevant event names written to `core.audit.AuditLog`.
+
+    Distinct from `RealtimeEvent` below: realtime events are UI push
+    notifications, these are the accountability record - see `core.audit`.
+    """
+
+    LOGIN_SUCCESS = "login.success"
+    LOGIN_FAILED = "login.failed"
+    LOGOUT = "logout"
+    ACCOUNT_LOCKED = "account.locked"
+
+    PASSWORD_CHANGED = "password.changed"
+    PASSWORD_RESET_REQUESTED = "password.reset_requested"
+    PASSWORD_RESET_COMPLETED = "password.reset_completed"
+    ADMIN_PASSWORD_RESET = "password.admin_reset"
+
+    EMAIL_VERIFIED = "email.verified"
+
+    MFA_CHALLENGE_ISSUED = "mfa.challenge_issued"
+    MFA_ENABLED = "mfa.enabled"
+    MFA_DISABLED = "mfa.disabled"
+    MFA_FAILED = "mfa.failed"
+    MFA_RECOVERY_CODES_REGENERATED = "mfa.recovery_codes_regenerated"
+
+    ROLE_CHANGED = "role.changed"
+    PERMISSION_CHANGED = "permission.changed"
+
+    USER_CREATED = "user.created"
+    USER_UPDATED = "user.updated"
+    USER_DELETED = "user.deleted"
+
+    SESSION_REVOKED = "session.revoked"
+
+    LEAVE_APPROVED = "leave.approved"
+    LEAVE_REJECTED = "leave.rejected"
+    LEAVE_BALANCE_ADJUSTED = "leave.balance_adjusted"
+    HOLIDAY_CHANGED = "holiday.changed"
+
+    ACCESS_DENIED = "access.denied"
+
+
 class RealtimeEvent:
     """Event names published to the websocket hub.  Keep in sync with the
     Angular `RealtimeService` and `realtime/src/lib/events.js`."""

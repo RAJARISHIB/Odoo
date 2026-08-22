@@ -4,7 +4,19 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { ADMIN_ROLES, AuthTokens, LoginResponse, Organization, Permissions, SessionResponse, User } from '../models/user.model';
+import {
+  ADMIN_ROLES,
+  AuthenticatedSession,
+  AuthTokens,
+  LoginResponse,
+  MfaEnrollConfirm,
+  MfaEnrollStart,
+  Organization,
+  Permissions,
+  Session,
+  SessionResponse,
+  User,
+} from '../models/user.model';
 import { Api } from './api';
 import { ApiResponse } from '../models/api.model';
 import { Realtime } from './realtime';
@@ -29,10 +41,17 @@ export class Auth {
   private readonly userSignal = signal<User | null>(this.storage.user);
   private readonly organizationSignal = signal<Organization | null>(null);
   private readonly permissionsSignal = signal<Permissions | null>(null);
+  /**
+   * Set only while a sign-in is waiting on the second MFA factor: holds the
+   * narrow `mfa_pending_token` from `login()`, which is not a real session
+   * and is never persisted to storage - see `verifyMfa`.
+   */
+  private readonly mfaPendingTokenSignal = signal<string | null>(null);
 
   readonly user = this.userSignal.asReadonly();
   readonly organization = this.organizationSignal.asReadonly();
   readonly permissions = this.permissionsSignal.asReadonly();
+  readonly mfaPending = computed(() => !!this.mfaPendingTokenSignal());
 
   readonly isAuthenticated = computed(() => !!this.userSignal() && !!this.storage.accessToken);
   /**
@@ -59,8 +78,35 @@ export class Auth {
    */
   login(identifier: string, password: string): Observable<LoginResponse> {
     return this.api.post<LoginResponse>('auth/login', { identifier, password }).pipe(
-      tap((result) => this.startSession(result.tokens, result.user)),
+      tap((result) => {
+        if (result.mfa_required) {
+          this.mfaPendingTokenSignal.set(result.mfa_pending_token ?? null);
+          return;
+        }
+        this.mfaPendingTokenSignal.set(null);
+        this.startSession(result.tokens!, result.user!);
+      }),
     );
+  }
+
+  /** Second login step for an MFA-enabled account - a TOTP or recovery code. */
+  verifyMfa(code: string): Observable<LoginResponse> {
+    const pendingToken = this.mfaPendingTokenSignal();
+    if (!pendingToken) throw new Error('No MFA challenge in progress.');
+
+    return this.api
+      .post<LoginResponse>('auth/mfa/verify', { mfa_pending_token: pendingToken, code })
+      .pipe(
+        tap((result) => {
+          this.mfaPendingTokenSignal.set(null);
+          this.startSession(result.tokens!, result.user!);
+        }),
+      );
+  }
+
+  /** Abandon an in-progress MFA challenge, e.g. "back to sign in". */
+  cancelMfaChallenge(): void {
+    this.mfaPendingTokenSignal.set(null);
   }
 
   /**
@@ -69,10 +115,10 @@ export class Auth {
    *
    * Posted as multipart when a logo was chosen, plain JSON otherwise.
    */
-  register(payload: RegistrationPayload, logo?: File | null): Observable<LoginResponse> {
+  register(payload: RegistrationPayload, logo?: File | null): Observable<AuthenticatedSession> {
     const request = logo
-      ? this.api.postForm<LoginResponse>('auth/register', toFormData(payload, logo))
-      : this.api.post<LoginResponse>('auth/register', payload);
+      ? this.api.postForm<AuthenticatedSession>('auth/register', toFormData(payload, logo))
+      : this.api.post<AuthenticatedSession>('auth/register', payload);
 
     return request.pipe(tap((result) => this.startSession(result.tokens, result.user)));
   }
@@ -109,6 +155,71 @@ export class Auth {
     });
   }
 
+  // -----------------------------------------------------------------
+  // Self-service password reset / email verification
+  // -----------------------------------------------------------------
+  /** Always resolves the same way whether or not the account exists. */
+  forgotPassword(identifier: string): Observable<unknown> {
+    return this.api.post('auth/forgot-password', { identifier });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<unknown> {
+    return this.api.post('auth/reset-password', { token, new_password: newPassword });
+  }
+
+  verifyEmail(token: string): Observable<unknown> {
+    return this.api.post('auth/verify-email', { token });
+  }
+
+  resendVerification(): Observable<unknown> {
+    return this.api.post('auth/resend-verification');
+  }
+
+  // -----------------------------------------------------------------
+  // MFA (self-service security settings)
+  // -----------------------------------------------------------------
+  mfaEnrollStart(): Observable<MfaEnrollStart> {
+    return this.api.post<MfaEnrollStart>('security/mfa/enroll/start');
+  }
+
+  mfaEnrollConfirm(code: string): Observable<MfaEnrollConfirm> {
+    return this.api
+      .post<MfaEnrollConfirm>('security/mfa/enroll/confirm', { code })
+      .pipe(tap(() => this.refreshCurrentUser()));
+  }
+
+  mfaDisable(currentPassword: string, code: string): Observable<unknown> {
+    return this.api
+      .post('security/mfa/disable', { current_password: currentPassword, code })
+      .pipe(tap(() => this.refreshCurrentUser()));
+  }
+
+  mfaRegenerateRecoveryCodes(currentPassword: string, code: string): Observable<MfaEnrollConfirm> {
+    return this.api.post<MfaEnrollConfirm>('security/mfa/recovery-codes/regenerate', {
+      current_password: currentPassword,
+      code,
+    });
+  }
+
+  /** Re-pulls `/auth/me` so `user()`/`permissions()` reflect a change made
+   * out from under the cached session (MFA enabled/disabled, ...). */
+  private refreshCurrentUser(): void {
+    this.loadSession().subscribe({ error: () => undefined });
+  }
+
+  // -----------------------------------------------------------------
+  // Active sessions ("signed-in devices")
+  // -----------------------------------------------------------------
+  listSessions(): Observable<Session[]> {
+    return this.api.get<Session[]>('auth/sessions');
+  }
+
+  /** Sign out one specific *other* device - distinct from `logout()`, which
+   * only ever acts on the caller's own current session or all of them. */
+  revokeSession(sessionId: string): Observable<unknown> {
+    return this.api.delete(`auth/sessions/${sessionId}`);
+  }
+
   /** The signed-in user's login ID, for display. */
   readonly loginId = computed(() => this.userSignal()?.login_id ?? null);
 
@@ -126,7 +237,7 @@ export class Auth {
     if (!refreshToken) throw new Error('No refresh token available.');
 
     return this.http
-      .post<ApiResponse<LoginResponse>>(`${environment.apiUrl}/auth/refresh`, {
+      .post<ApiResponse<AuthenticatedSession>>(`${environment.apiUrl}/auth/refresh`, {
         refresh_token: refreshToken,
       })
       .pipe(

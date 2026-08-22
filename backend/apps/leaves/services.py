@@ -1,6 +1,7 @@
 """Leave domain business logic."""
 import calendar
 import logging
+import re
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -323,12 +324,13 @@ def admin_list_leave_requests(organization, *, status=None, leave_type_id=None, 
         if department_id:
             users_qs = users_qs.filter(department=department_id)
         if search:
+            pattern = re.escape(search)
             users_qs = users_qs.filter(
                 __raw__={
                     "$or": [
-                        {"first_name": {"$regex": search, "$options": "i"}},
-                        {"last_name": {"$regex": search, "$options": "i"}},
-                        {"employee_id": {"$regex": search, "$options": "i"}},
+                        {"first_name": {"$regex": pattern, "$options": "i"}},
+                        {"last_name": {"$regex": pattern, "$options": "i"}},
+                        {"employee_id": {"$regex": pattern, "$options": "i"}},
                     ]
                 }
             )
@@ -904,12 +906,13 @@ def list_org_balances(organization, year: int, *, leave_type_id: str = None, dep
     if user_id:
         users_qs = users_qs.filter(id=user_id)
     if search:
+        pattern = re.escape(search)
         users_qs = users_qs.filter(
             __raw__={
                 "$or": [
-                    {"first_name": {"$regex": search, "$options": "i"}},
-                    {"last_name": {"$regex": search, "$options": "i"}},
-                    {"employee_id": {"$regex": search, "$options": "i"}},
+                    {"first_name": {"$regex": pattern, "$options": "i"}},
+                    {"last_name": {"$regex": pattern, "$options": "i"}},
+                    {"employee_id": {"$regex": pattern, "$options": "i"}},
                 ]
             }
         )

@@ -17,6 +17,7 @@ from django.urls import include, path, re_path
 from apps.attendance.urls import admin_urlpatterns as attendance_admin_urls
 from apps.teams.urls import admin_urlpatterns as teams_admin_urls
 from apps.leaves.urls import admin_urlpatterns as leaves_admin_urls
+from apps.users.urls import admin_urlpatterns as users_admin_urls
 from apps.users.urls import auth_urlpatterns
 from core import views as core_views
 
@@ -42,6 +43,7 @@ urlpatterns = [
     path(API_PREFIX + "admin/", include((attendance_admin_urls, "admin"))),
     path(API_PREFIX + "admin/", include((leaves_admin_urls, "admin-leaves"))),
     path(API_PREFIX + "admin/", include((teams_admin_urls, "admin-teams"))),
+    path(API_PREFIX + "admin/", include((users_admin_urls, "admin-users"))),
 
     path(API_PREFIX + "internal/realtime/presence", core_views.realtime_presence,
          name="internal-realtime-presence"),

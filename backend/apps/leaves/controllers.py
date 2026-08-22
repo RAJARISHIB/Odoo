@@ -3,7 +3,7 @@ from datetime import date
 
 from apps.leaves import services
 from core.base_controller import BaseController
-from core.constants import RealtimeEvent
+from core.constants import AuditAction, RealtimeEvent
 
 
 class LeaveController(BaseController):
@@ -137,12 +137,16 @@ class HolidayAdminController(BaseController):
         self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
         self.require("name", "date")
         holiday = services.create_holiday_admin(self.user.organization, self.data, created_by=self.user)
+        self.audit(AuditAction.HOLIDAY_CHANGED, resource_type="holiday", resource_id=str(holiday.id),
+                  metadata={"action": "created"})
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         return self.created(holiday.to_dict(), "Holiday created.")
 
     def update(self, holiday_id):
         self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
         holiday = services.update_holiday_admin(self.user.organization, holiday_id, self.data, updated_by=self.user)
+        self.audit(AuditAction.HOLIDAY_CHANGED, resource_type="holiday", resource_id=str(holiday.id),
+                  metadata={"action": "updated"})
         self.emit_to_admins(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         self.emit_to_org(RealtimeEvent.HOLIDAY_UPDATED, {"holiday": holiday.to_dict()})
         return self.ok(holiday.to_dict(), "Holiday updated.")
@@ -171,11 +175,15 @@ class LeaveAdminRequestController(BaseController):
         request = services.approve_leave_request(
             self.user.organization, request_id, self.user, leave_type_id=self.field("leave_type_id")
         )
+        self.audit(AuditAction.LEAVE_APPROVED, resource_type="leave_request", resource_id=str(request.id),
+                  metadata={"employee_id": str(request.employee.id)})
         return self._announce(request, "Leave request approved.")
 
     def reject(self, request_id):
         self.require_admin()
         request = services.reject_leave_request(self.user.organization, request_id, self.user, self.field("comment"))
+        self.audit(AuditAction.LEAVE_REJECTED, resource_type="leave_request", resource_id=str(request.id),
+                  metadata={"employee_id": str(request.employee.id)})
         return self._announce(request, "Leave request rejected.")
 
     def _announce(self, request, message: str):
@@ -269,6 +277,12 @@ class LeaveAdjustmentController(BaseController):
             self.user.organization, target_user, leave_type, self.data, created_by=self.user
         )
 
+        self.audit(
+            AuditAction.LEAVE_BALANCE_ADJUSTED, resource_type="leave_adjustment",
+            resource_id=str(adjustment.id),
+            metadata={"employee_id": str(target_user.id), "leave_type_id": str(leave_type.id),
+                     "amount": adjustment.amount},
+        )
         payload = {"adjustment": self._with_creator(adjustment), "user_id": str(target_user.id)}
         self.emit_to_admins(RealtimeEvent.LEAVE_BALANCE_UPDATED, payload)
         self.emit_to_user(target_user.id, RealtimeEvent.LEAVE_BALANCE_UPDATED, payload)
