@@ -4,12 +4,13 @@ import { RouterLink } from '@angular/router';
 import { Auth } from '../../../core/services/auth';
 import { Layout } from '../../../core/services/layout';
 import { Icon } from '../../icon/icon';
+import { Logo } from '../../logo/logo';
 import { visibleNav } from '../nav-config';
 
 /** Sidebar: brand, capability-filtered nav, user chip. Collapses to a rail. */
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',

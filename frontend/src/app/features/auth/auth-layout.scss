@@ -39,20 +39,29 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-weight: var(--weight-semibold);
-  font-size: 17px;
+  color: var(--brand-deep-ink);
 }
 
-.brand .mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  background: var(--brand-deep-accent);
-  color: var(--brand-deep);
-  display: grid;
-  place-items: center;
-  flex: none;
-  --icon-size: 20px;
+.brand app-logo {
+  color: var(--brand-deep-ink);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.brand .name {
+  font-weight: var(--weight-bold);
+  font-size: 19px;
+  letter-spacing: var(--tracking-tight);
+}
+
+.brand .tagline {
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  color: var(--brand-deep-subtle);
 }
 
 .pitch h1 {

@@ -81,6 +81,15 @@ nav {
   gap: 3px;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Scrolls (the nav list now runs longer than the viewport on some panels)
+     but the bar itself is visual noise next to a 248px-wide rail - Firefox
+     and WebKit need their own properties, there's no shorthand. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-section {

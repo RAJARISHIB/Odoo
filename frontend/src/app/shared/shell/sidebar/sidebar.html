@@ -1,13 +1,13 @@
 <div class="brand">
-  <a class="mark" routerLink="/employees" [attr.aria-label]="auth.organization()?.name ?? 'HRMS Portal'">
+  <a class="mark" routerLink="/employees" [attr.aria-label]="auth.organization()?.name ?? 'Humlynk'">
     @if (auth.organization()?.logo_url; as logo) {
       <img [src]="logo" [alt]="auth.organization()?.name ?? 'Logo'" />
     } @else {
-      <app-icon name="people" [strokeWidth]="2" />
+      <app-logo [size]="22" />
     }
   </a>
   <span class="brand-text">
-    <strong class="truncate">{{ auth.organization()?.name ?? 'HRMS Portal' }}</strong>
+    <strong class="truncate">{{ auth.organization()?.name ?? 'Humlynk' }}</strong>
     <span class="section-label">{{ auth.user()?.role === 'employee' ? 'Employee' : 'Workspace' }}</span>
   </span>
 

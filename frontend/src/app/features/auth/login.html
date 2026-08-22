@@ -53,6 +53,9 @@
     </div>
 
     <button class="btn block" type="submit" [disabled]="submitting()">
+      @if (submitting()) {
+        <app-logo [size]="18" [loading]="true" />
+      }
       {{ submitting() ? 'Signing in…' : 'Sign in' }}
     </button>
   </form>

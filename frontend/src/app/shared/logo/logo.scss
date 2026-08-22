@@ -1,0 +1,105 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  width: var(--logo-size, 28px);
+  height: var(--logo-size, 28px);
+  color: currentColor;
+  animation: logo-enter var(--dur-slow, 320ms) var(--ease-out, ease) both;
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.head,
+.body {
+  fill: currentColor;
+}
+
+/* Quiet by default - a connective line, not a bar. The eye should land on the
+   two figures first, same as reading a person's shoulders before the arm
+   that links them. */
+.link {
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.45;
+}
+
+/* A second copy of the same path, drawn as a short dash that travels along it
+   - "signal on the wire" - shown only while loading. Two paths rather than
+   colouring the one path: the base link must stay visible as a whole curve
+   even mid-animation, which a moving dash on its own cannot do. */
+.link-flow {
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 16 40;
+  opacity: 0;
+}
+
+.figure {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+:host(.is-loading) .link-flow {
+  opacity: 1;
+  animation: logo-flow 1.3s linear infinite;
+}
+
+:host(.is-loading) .figure-l {
+  animation: logo-pulse 1.7s var(--ease-emphasized, ease-in-out) infinite;
+}
+
+:host(.is-loading) .figure-r {
+  animation: logo-pulse 1.7s var(--ease-emphasized, ease-in-out) infinite;
+  /* Offset so the two figures pulse in a call-and-response rather than in
+     lockstep - it reads as the two sides of the mark "talking". */
+  animation-delay: 0.55s;
+}
+
+@keyframes logo-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes logo-flow {
+  from {
+    stroke-dashoffset: 56;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes logo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+
+  :host(.is-loading) .link-flow,
+  :host(.is-loading) .figure-l,
+  :host(.is-loading) .figure-r {
+    animation: none;
+  }
+
+  :host(.is-loading) .link-flow {
+    opacity: 0.85;
+  }
+}

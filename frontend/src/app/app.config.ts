@@ -2,6 +2,7 @@ import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalE
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   PreloadAllModules,
+  TitleStrategy,
   provideRouter,
   withComponentInputBinding,
   withPreloading,
@@ -13,6 +14,7 @@ import { Auth } from './core/services/auth';
 import { TokenStorage } from './core/services/token-storage';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { BrandTitleStrategy } from './core/title-strategy';
 import { routes } from './app.routes';
 
 /**
@@ -55,5 +57,6 @@ export const appConfig: ApplicationConfig = {
     // retried with a refreshed token before it can be turned into a toast.
     provideHttpClient(withInterceptors([errorInterceptor, authInterceptor])),
     provideAppInitializer(restoreSession),
+    { provide: TitleStrategy, useClass: BrandTitleStrategy },
   ],
 };

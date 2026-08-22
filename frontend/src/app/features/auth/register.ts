@@ -6,6 +6,7 @@ import { ApiErrorBody } from '../../core/models/api.model';
 import { Auth } from '../../core/services/auth';
 import { Toast } from '../../core/services/toast';
 import { Icon } from '../../shared/icon/icon';
+import { Logo } from '../../shared/logo/logo';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
@@ -18,7 +19,7 @@ const MAX_LOGO_BYTES = 2 * 1024 * 1024;
  */
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, Icon],
+  imports: [ReactiveFormsModule, RouterLink, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './register.html',
   styleUrl: './auth-form.scss',
