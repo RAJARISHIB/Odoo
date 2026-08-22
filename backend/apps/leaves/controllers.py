@@ -157,9 +157,11 @@ class LeaveAdminRequestController(BaseController):
     """Organization-wide leave requests: /api/v1/admin/leaves/requests"""
 
     def list(self):
-        self.require_permissions(Permissions.ORG_MANAGE)
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
+        manager = self.user if not self.user.has_permission(Permissions.ORG_MANAGE) else None
         queryset = services.admin_list_leave_requests(
             self.user.organization,
+            manager=manager,
             status=self.param("status"), leave_type_id=self.param("leave_type_id"),
             department_id=self.param("department_id"), search=self.param("search"),
             date_from=self.param("date_from"), date_to=self.param("date_to"),
@@ -167,19 +169,23 @@ class LeaveAdminRequestController(BaseController):
         return self.paginated(queryset, serializer=self._with_employee)
 
     def retrieve(self, request_id):
-        self.require_permissions(Permissions.ORG_MANAGE)
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.get_leave_request_in_org(self.user.organization, request_id)
+        if not self.user.has_permission(Permissions.ORG_MANAGE):
+            from apps.teams.services import get_subordinate_ids
+            if str(request.employee.id) not in get_subordinate_ids(self.user.organization, self.user):
+                raise PermissionDenied("You can only view requests for your team members.")
         return self.ok(self._with_employee(request))
 
     def approve(self, request_id):
-        self.require_permissions(Permissions.ORG_MANAGE)
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.approve_leave_request(
             self.user.organization, request_id, self.user, leave_type_id=self.field("leave_type_id")
         )
         return self._announce(request, "Leave request approved.")
 
     def reject(self, request_id):
-        self.require_permissions(Permissions.ORG_MANAGE)
+        self.require_any_permission(Permissions.ORG_MANAGE, Permissions.LEAVES_APPROVE)
         request = services.reject_leave_request(self.user.organization, request_id, self.user, self.field("comment"))
         return self._announce(request, "Leave request rejected.")
 
