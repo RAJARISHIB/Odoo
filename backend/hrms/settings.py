@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.leaves",
     "apps.teams",
     "apps.claims",
+    "apps.payroll",
 ]
 
 MIDDLEWARE = [

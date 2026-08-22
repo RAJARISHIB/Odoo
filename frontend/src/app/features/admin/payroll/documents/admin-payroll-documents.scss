@@ -1,0 +1,11 @@
+.flex-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.empty-padding {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+}

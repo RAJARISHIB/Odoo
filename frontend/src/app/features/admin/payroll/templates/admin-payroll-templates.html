@@ -1,0 +1,164 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Role Salary Templates</h1>
+      <p>Configure prefilled salary structures, component rules, and PF/Tax defaults per Role.</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" (click)="openCreateModal()">+ Create Role Template</button>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Role / Designation</th>
+            <th>Monthly Base Wage</th>
+            <th>Yearly Base (CTC)</th>
+            <th>PF Rate</th>
+            <th>Prof. Tax</th>
+            <th>Components</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tpl of templates(); track tpl.id) {
+            <tr>
+              <td>
+                <strong class="text-capitalize">{{ tpl.role }}</strong>
+                @if (tpl.designation) {
+                  <div class="subtle">{{ tpl.designation }}</div>
+                }
+              </td>
+              <td class="mono font-semibold">{{ tpl.monthly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+              <td class="mono subtle">{{ tpl.yearly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+              <td>{{ tpl.employee_pf_rate }}% (Base: {{ tpl.pf_base_component || 'Basic' }})</td>
+              <td>{{ tpl.professional_tax | currency: 'INR' : 'symbol' : '1.0-0' }}/mo</td>
+              <td>
+                <span class="badge info">{{ tpl.components?.length || 0 }} Rules</span>
+              </td>
+              <td class="text-right">
+                <button class="btn ghost sm" (click)="openEditModal(tpl)">Edit Template</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty-padding">No role salary templates configured yet. Click above to create one.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- Modal Dialog for Creating/Editing Role Salary Template -->
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ templateForm.value.id ? 'Edit Role Salary Template' : 'Create Role Salary Template' }}</h3>
+        <button class="btn-icon" (click)="closeModal()">&times;</button>
+      </div>
+
+      <div class="modal-body modal-grid">
+        <!-- Form Setup Column -->
+        <form [formGroup]="templateForm" class="template-form">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Target Role *</label>
+              <select formControlName="role" class="form-select">
+                @for (r of roles; track r.value) {
+                  <option [value]="r.value">{{ r.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label>Designation Title</label>
+              <input formControlName="designation" class="form-control" placeholder="e.g. Senior Software Engineer" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Monthly Base Wage (₹) *</label>
+              <input type="number" formControlName="monthly_wage" class="form-control" (input)="recalculatePreview()" />
+            </div>
+            <div class="form-group flex-1">
+              <label>Employee PF Rate (%)</label>
+              <input type="number" formControlName="employee_pf_rate" class="form-control" (input)="recalculatePreview()" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Professional Tax (₹/mo)</label>
+              <input type="number" formControlName="professional_tax" class="form-control" (input)="recalculatePreview()" />
+            </div>
+            <div class="form-group flex-1">
+              <label>PF Base Component</label>
+              <input formControlName="pf_base_component" class="form-control" placeholder="Basic Salary" (input)="recalculatePreview()" />
+            </div>
+          </div>
+
+          <!-- Components Header -->
+          <div class="components-header">
+            <h4>Salary Component Rules</h4>
+            <button class="btn quiet sm" type="button" (click)="addComponent()">+ Add Rule</button>
+          </div>
+
+          <div formArrayName="components" class="components-list">
+            @for (cGroup of componentsArray.controls; track $index) {
+              <div [formGroupName]="$index" class="component-item">
+                <div class="comp-row">
+                  <input formControlName="name" class="form-control comp-name" placeholder="Component Name" (input)="recalculatePreview()" />
+                  <select formControlName="calculation_type" class="form-select comp-type" (change)="recalculatePreview()">
+                    <option value="PERCENTAGE">% of Base</option>
+                    <option value="FIXED_AMOUNT">Fixed (₹)</option>
+                  </select>
+                  <input type="number" formControlName="value" class="form-control comp-val" (input)="recalculatePreview()" />
+                  <input formControlName="depends_on" class="form-control comp-dep" placeholder="Depends On (WAGE)" (input)="recalculatePreview()" />
+                  <button class="btn quiet danger icon-only" type="button" (click)="removeComponent($index)">&times;</button>
+                </div>
+              </div>
+            }
+          </div>
+        </form>
+
+        <!-- Live Preview Sidebar -->
+        <div class="preview-sidebar">
+          <h4>Calculated Salary Preview</h4>
+          @if (preview(); as prev) {
+            <div class="preview-card">
+              <div class="preview-line"><span>Monthly Base</span><strong>{{ prev.monthly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <div class="preview-line"><span>Annual CTC</span><strong>{{ prev.yearly_wage | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <hr />
+              <div class="preview-subtitle">Earnings Breakdown</div>
+              @for (c of prev.components; track c.name) {
+                <div class="preview-line sub">
+                  <span>{{ c.name }}</span>
+                  <strong class="mono">{{ c.calculated_amount | currency: 'INR' : 'symbol' : '1.0-0' }}</strong>
+                </div>
+              }
+              <div class="preview-line highlight"><span>Gross Salary</span><strong class="text-success">{{ prev.gross_salary | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <hr />
+              <div class="preview-subtitle">Deductions</div>
+              <div class="preview-line sub"><span>Employee PF (12%)</span><strong class="text-danger">{{ prev.employee_pf_amount | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <div class="preview-line sub"><span>Prof. Tax</span><strong class="text-danger">{{ prev.professional_tax | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <div class="preview-line highlight"><span>Total Deductions</span><strong class="text-danger">{{ prev.total_deductions | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+              <hr />
+              <div class="preview-line net"><span>Net Monthly Take-Home</span><strong class="text-primary">{{ prev.net_salary | currency: 'INR' : 'symbol' : '1.0-0' }}</strong></div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn ghost" (click)="closeModal()">Cancel</button>
+        <button class="btn primary" (click)="saveTemplate()">Save Role Template</button>
+      </div>
+    </div>
+  </div>
+}

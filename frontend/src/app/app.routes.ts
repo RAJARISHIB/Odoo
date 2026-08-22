@@ -142,6 +142,13 @@ export const routes: Routes = [
       },
 
       {
+        path: 'payroll',
+        title: 'My Payroll',
+        data: { breadcrumb: 'My Payroll' },
+        loadComponent: () => import('./features/user/payroll/my-payroll').then((m) => m.MyPayrollComponent),
+      },
+
+      {
         path: 'fines',
         title: 'My Fines',
         data: { breadcrumb: 'Fines' },
@@ -174,6 +181,30 @@ export const routes: Routes = [
             canActivate: [capabilityGuard('can_view_all_attendance')],
             loadComponent: () =>
               import('./features/admin/dashboard/dashboard').then((m) => m.AdminDashboard),
+          },
+          {
+            path: 'payroll-templates',
+            title: 'Role salary templates',
+            data: { breadcrumb: 'Salary Templates' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/payroll/templates/admin-payroll-templates').then((m) => m.AdminPayrollTemplatesComponent),
+          },
+          {
+            path: 'payroll-assignments',
+            title: 'Employee payroll',
+            data: { breadcrumb: 'Employee Payroll' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/payroll/assignments/admin-payroll-assignments').then((m) => m.AdminPayrollAssignmentComponent),
+          },
+          {
+            path: 'payroll-documents',
+            title: 'Payroll documents',
+            data: { breadcrumb: 'Payroll Documents' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/payroll/documents/admin-payroll-documents').then((m) => m.AdminPayrollDocumentsComponent),
           },
           {
             path: 'teams',
