@@ -142,22 +142,22 @@ class BaseController:
             )
         return user
 
-    def _deprecated_require_roles(self, *roles):
+    def require_roles(self, *roles):
         """Restrict an action to specific role slugs (legacy compat)."""
         user = self.require_user()
-        if not hasattr(user.role, 'slug') or user.role.slug not in roles:
+        role_slug = getattr(user.role, 'slug', str(user.role or ''))
+        if role_slug not in roles:
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
         return user
 
-    def _deprecated_require_admin(self):
+    def require_admin(self):
         """Any role that has access to the admin panel."""
         return self.require_roles(*Role.ADMIN_PANEL)
 
-    def _deprecated_require_super_admin(self):
+    def require_super_admin(self):
         return self.require_roles(Role.SUPER_ADMIN)
-
     @property
     def is_admin(self) -> bool:
         return bool(self.user and hasattr(self.user.role, 'slug') and self.user.role.slug in Role.ADMIN_PANEL)
@@ -168,7 +168,8 @@ class BaseController:
 
     def assert_same_organization(self, document):
         """Block cross-tenant access.  Super admins are exempt."""
-        if self.role == Role.SUPER_ADMIN:
+        role_slug = getattr(self.role, 'slug', str(self.role or ''))
+        if role_slug == Role.SUPER_ADMIN:
             return document
         target_org = getattr(document, "organization", None)
         if target_org is None or self.organization_id is None:
@@ -186,7 +187,8 @@ class BaseController:
     def scoped(self, document_class):
         """Queryset pre-filtered to live documents in the caller's organization."""
         queryset = document_class.objects.filter(is_deleted=False)
-        if self.role != Role.SUPER_ADMIN and self.organization_id:
+        role_slug = getattr(self.role, 'slug', str(self.role or ''))
+        if role_slug != Role.SUPER_ADMIN and self.organization_id:
             queryset = queryset.filter(organization=self.organization_id)
         return queryset
 

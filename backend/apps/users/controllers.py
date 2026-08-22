@@ -211,7 +211,7 @@ class UserController(BaseController):
         """Headline counters for the admin dashboard."""
         self.require_permissions(Permissions.USERS_VIEW)
         queryset = User.objects.filter(organization=self.user.organization, is_deleted=False)
-        roles = getattr(self.user, "organization", None) and Role.objects.filter(organization=self.user.organization).all() or []; by_role = {r.name: queryset.filter(role=r).count() for r in roles}
+        roles = getattr(self.user, "organization", None) and RoleModel.objects.filter(organization=self.user.organization).all() or []; by_role = {r.name: queryset.filter(role=r).count() for r in roles}
         return self.ok(
             {
                 "total": queryset.count(),
