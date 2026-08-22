@@ -80,7 +80,7 @@ class LeaveController(BaseController):
             "user": {"id": str(user.id), "name": user.full_name, "email": user.email},
         }
         self.emit_to_user(user.id, RealtimeEvent.LEAVE_REQUEST_CREATED, payload)
-        self.emit_to_admins(RealtimeEvent.LEAVE_REQUEST_CREATED, payload)
+        self.notify_relevant(RealtimeEvent.LEAVE_REQUEST_CREATED, payload, subject_user=user)
 
         return self.created(record.to_dict(), "Leave request submitted successfully.")
 
@@ -191,7 +191,7 @@ class LeaveAdminRequestController(BaseController):
 
     def _announce(self, request, message: str):
         payload = {"request": self._with_employee(request), "user_id": str(request.employee.id)}
-        self.emit_to_admins(RealtimeEvent.LEAVE_REQUEST_UPDATED, payload)
+        self.notify_relevant(RealtimeEvent.LEAVE_REQUEST_UPDATED, payload, subject_user=request.employee)
         self.emit_to_user(request.employee.id, RealtimeEvent.LEAVE_REQUEST_UPDATED, payload)
         return self.ok(request.to_dict(), message)
 
@@ -281,7 +281,7 @@ class LeaveAdjustmentController(BaseController):
         )
 
         payload = {"adjustment": self._with_creator(adjustment), "user_id": str(target_user.id)}
-        self.emit_to_admins(RealtimeEvent.LEAVE_BALANCE_UPDATED, payload)
+        self.notify_relevant(RealtimeEvent.LEAVE_BALANCE_UPDATED, payload, subject_user=target_user)
         self.emit_to_user(target_user.id, RealtimeEvent.LEAVE_BALANCE_UPDATED, payload)
         return self.created(adjustment.to_dict(), "Balance adjustment recorded.")
 

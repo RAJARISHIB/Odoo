@@ -114,12 +114,22 @@ class Permissions:
     ROLES_MANAGE = 'roles.manage'
     ROLES_ASSIGN = 'roles.assign'
 
+    # Payroll
+    PAYROLL_VIEW_ALL = 'payroll.view_all'
+    PAYROLL_MANAGE = 'payroll.manage'
+
+    # Claims, fines & employee requests
+    CLAIMS_VIEW_ALL = 'claims.view_all'
+    CLAIMS_MANAGE = 'claims.manage'
+
     ALL = (
         USERS_VIEW, USERS_CREATE, USERS_EDIT, USERS_DELETE, USERS_RESET_PASSWORD,
         ATTENDANCE_PUNCH, ATTENDANCE_VIEW_OWN, ATTENDANCE_VIEW_TEAM, ATTENDANCE_VIEW_ALL, ATTENDANCE_MANAGE,
         LEAVES_APPLY, LEAVES_VIEW_OWN, LEAVES_VIEW_TEAM, LEAVES_VIEW_ALL, LEAVES_APPROVE, LEAVES_MANAGE_TYPES,
         ORG_VIEW, ORG_MANAGE, DEPARTMENTS_MANAGE,
-        ROLES_VIEW, ROLES_MANAGE, ROLES_ASSIGN
+        ROLES_VIEW, ROLES_MANAGE, ROLES_ASSIGN,
+        PAYROLL_VIEW_ALL, PAYROLL_MANAGE,
+        CLAIMS_VIEW_ALL, CLAIMS_MANAGE,
     )
 
     CATALOG = [
@@ -173,6 +183,22 @@ class Permissions:
                 {'key': ROLES_VIEW, 'label': 'View Roles', 'description': 'View roles and assigned permissions.'},
                 {'key': ROLES_MANAGE, 'label': 'Manage Roles', 'description': 'Create, edit, and delete custom roles.'},
                 {'key': ROLES_ASSIGN, 'label': 'Assign Roles', 'description': 'Assign roles to employees.'}
+            ]
+        },
+        {
+            'module': 'payroll',
+            'label': 'Payroll',
+            'permissions': [
+                {'key': PAYROLL_VIEW_ALL, 'label': 'View All Payroll', 'description': 'View salary templates, assignments and documents for any employee.'},
+                {'key': PAYROLL_MANAGE, 'label': 'Manage Payroll', 'description': 'Configure salary templates, assign employee payroll, and manage payroll documents.'}
+            ]
+        },
+        {
+            'module': 'claims',
+            'label': 'Claims, Fines & Requests',
+            'permissions': [
+                {'key': CLAIMS_VIEW_ALL, 'label': 'View All Claims', 'description': 'View expense claims, fines and requests for any employee.'},
+                {'key': CLAIMS_MANAGE, 'label': 'Manage Claims', 'description': 'Approve or reject expense claims, fines and employee requests.'}
             ]
         }
     ]

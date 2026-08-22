@@ -514,5 +514,43 @@ def get_subordinate_ids(organization, manager) -> list:
                 subordinate_ids.add(str(member.employee.id))
             elif member.hierarchy_level.order > manager_order:
                 subordinate_ids.add(str(member.employee.id))
-                
+
     return list(subordinate_ids)
+
+
+def get_managers_of(organization, employee) -> list:
+    """The inverse of `get_subordinate_ids`: user IDs who manage the given
+    employee - for each active team the employee belongs to, anyone in that
+    team ranked above them (a lower `hierarchy_level.order`).
+
+    An employee with no `hierarchy_level` on a membership has no identifiable
+    manager through that membership - there's nothing to compare orders
+    against, so it's skipped, same as `get_subordinate_ids` skips it."""
+    memberships = TeamMember.objects.filter(
+        organization=organization,
+        employee=employee,
+        is_active=True,
+        is_deleted=False,
+    )
+
+    manager_ids = set()
+    for membership in memberships:
+        if not membership.team or membership.team.status != Team.STATUS_ACTIVE:
+            continue
+
+        if not membership.hierarchy_level:
+            continue
+
+        team_members = TeamMember.objects.filter(
+            organization=organization,
+            team=membership.team,
+            is_active=True,
+            is_deleted=False,
+        )
+
+        employee_order = membership.hierarchy_level.order
+        for member in team_members:
+            if member.hierarchy_level and member.hierarchy_level.order < employee_order:
+                manager_ids.add(str(member.employee.id))
+
+    return list(manager_ids)

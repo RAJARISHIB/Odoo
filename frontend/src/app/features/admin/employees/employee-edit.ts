@@ -12,7 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { ApiErrorBody } from '../../../core/models/api.model';
 import { Auth } from '../../../core/services/auth';
-import { Department, Role, User, UserStatus } from '../../../core/models/user.model';
+import { Department, Role, User, UserStatus, roleSlug } from '../../../core/models/user.model';
 import { Organizations, Users } from '../../../core/services/users';
 import { Toast } from '../../../core/services/toast';
 import { Icon } from '../../../shared/icon/icon';
@@ -58,12 +58,31 @@ export class EmployeeEdit {
 
   protected readonly roles: Role[] = ['employee', 'manager', 'hr', 'admin', 'super_admin'];
 
+  /** Index in `roles` doubles as rank - lowest first, matching the backend's
+      `_ROLE_RANK` in `apps/users/services.py`. */
+  private readonly roleRank: Record<Role, number> = Object.fromEntries(
+    this.roles.map((role, index) => [role, index]),
+  ) as Record<Role, number>;
+
   /**
    * The backend refuses a self-demotion, and rightly so — an admin who removed
    * their own last privilege would lock themselves out of the page that could
    * undo it. Disabling the control says so before the request is sent.
    */
   protected readonly isSelf = computed(() => this.user()?.id === this.auth.user()?.id);
+
+  /**
+   * The backend also refuses to let an admin touch a peer or a superior at
+   * all — not just the role field, the whole record — applied even between
+   * two `super_admin`s. Disabling the form here says so up front instead of
+   * letting Save round-trip into a rejection.
+   */
+  protected readonly isProtected = computed(() => {
+    const target = this.user();
+    const me = this.auth.user();
+    if (!target || !me || this.isSelf()) return false;
+    return this.roleRank[roleSlug(target.role)] >= this.roleRank[roleSlug(me.role)];
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     first_name: ['', Validators.required],
@@ -111,10 +130,11 @@ export class EmployeeEdit {
       designation: user.designation ?? '',
       employee_id: user.employee_id ?? '',
       date_of_birth: user.date_of_birth ?? '',
-      role: user.role,
+      role: roleSlug(user.role),
       department_id: user.department_id ?? '',
     });
     if (this.isSelf()) this.form.controls.role.disable();
+    if (this.isProtected()) this.form.disable();
   }
 
   protected initials(): string {
@@ -125,7 +145,7 @@ export class EmployeeEdit {
 
   // -- save ----------------------------------------------------------------
   protected save(): void {
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.saving() || this.isProtected()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -164,7 +184,7 @@ export class EmployeeEdit {
   // -- account actions -----------------------------------------------------
   protected resetPassword(): void {
     const user = this.user();
-    if (!user) return;
+    if (!user || this.isProtected()) return;
     if (!confirm(`Issue a new temporary password for ${user.full_name}?`)) return;
 
     this.users.resetPassword(user.id).subscribe((result) => {
@@ -175,7 +195,7 @@ export class EmployeeEdit {
 
   protected toggleStatus(): void {
     const user = this.user();
-    if (!user) return;
+    if (!user || this.isProtected()) return;
     const status: UserStatus = user.status === 'active' ? 'suspended' : 'active';
 
     this.users.update(user.id, { status }).subscribe((updated) => {
@@ -186,7 +206,7 @@ export class EmployeeEdit {
 
   protected remove(): void {
     const user = this.user();
-    if (!user) return;
+    if (!user || this.isProtected()) return;
     if (!confirm(`Remove ${user.full_name}? Their attendance history is kept.`)) return;
 
     this.users.remove(user.id).subscribe(() => {

@@ -251,6 +251,39 @@ class BaseController:
             actor_id=self.user.id if self.user else None,
         )
 
+    def notify_relevant(self, event: str, payload: dict = None, *, subject_user=None, department=None, org_id=None):
+        """Like `emit_to_admins`, but scoped down from every admin-panel user
+        to whoever actually has a reason to see this event: the org's own
+        oversight roles (`super_admin`/`admin`/`hr` - unaffected, they already
+        see everything and should keep doing so) plus, for an event about one
+        employee, that employee's own manager(s) via the team hierarchy; or
+        for an event about a department, that department's members. A plain
+        `manager` with no relationship to the subject no longer gets it.
+
+        Deferred imports: `core` stays app-agnostic, importing `apps.*` only
+        inside the method that needs them rather than at module load time.
+        """
+        from apps.teams.services import get_managers_of
+        from apps.users.models import Role as RoleDoc, User
+
+        org = org_id or self.organization_id
+        oversight_roles = list(RoleDoc.objects.filter(
+            organization=org, slug__in=(Role.SUPER_ADMIN, Role.ADMIN, Role.HR),
+        ))
+        recipient_ids = {
+            str(u.id) for u in User.objects.filter(organization=org, role__in=oversight_roles, is_deleted=False)
+        }
+
+        if subject_user is not None:
+            recipient_ids.update(get_managers_of(org, subject_user))
+        if department is not None:
+            recipient_ids.update(
+                str(u.id) for u in User.objects.filter(organization=org, department=department, is_deleted=False)
+            )
+
+        for user_id in recipient_ids:
+            self.emit_to_user(user_id, event, payload)
+
     # -----------------------------------------------------------------
     # Logging
     # -----------------------------------------------------------------

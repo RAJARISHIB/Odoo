@@ -66,7 +66,7 @@ class AttendanceController(BaseController):
             "user": {"id": str(user.id), "name": user.full_name, "email": user.email},
             "attendance": record.to_dict(),
         }
-        self.emit_to_admins(event, payload)
+        self.notify_relevant(event, payload, subject_user=user)
         self.emit_to_user(user.id, event, payload)
 
 
@@ -121,14 +121,17 @@ class AttendanceAdminController(BaseController):
 
         payload = {"attendance": record.to_dict(), "user_id": str(target_user.id)}
         self.emit_to_user(target_user.id, RealtimeEvent.ATTENDANCE_UPDATED, payload)
-        self.emit_to_admins(RealtimeEvent.ATTENDANCE_UPDATED, payload)
+        self.notify_relevant(RealtimeEvent.ATTENDANCE_UPDATED, payload, subject_user=target_user)
         return self.created(record.to_dict(), "Attendance recorded.")
 
     def destroy(self, record_id):
         self.require_permissions(Permissions.ATTENDANCE_MANAGE)
         record = services.get_record(self.user.organization, record_id)
+        subject = record.user
         record.soft_delete()
-        self.emit_to_admins(RealtimeEvent.ATTENDANCE_UPDATED, {"deleted_id": str(record.id)})
+        self.notify_relevant(
+            RealtimeEvent.ATTENDANCE_UPDATED, {"deleted_id": str(record.id)}, subject_user=subject
+        )
         return self.deleted("Attendance record removed.")
 
     @staticmethod
