@@ -7,6 +7,8 @@ import { ATTENDANCE_STATUS_LABELS, AttendanceState, AttendanceSummary } from '..
 import { ApiErrorBody } from '../../../core/models/api.model';
 import { Attendance } from '../../../core/services/attendance';
 import { Auth } from '../../../core/services/auth';
+import { LeaveBalance } from '../../../core/models/leaves.model';
+import { Leaves } from '../../../core/services/leaves';
 import { Realtime } from '../../../core/services/realtime';
 import { ServerMessage } from '../../../core/models/realtime.model';
 import { Toast } from '../../../core/services/toast';
@@ -21,6 +23,7 @@ import { Toast } from '../../../core/services/toast';
 })
 export class UserDashboard {
   private readonly attendance = inject(Attendance);
+  private readonly leaves = inject(Leaves);
   private readonly toast = inject(Toast);
   private readonly realtime = inject(Realtime);
   protected readonly auth = inject(Auth);
@@ -28,6 +31,7 @@ export class UserDashboard {
   protected readonly statusLabels = ATTENDANCE_STATUS_LABELS;
   protected readonly today = signal<AttendanceState | null>(null);
   protected readonly summary = signal<AttendanceSummary | null>(null);
+  protected readonly leaveBalance = signal<LeaveBalance | null>(null);
   protected readonly busy = signal(false);
   protected readonly notifications = signal<ServerMessage[]>([]);
 
@@ -58,6 +62,7 @@ export class UserDashboard {
   private load(): void {
     this.loadStatus();
     this.attendance.mySummary().subscribe((summary) => this.summary.set(summary));
+    this.leaves.getBalance().subscribe((balance) => this.leaveBalance.set(balance));
   }
 
   private loadStatus(): void {

@@ -83,6 +83,30 @@
     </section>
   </div>
 
+  <!-- Leave Overview -->
+  <div class="grid cols-4" style="margin-top: 16px">
+    <div class="stat">
+      <div class="label">Leave Available</div>
+      <div class="value text-primary">{{ leaveBalance()?.remaining_leave ?? '-' }} <small class="subtle">Days</small></div>
+      <div class="hint"><a routerLink="/app/calendar">Apply for leave &rarr;</a></div>
+    </div>
+    <div class="stat">
+      <div class="label">Leave Pending</div>
+      <div class="value text-warning">{{ leaveBalance()?.pending_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="hint">Awaiting approval</div>
+    </div>
+    <div class="stat">
+      <div class="label">Leave Used</div>
+      <div class="value text-success">{{ leaveBalance()?.used_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="hint">This month</div>
+    </div>
+    <div class="stat">
+      <div class="label">Monthly Entitlement</div>
+      <div class="value">{{ leaveBalance()?.monthly_entitlement ?? '-' }} <small class="subtle">Days</small></div>
+      <div class="hint">Configured policy</div>
+    </div>
+  </div>
+
   <!-- 30-day summary -->
   @if (summary(); as stats) {
     <div class="grid cols-4" style="margin-top: 16px">
