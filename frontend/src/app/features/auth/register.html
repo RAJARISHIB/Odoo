@@ -146,6 +146,9 @@
     </div>
 
     <button class="btn block" type="submit" [disabled]="submitting()">
+      @if (submitting()) {
+        <app-logo [size]="18" [loading]="true" />
+      }
       {{ submitting() ? 'Creating…' : 'Create organization' }}
     </button>
   </form>

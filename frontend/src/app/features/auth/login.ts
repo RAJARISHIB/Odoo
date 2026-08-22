@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiErrorBody } from '../../core/models/api.model';
 import { Auth } from '../../core/services/auth';
 import { Icon } from '../../shared/icon/icon';
+import { Logo } from '../../shared/logo/logo';
 
 /**
  * Sign-in page for both panels.
@@ -15,7 +16,7 @@ import { Icon } from '../../shared/icon/icon';
  */
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink, Icon],
+  imports: [ReactiveFormsModule, RouterLink, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
   styleUrl: './auth-form.scss',

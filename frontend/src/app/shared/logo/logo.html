@@ -1,0 +1,22 @@
+<svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient [attr.id]="gradId" x1="22" y1="34" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" style="stop-color: var(--primary, #2dd4bf)" />
+      <stop offset="1" style="stop-color: var(--primary-hover, #5eead4)" />
+    </linearGradient>
+  </defs>
+
+  <!-- Connecting curve, behind the figures so it reads as passing through them -->
+  <path class="link" d="M 22 34 Q 32 47 42 34" />
+  <path class="link-flow" [attr.stroke]="'url(#' + gradId + ')'" d="M 22 34 Q 32 47 42 34" />
+
+  <g class="figure figure-l">
+    <circle class="head" cx="16" cy="17" r="6.5" />
+    <rect class="body" x="9" y="25" width="14" height="30" rx="7" />
+  </g>
+
+  <g class="figure figure-r">
+    <circle class="head" cx="48" cy="17" r="6.5" />
+    <rect class="body" x="41" y="25" width="14" height="30" rx="7" />
+  </g>
+</svg>

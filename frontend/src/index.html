@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>HRMS Portal</title>
+  <title>Humlynk</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Attendance, people and time off for your organization.">
@@ -28,8 +28,110 @@
   <link rel="preload" href="/fonts/plex-sans-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/plex-mono-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <style>
+    /* Boot splash: shown only while `provideAppInitializer` awaits /auth/me on
+       a reload, before Angular has created a single component. It lives as
+       plain content inside <app-root> - Angular clears that content the
+       moment it creates the root component, so this needs no removal logic of
+       its own. Framework-free by necessity (nothing has bootstrapped yet), so
+       it duplicates rather than reuses shared/logo/logo's animation; keep the
+       two in sync by eye if the mark's geometry ever changes.
+       Colours are hardcoded, not var()-only: the linked stylesheet is
+       render-blocking so the tokens are normally already there, but a splash
+       that depends on CSS having loaded to render at all defeats its purpose. */
+    .boot-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg, #f6f8f9);
+      color: var(--primary, #0f766e);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme='light']) .boot-splash {
+        background: var(--bg, #0b1417);
+        color: var(--primary, #2dd4bf);
+      }
+    }
+
+    :root[data-theme='dark'] .boot-splash {
+      background: var(--bg, #0b1417);
+      color: var(--primary, #2dd4bf);
+    }
+
+    .boot-figure {
+      transform-box: fill-box;
+      transform-origin: 50% 50%;
+      animation: boot-pulse 1.7s ease-in-out infinite;
+    }
+
+    .boot-figure-r {
+      animation-delay: 0.55s;
+    }
+
+    .boot-flow {
+      animation: boot-flow 1.3s linear infinite;
+    }
+
+    @keyframes boot-pulse {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.12);
+        opacity: 0.72;
+      }
+    }
+
+    @keyframes boot-flow {
+      from {
+        stroke-dashoffset: 56;
+      }
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .boot-figure,
+      .boot-flow {
+        animation: none;
+      }
+
+      .boot-flow {
+        opacity: 0.85;
+      }
+    }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <div class="boot-splash" role="status" aria-live="polite" aria-label="Loading Humlynk">
+      <svg viewBox="0 0 64 64" width="56" height="56" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="bootFlow" x1="22" y1="34" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2dd4bf" />
+            <stop offset="1" stop-color="#5eead4" />
+          </linearGradient>
+        </defs>
+        <path class="boot-link" d="M 22 34 Q 32 47 42 34" stroke="currentColor" stroke-width="7" stroke-linecap="round" opacity="0.45" />
+        <path class="boot-flow" d="M 22 34 Q 32 47 42 34" stroke="url(#bootFlow)" stroke-width="7" stroke-linecap="round" stroke-dasharray="16 40" />
+        <g class="boot-figure boot-figure-l">
+          <circle cx="16" cy="17" r="6.5" fill="currentColor" />
+          <rect x="9" y="25" width="14" height="30" rx="7" fill="currentColor" />
+        </g>
+        <g class="boot-figure boot-figure-r">
+          <circle cx="48" cy="17" r="6.5" fill="currentColor" />
+          <rect x="41" y="25" width="14" height="30" rx="7" fill="currentColor" />
+        </g>
+      </svg>
+    </div>
+  </app-root>
 </body>
 </html>
