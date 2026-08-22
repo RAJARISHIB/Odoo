@@ -334,13 +334,19 @@ def update_user(user: User, data: dict, *, editor: User = None) -> User:
                 raise ValidationError("Date of birth cannot be in the future.", details={"date_of_birth": "Must be today or in the past."})
             user.date_of_birth = datetime.combine(dob_d, time.min, tzinfo=timezone.utc)
 
-    # Role and status are privileged, and nobody may demote themselves.
-    if "role" in data and editor and editor.role in (Role.SUPER_ADMIN, Role.ADMIN):
-        if str(editor.id) == str(user.id) and data["role"] != user.role:
-            raise ValidationError("You cannot change your own role.", details={"role": "Not allowed."})
-        user.role = validate_choice(data["role"], Role.ALL, "role")
 
-    if "status" in data and editor and editor.is_admin:
+    # Role and status are privileged, and nobody may demote themselves.
+    if "role" in data and editor and editor.has_permission(Permissions.ROLES_ASSIGN):
+        if str(editor.id) == str(user.id) and data["role"] != str(user.role.id if user.role else ""):
+            raise ValidationError("You cannot change your own role.", details={"role": "Not allowed."})
+        role_doc = get_role(user.organization, data["role"])
+        if not role_doc:
+            raise ValidationError("Role not found.", details={"role": "Invalid role ID."})
+        user.role = role_doc
+
+    if "status" in data and editor and editor.has_permission(Permissions.USERS_EDIT):
+        if str(editor.id) == str(user.id) and data["status"] == UserStatus.SUSPENDED:
+            raise ValidationError("You cannot suspend your own account.", details={"status": "Not allowed."})
         user.status = validate_choice(data["status"], UserStatus.ALL, "status")
 
     if "department_id" in data:

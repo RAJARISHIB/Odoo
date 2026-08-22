@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
-from apps.leaves.models import Holiday, LeaveRequest
+from apps.leaves.models import Holiday, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
 from apps.users.models import RefreshToken, User, Role
@@ -238,9 +238,27 @@ class Command(BaseCommand):
                 ).save()
                 count += 1
         self.stdout.write("Seeded {} holidays.".format(count))
-
     def _leaves(self, organization, users):
+        LeaveType.objects.filter(organization=organization).delete()
+        LeaveType(
+            organization=organization,
+            name="Casual Leave",
+            code="CL",
+            description="For personal work or vacation.",
+            is_paid=True,
+            allow_fractional=True
+        ).save()
+        LeaveType(
+            organization=organization,
+            name="Sick Leave",
+            code="SL",
+            description="For medical emergencies.",
+            is_paid=True,
+            allow_fractional=True
+        ).save()
+
         today = datetime.now(timezone.utc).date()
+
         dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
         if not dev_user:
             return
