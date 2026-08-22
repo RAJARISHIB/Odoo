@@ -69,7 +69,7 @@ class DepartmentController(BaseController):
     def create(self):
         self.require_permissions(Permissions.DEPARTMENTS_MANAGE)
         department = services.create_department(self.user.organization, self.data)
-        self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()})
+        self.notify_relevant(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()}, department=department)
         return self.created(department.to_dict(), "Department created.")
 
     def retrieve(self, department_id):
@@ -81,12 +81,14 @@ class DepartmentController(BaseController):
         self.require_permissions(Permissions.DEPARTMENTS_MANAGE)
         department = services.get_department(self.user.organization, department_id)
         department = services.update_department(self.user.organization, department, self.data)
-        self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()})
+        self.notify_relevant(RealtimeEvent.ORG_UPDATED, {"department": department.to_dict()}, department=department)
         return self.ok(department.to_dict(), "Department updated.")
 
     def destroy(self, department_id):
         self.require_permissions(Permissions.ORG_MANAGE)
         department = services.get_department(self.user.organization, department_id)
         department.soft_delete()
-        self.emit_to_admins(RealtimeEvent.ORG_UPDATED, {"department_id": str(department.id)})
+        self.notify_relevant(
+            RealtimeEvent.ORG_UPDATED, {"department_id": str(department.id)}, department=department
+        )
         return self.deleted("Department removed.")

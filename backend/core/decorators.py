@@ -76,6 +76,10 @@ def roles_required(*roles):
             if request.method == "OPTIONS":
                 return view(request, *args, **kwargs)
             user = request.auth_user
+            # `user.role` is a `Role` reference document, not a slug string -
+            # comparing it against `roles` (plain slugs) directly never
+            # matches, so this rejected every caller regardless of role until
+            # fixed. Same defensive unwrap `has_permission` already uses.
             user_role_slug = getattr(user.role, "slug", str(user.role)) if user and user.role else None
             if user_role_slug not in roles:
                 raise PermissionDenied(

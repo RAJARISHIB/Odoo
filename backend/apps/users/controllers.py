@@ -178,7 +178,7 @@ class UserController(BaseController):
             # Returned once, never stored in clear - the admin passes it on.
             payload["temporary_password"] = temporary_password
 
-        self.emit_to_admins(RealtimeEvent.USER_CREATED, {"user": user.to_dict()})
+        self.notify_relevant(RealtimeEvent.USER_CREATED, {"user": user.to_dict()}, subject_user=user)
         return self.created(
             payload, "Employee created. Login ID: {}.".format(user.login_id)
         )
@@ -202,7 +202,7 @@ class UserController(BaseController):
         user = services.update_user(user, self.data, editor=self.user)
 
         self.emit_to_user(user.id, RealtimeEvent.USER_UPDATED, {"user": user.to_dict()})
-        self.emit_to_admins(RealtimeEvent.USER_UPDATED, {"user": user.to_dict()})
+        self.notify_relevant(RealtimeEvent.USER_UPDATED, {"user": user.to_dict()}, subject_user=user)
         return self.ok(user.to_dict(), "Employee updated.")
 
     def destroy(self, user_id):
@@ -211,16 +211,21 @@ class UserController(BaseController):
         if self.is_self(user_id):
             raise ValidationError("You cannot delete your own account.")
         user = services.get_user_in_org(self.user.organization, user_id)
+        services.assert_editable_by(self.user, user)
         user.soft_delete()
         services.logout(user=user, all_sessions=True)
 
-        self.emit_to_admins(RealtimeEvent.USER_STATUS_CHANGED,
-                            {"user_id": str(user.id), "status": "deleted"})
+        self.notify_relevant(
+            RealtimeEvent.USER_STATUS_CHANGED, {"user_id": str(user.id), "status": "deleted"}, subject_user=user
+        )
         return self.deleted("Employee removed.")
 
     def reset_password(self, user_id):
         self.require_permissions(Permissions.USERS_EDIT)
         user = services.get_user_in_org(self.user.organization, user_id)
+        # A password reset is as consequential as an edit - it hands the actor
+        # the target's account outright, so it gets the same hierarchy guard.
+        services.assert_editable_by(self.user, user)
         temporary_password = services.reset_password(user, self.field("new_password"))
 
         self.emit_to_user(user.id, RealtimeEvent.NOTIFICATION,
