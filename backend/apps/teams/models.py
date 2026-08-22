@@ -104,14 +104,17 @@ class TeamMember(BaseDocument):
                 "date_of_birth": user.date_of_birth.strftime("%Y-%m-%d") if user.date_of_birth else None,
             }
 
-        if self.hierarchy_level:
-            level = self.hierarchy_level
-            data["hierarchy_level"] = {
-                "id": str(level.id),
-                "name": level.name,
-                "order": level.order,
-            }
-        else:
+        try:
+            if self.hierarchy_level:
+                level = self.hierarchy_level
+                data["hierarchy_level"] = {
+                    "id": str(level.id),
+                    "name": level.name,
+                    "order": level.order,
+                }
+            else:
+                data["hierarchy_level"] = None
+        except Exception:
             data["hierarchy_level"] = None
 
         return data

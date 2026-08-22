@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
-from apps.leaves.models import Holiday, LeaveRequest
+from apps.leaves.models import Holiday, LeaveAllocation, LeaveRequest, LeaveType
 from apps.organization.models import Department, Organization
 from apps.teams.models import Team, TeamHierarchyLevel, TeamMember
 from apps.users.models import RefreshToken, User
@@ -70,6 +70,8 @@ class Command(BaseCommand):
         Attendance.objects.filter(organization=organization).delete()
         Holiday.objects.filter(organization=organization).delete()
         LeaveRequest.objects.filter(organization=organization).delete()
+        LeaveAllocation.objects.filter(organization=organization).delete()
+        LeaveType.objects.filter(organization=organization).delete()
         TeamMember.objects.filter(organization=organization).delete()
         for t in Team.objects.filter(organization=organization):
             TeamHierarchyLevel.objects.filter(team=t).delete()
@@ -227,6 +229,44 @@ class Command(BaseCommand):
 
     def _leaves(self, organization, users):
         today = datetime.now(timezone.utc).date()
+
+        # Seed Leave Types
+        types_data = [
+            ("Casual Leave", "CL", "Casual time off", True, 12.0, "#4f46e5"),
+            ("Sick Leave", "SL", "Medical / sick time off", True, 10.0, "#059669"),
+            ("Privilege Leave", "PL", "Earned privilege leave", True, 15.0, "#d97706"),
+            ("Unpaid Leave", "LOP", "Loss of pay", False, 0.0, "#dc2626"),
+        ]
+        leave_types = {}
+        for name, code, desc, is_paid, default_amount, color in types_data:
+            lt = LeaveType.objects.filter(organization=organization, code=code).first()
+            if not lt:
+                lt = LeaveType(
+                    organization=organization,
+                    name=name,
+                    code=code,
+                    description=desc,
+                    is_paid=is_paid,
+                    is_active=True,
+                    color=color,
+                ).save()
+            leave_types[code] = lt
+
+            # Grant initial leave allocation to users
+            if default_amount > 0:
+                for u in users:
+                    period_key = f"{today.year}-{code}"
+                    if not LeaveAllocation.objects.filter(user=u, leave_type=lt, period_key=period_key).first():
+                        LeaveAllocation(
+                            organization=organization,
+                            user=u,
+                            leave_type=lt,
+                            year=today.year,
+                            frequency="yearly",
+                            amount=default_amount,
+                            period_key=period_key,
+                        ).save()
+
         dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
         if not dev_user:
             return
@@ -241,6 +281,7 @@ class Command(BaseCommand):
             LeaveRequest(
                 organization=organization,
                 employee=dev_user,
+                leave_type=leave_types.get("CL"),
                 start_date=start_dt,
                 end_date=end_dt,
                 reason="Personal work",

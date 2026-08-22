@@ -32,6 +32,7 @@ export const NAV: readonly NavSection[] = [
     label: 'Workspace',
     items: [
       { label: 'Employees', path: '/employees', icon: 'people' },
+      { label: 'My Team', path: '/teams', icon: 'people' },
       { label: 'Attendance', path: '/attendance', icon: 'clock' },
       { label: 'Time off', path: '/time-off', icon: 'calendar' },
       // Approving leave is a recurring job, not configuration - it belongs
@@ -48,6 +49,7 @@ export const NAV: readonly NavSection[] = [
     label: 'Administration',
     items: [
       { label: 'Overview', path: '/settings/overview', icon: 'dashboard', requires: ['can_view_all_attendance'] },
+      { label: 'Teams setup', path: '/settings/teams', icon: 'people', requires: ['can_manage_organization'] },
       { label: 'Leave insights', path: '/settings/leave-insights', icon: 'plane', requires: ['can_view_all_attendance'] },
       { label: 'People', path: '/settings/people', icon: 'briefcase', requires: ['can_manage_users'] },
       { label: 'Leave policy', path: '/settings/leave-policy', icon: 'settings', requires: ['can_manage_organization'] },

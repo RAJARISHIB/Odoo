@@ -86,6 +86,13 @@ export const routes: Routes = [
       },
 
       {
+        path: 'teams',
+        title: 'My team',
+        data: { breadcrumb: 'My Team' },
+        loadComponent: () => import('./features/teams/my-team/my-team').then((m) => m.MyTeam),
+      },
+
+      {
         path: 'attendance',
         data: { breadcrumb: 'Attendance' },
         children: [
@@ -146,6 +153,14 @@ export const routes: Routes = [
             canActivate: [capabilityGuard('can_view_all_attendance')],
             loadComponent: () =>
               import('./features/admin/dashboard/dashboard').then((m) => m.AdminDashboard),
+          },
+          {
+            path: 'teams',
+            title: 'Teams setup',
+            data: { breadcrumb: 'Teams setup' },
+            canActivate: [capabilityGuard('can_manage_organization')],
+            loadComponent: () =>
+              import('./features/admin/teams/manage-teams').then((m) => m.ManageTeams),
           },
           {
             path: 'people',

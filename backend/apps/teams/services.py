@@ -189,19 +189,22 @@ def add_team_member(organization, team: Team, user_id: str, hierarchy_level_id: 
         raise ValidationError("Employee not found or belongs to another organization.", details={"user_id": "Invalid employee."})
 
     hierarchy_level = None
-    if hierarchy_level_id:
+    if hierarchy_level_id and str(hierarchy_level_id).strip():
         hierarchy_level = get_hierarchy_level(team, hierarchy_level_id)
 
     # Deactivate existing active team memberships in other teams to ensure single active team
-    TeamMember.objects.filter(organization=organization, employee=user, is_active=True).update(set__is_active=False)
+    TeamMember.objects.filter(organization=organization, employee=user, team__ne=team, is_active=True).update(set__is_active=False)
 
-    member = TeamMember(
-        organization=organization,
-        team=team,
-        employee=user,
-        hierarchy_level=hierarchy_level,
-        is_active=True,
-    )
+    member = TeamMember.objects.filter(organization=organization, team=team, employee=user, is_deleted=False).first()
+    if not member:
+        member = TeamMember(
+            organization=organization,
+            team=team,
+            employee=user,
+        )
+
+    member.hierarchy_level = hierarchy_level
+    member.is_active = True
     return member.save()
 
 
@@ -234,7 +237,7 @@ def assign_hierarchy_level(team: Team, user_id: str, hierarchy_level_id: str) ->
         raise NotFound("Active team member not found.")
 
     hierarchy_level = None
-    if hierarchy_level_id:
+    if hierarchy_level_id and str(hierarchy_level_id).strip():
         hierarchy_level = get_hierarchy_level(team, hierarchy_level_id)
 
     member.hierarchy_level = hierarchy_level

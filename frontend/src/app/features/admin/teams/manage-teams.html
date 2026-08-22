@@ -1,0 +1,326 @@
+<div class="manage-teams-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-group">
+        <h1 class="page-title">
+          <app-icon name="settings" class="title-icon"></app-icon>
+          Teams Setup
+        </h1>
+        <p class="page-description">
+          Configure teams, arbitrary hierarchy levels, and employee assignments across your organization.
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-primary" (click)="openCreateTeamModal()">
+          <app-icon name="plus"></app-icon>
+          Create Team
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading teams configuration…</p>
+    </div>
+  } @else {
+    <div class="teams-layout">
+      <!-- Left Sidebar: Teams List -->
+      <div class="card teams-sidebar-card">
+        <div class="card-head">
+          <h3>Teams ({{ teams().length }})</h3>
+        </div>
+        <div class="team-list">
+          @for (team of teams(); track team.id) {
+            <div
+              class="team-item"
+              [class.active]="selectedTeam()?.id === team.id"
+              (click)="selectTeam(team)"
+            >
+              <div class="team-item-info">
+                <span class="team-name">{{ team.name }}</span>
+                <span class="team-status badge" [class.badge-success]="team.status === 'active'" [class.badge-neutral]="team.status !== 'active'">
+                  {{ team.status }}
+                </span>
+              </div>
+              <app-icon name="chevron" class="chevron-icon rot-270"></app-icon>
+            </div>
+          } @empty {
+            <div class="empty-padding">No teams created yet.</div>
+          }
+        </div>
+      </div>
+
+      <!-- Right Main: Selected Team Details -->
+      @if (selectedTeam(); as team) {
+        <div class="team-details-area">
+          <!-- Team Header Card -->
+          <div class="card team-header-card">
+            <div class="card-body flex-between">
+              <div>
+                <h2>{{ team.name }}</h2>
+                <p class="sub-text">{{ team.description || 'No description provided.' }}</p>
+              </div>
+              <div class="action-buttons">
+                <button class="btn btn-secondary btn-sm" (click)="openEditTeamModal(team)">
+                  <app-icon name="edit"></app-icon> Edit
+                </button>
+                <button class="btn btn-danger btn-sm" (click)="deleteTeam(team)">
+                  <app-icon name="trash"></app-icon> Deactivate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hierarchy Levels Manager -->
+          <div class="card hierarchy-card">
+            <div class="card-head">
+              <div>
+                <h3>Team Hierarchy Levels</h3>
+                <p class="sub-text">Custom, ordered levels for this team (e.g. Director, Manager, Lead, Developer, Intern).</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" (click)="openAddLevelModal()">
+                <app-icon name="plus"></app-icon> Add Level
+              </button>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-wrap">
+                <table class="data">
+                  <thead>
+                    <tr>
+                      <th style="width: 120px; white-space: nowrap;">Order</th>
+                      <th>Level Name</th>
+                      <th style="width: 100px; text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (lvl of hierarchyLevels(); track lvl.id) {
+                      <tr>
+                        <td>
+                          <span class="order-badge">Rank {{ lvl.order }}</span>
+                        </td>
+                        <td class="font-medium">{{ lvl.name }}</td>
+                        <td style="text-align: right;">
+                          <button class="btn-icon text-danger" (click)="deleteLevel(lvl.id)" title="Remove Level">
+                            <app-icon name="trash"></app-icon>
+                          </button>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="3" class="text-center text-muted p-4">No hierarchy levels added yet. Click "Add Level" to define team ranks.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Members Manager -->
+          <div class="card members-card">
+            <div class="card-head">
+              <div>
+                <h3>Team Members ({{ teamMembers().length }})</h3>
+                <p class="sub-text">Employees assigned to this team.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" (click)="openAddMemberModal()">
+                <app-icon name="plus"></app-icon> Add Member
+              </button>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-wrap">
+                <table class="data">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Designation</th>
+                      <th>Hierarchy Level</th>
+                      <th style="text-align: right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of teamMembers(); track m.id) {
+                      <tr>
+                        <td>
+                          <div class="user-row">
+                            <span class="user-name">{{ m.employee.full_name }}</span>
+                            <span class="user-email">{{ m.employee.email }}</span>
+                          </div>
+                        </td>
+                        <td>{{ m.employee.designation || '—' }}</td>
+                        <td>
+                          <select class="hierarchy-select-pill" [class.assigned]="m.hierarchy_level?.id" (change)="onAssignLevel(m, $event)">
+                            <option value="" [selected]="!m.hierarchy_level?.id">— No Level —</option>
+                            @for (lvl of hierarchyLevels(); track lvl.id) {
+                              <option [value]="lvl.id" [selected]="m.hierarchy_level?.id === lvl.id">
+                                Rank {{ lvl.order }} &middot; {{ lvl.name }}
+                              </option>
+                            }
+                          </select>
+                        </td>
+                        <td style="text-align: right;">
+                          <div class="action-flex">
+                            <button class="btn btn-secondary btn-xs" (click)="openMoveMemberModal(m)" title="Move to another team">
+                              Move
+                            </button>
+                            <button class="btn-icon text-danger" (click)="removeMember(m)" title="Remove from team">
+                              <app-icon name="x"></app-icon>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" class="text-center text-muted p-4">No employees assigned to this team yet.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="card empty-select-card">
+          <p>Select a team from the list or create a new team.</p>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal 1: Create / Edit Team -->
+  @if (showCreateTeamModal()) {
+    <div class="modal-backdrop" (click)="showCreateTeamModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ editingTeam() ? 'Edit Team' : 'Create Team' }}</h3>
+          <button class="btn-icon" (click)="showCreateTeamModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="teamForm" (ngSubmit)="saveTeam()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Team Name *</label>
+              <input type="text" formControlName="name" class="form-control" placeholder="e.g. Core Engineering" />
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea formControlName="description" class="form-control" rows="3" placeholder="Team responsibilities or scope"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select formControlName="status" class="form-control">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showCreateTeamModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="teamForm.invalid">Save Team</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal 2: Add Hierarchy Level -->
+  @if (showAddLevelModal()) {
+    <div class="modal-backdrop" (click)="showAddLevelModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Add Hierarchy Level</h3>
+          <button class="btn-icon" (click)="showAddLevelModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="levelForm" (ngSubmit)="saveLevel()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Level Name *</label>
+              <input type="text" formControlName="name" class="form-control" placeholder="e.g. Senior Developer, Team Lead, Manager" />
+            </div>
+            <div class="form-group">
+              <label>Order Rank (1 = Highest) *</label>
+              <input type="number" formControlName="order" class="form-control" min="1" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showAddLevelModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="levelForm.invalid">Add Level</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal 3: Add Member -->
+  @if (showAddMemberModal()) {
+    <div class="modal-backdrop" (click)="showAddMemberModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Add Member to {{ selectedTeam()?.name }}</h3>
+          <button class="btn-icon" (click)="showAddMemberModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="addMemberForm" (ngSubmit)="saveMember()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Select Employee *</label>
+              <select formControlName="user_id" class="form-control">
+                <option value="">-- Choose Employee --</option>
+                @for (u of allUsers(); track u.id) {
+                  <option [value]="u.id">{{ u.full_name }} ({{ u.email }})</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Hierarchy Level</label>
+              <select formControlName="hierarchy_level_id" class="form-control">
+                <option value="">— No Hierarchy Level —</option>
+                @for (lvl of hierarchyLevels(); track lvl.id) {
+                  <option [value]="lvl.id">Rank {{ lvl.order }} &middot; {{ lvl.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showAddMemberModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="addMemberForm.invalid">Add Member</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal 4: Move Member -->
+  @if (showMoveMemberModal()) {
+    <div class="modal-backdrop" (click)="showMoveMemberModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Move {{ selectedMemberToMove()?.employee?.full_name }}</h3>
+          <button class="btn-icon" (click)="showMoveMemberModal.set(false)"><app-icon name="x"></app-icon></button>
+        </div>
+        <form [formGroup]="moveMemberForm" (ngSubmit)="saveMoveMember()">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Target Team *</label>
+              <select formControlName="target_team_id" class="form-control">
+                <option value="">-- Select Target Team --</option>
+                @for (t of teams(); track t.id) {
+                  @if (t.id !== selectedTeam()?.id) {
+                    <option [value]="t.id">{{ t.name }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showMoveMemberModal.set(false)">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="moveMemberForm.invalid">Move Member</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
