@@ -94,6 +94,7 @@ class Command(BaseCommand):
         EmployeePayroll.objects.filter(organization=organization).delete()
         PayrollDocument.objects.filter(organization=organization).delete()
         RoleSalaryTemplate.objects.filter(organization=organization).delete()
+        Role.objects.filter(organization=organization).delete()
         for t in Team.objects.filter(organization=organization):
             TeamHierarchyLevel.objects.filter(team=t).delete()
             t.delete()
