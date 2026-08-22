@@ -14,7 +14,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
 from core.constants import Role
-from core.exceptions import AuthenticationError, MethodNotAllowed, PermissionDenied
+from core.exceptions import AuthenticationError, MethodNotAllowed, PermissionDenied, StepUpRequired
 
 
 def api_view(*methods):
@@ -89,9 +89,14 @@ def roles_required(*roles):
     return decorator
 
 
-
 def permissions_required(*permissions):
-    """Require an authenticated user holding all of the specified permissions."""
+    """Require an authenticated user holding all of the specified permissions.
+
+    Also enforces MFA for the small set of permissions the org has flagged as
+    high-risk (see `core.permissions.MFA_REQUIRED_PERMISSIONS`), regardless of
+    role - a role's `has_permission` grant is necessary but not sufficient for
+    those.
+    """
 
     def decorator(view):
         @auth_required
@@ -99,18 +104,47 @@ def permissions_required(*permissions):
         def wrapper(request, *args, **kwargs):
             if request.method == "OPTIONS":
                 return view(request, *args, **kwargs)
+            from core.permissions import assert_mfa_satisfied
+
             user = request.auth_user
             missing = [p for p in permissions if not user.has_permission(p)]
             if missing:
                 raise PermissionDenied(
                     "Missing required permissions: {}.".format(", ".join(missing))
                 )
+            for permission in permissions:
+                assert_mfa_satisfied(user, permission)
             return view(request, *args, **kwargs)
 
         wrapper.required_permissions = permissions
         return wrapper
 
     return decorator
+
+
+def step_up_required(max_age_seconds: int = 900):
+    """View-level equivalent of `BaseController.require_step_up` - see there
+    for what "step up" means. Use this on plain function views; controller
+    actions should call `self.require_step_up()` instead."""
+
+    def decorator(view):
+        @auth_required
+        @functools.wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if request.method == "OPTIONS":
+                return view(request, *args, **kwargs)
+            import time as _time
+
+            payload = getattr(request, "auth_payload", None) or {}
+            reauth_at = payload.get("reauth_at")
+            if not reauth_at or (_time.time() - reauth_at) > max_age_seconds:
+                raise StepUpRequired()
+            return view(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
 
 def admin_required(view):
     """Shorthand for any role that can reach the admin panel."""

@@ -52,8 +52,15 @@ export class Login {
     this.auth.login(identifier, password).subscribe({
       next: (result) => {
         this.submitting.set(false);
+
+        if (result.mfa_required) {
+          this.router.navigate(['/auth/mfa-verify'], {
+            queryParams: { redirect: this.route.snapshot.queryParamMap.get('redirect') },
+          });
+          return;
+        }
         // A system-generated password has to be replaced before anything else.
-        if (result.user.must_change_password) {
+        if (result.user!.must_change_password) {
           this.router.navigate(['/change-password']);
           return;
         }

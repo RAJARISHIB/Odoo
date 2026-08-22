@@ -66,3 +66,21 @@ class ServiceUnavailable(ApiError):
     status_code = 503
     code = "service_unavailable"
     message = "A downstream service is unavailable."
+
+
+class TooManyRequests(ApiError):
+    status_code = 429
+    code = "too_many_requests"
+    message = "Too many attempts. Please try again later."
+
+
+class MfaRequired(ApiError):
+    status_code = 403
+    code = "mfa_setup_required"
+    message = "Enable multi-factor authentication to perform this action."
+
+
+class StepUpRequired(ApiError):
+    status_code = 401
+    code = "step_up_required"
+    message = "Please re-enter your password to continue."

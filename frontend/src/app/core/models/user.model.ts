@@ -29,6 +29,8 @@ export interface User {
   department_id?: string | null;
   last_login_at?: string | null;
   must_change_password?: boolean;
+  email_verified?: boolean;
+  mfa_enabled?: boolean;
   created_at?: string;
   /** Present only in the response that creates a user. */
   temporary_password?: string;
@@ -50,12 +52,53 @@ export interface Permissions {
   can_manage_organization: boolean;
   can_view_all_attendance: boolean;
   can_approve_attendance: boolean;
+  /**
+   * Fine-grained `module.action` flags from `core.constants.Permissions` -
+   * e.g. `permissions['audit.view']`, `permissions['roles.manage']`. Indexed
+   * rather than named individually so the frontend never has to be extended
+   * just because the backend added a new permission string.
+   */
+  [permission: string]: boolean | Panel | undefined;
 }
 
+/**
+ * What `POST /auth/login` returns.  For an MFA-enabled account this is only
+ * the `mfa_required` branch - no tokens, no user - until `Auth.verifyMfa`
+ * completes the sign-in. See `apps.users.services.login`.
+ */
 export interface LoginResponse {
+  mfa_required: boolean;
+  user?: User;
+  tokens?: AuthTokens;
+  realtime?: { channels: string[] };
+  mfa_pending_token?: string;
+  expires_at?: string;
+}
+
+/** Narrowed shape once a session has actually been established. */
+export interface AuthenticatedSession {
   user: User;
   tokens: AuthTokens;
   realtime?: { channels: string[] };
+}
+
+export interface Session {
+  id: string;
+  created_at: string | null;
+  expires_at: string | null;
+  ip_address: string;
+  user_agent: string;
+  is_current: boolean;
+}
+
+export interface MfaEnrollStart {
+  secret: string;
+  otpauth_uri: string;
+  qr_svg: string;
+}
+
+export interface MfaEnrollConfirm {
+  recovery_codes: string[];
 }
 
 export interface SessionResponse {

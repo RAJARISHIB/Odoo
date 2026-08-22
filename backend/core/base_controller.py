@@ -19,7 +19,7 @@ from django.conf import settings
 
 from core import realtime, responses
 from core.constants import Role
-from core.exceptions import AuthenticationError, NotFound, PermissionDenied, ValidationError
+from core.exceptions import AuthenticationError, NotFound, PermissionDenied, StepUpRequired, ValidationError
 from core.pagination import paginate
 from core.utils import client_ip, parse_json_body, user_agent
 from core.validators import parse_int, require_fields, validate_object_id
@@ -136,13 +136,42 @@ class BaseController:
         return self.user
 
     def require_permissions(self, *permissions):
-        """Restrict an action to users holding ALL the specified permissions."""
+        """Restrict an action to users holding ALL the specified permissions.
+
+        A handful of high-risk permissions additionally require the caller
+        to have MFA turned on, regardless of role - see
+        `core.permissions.MFA_REQUIRED_PERMISSIONS`.
+        """
+        from core.permissions import assert_mfa_satisfied
+
         user = self.require_user()
         missing = [p for p in permissions if not user.has_permission(p)]
         if missing:
             raise PermissionDenied(
                 "This action requires permissions: {}.".format(", ".join(missing))
             )
+        for permission in permissions:
+            assert_mfa_satisfied(user, permission)
+        return user
+
+    def require_any_permission(self, *permissions):
+        """Restrict an action to users holding AT LEAST ONE of `permissions`.
+
+        Used for "manager delegation": an endpoint reachable either by
+        org-wide admin power (`org.manage`) or by a narrower, module-specific
+        grant (e.g. `leaves.approve`) - see AI_INSTRUCTIONS.md's manager
+        delegation note.
+        """
+        from core.permissions import assert_mfa_satisfied
+
+        user = self.require_user()
+        if not any(user.has_permission(p) for p in permissions):
+            raise PermissionDenied(
+                "This action requires one of these permissions: {}.".format(", ".join(permissions))
+            )
+        for permission in permissions:
+            if user.has_permission(permission):
+                assert_mfa_satisfied(user, permission)
         return user
 
     def require_roles(self, *roles):
@@ -158,6 +187,22 @@ class BaseController:
     def require_admin(self):
         """Any role that has access to the admin panel."""
         return self.require_roles(*Role.ADMIN_PANEL)
+
+    def require_step_up(self, max_age_seconds: int = 900):
+        """Require the current access token to have been minted (or last
+        rotated as part of a session whose original login) within
+        `max_age_seconds` - i.e. the caller proved their password (+ MFA)
+        recently, not just that their session hasn't expired yet. Used for
+        actions sensitive enough that a long-lived session isn't proof
+        enough (role changes, disabling MFA, ...).
+        """
+        import time as _time
+
+        self.require_user()
+        payload = self.token_payload or {}
+        reauth_at = payload.get("reauth_at")
+        if not reauth_at or (_time.time() - reauth_at) > max_age_seconds:
+            raise StepUpRequired()
 
     def require_super_admin(self):
         return self.require_roles(Role.SUPER_ADMIN)
@@ -239,6 +284,25 @@ class BaseController:
         return realtime.notify_admins(
             org_id or self.organization_id, event, payload,
             actor_id=self.user.id if self.user else None,
+        )
+
+    # -----------------------------------------------------------------
+    # Audit trail (accountability, not debugging - see `core.audit`)
+    # -----------------------------------------------------------------
+    def audit(self, action: str, *, resource_type: str = "", resource_id="",
+             result: str = "success", metadata: dict = None):
+        from core.audit import record
+
+        record(
+            action=action,
+            actor=self.user,
+            organization=self.organization_id and self.user.organization,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            result=result,
+            ip_address=self.client_meta["ip_address"],
+            user_agent=self.client_meta["user_agent"],
+            metadata=metadata,
         )
 
     # -----------------------------------------------------------------

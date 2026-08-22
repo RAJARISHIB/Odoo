@@ -22,6 +22,13 @@ auth_urlpatterns = [
     path("roles", views.role_collection, name="roles-collection"),
     path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
     path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
+
+    path("forgot-password", views.forgot_password, name="auth-forgot-password"),
+    path("reset-password", views.reset_password, name="auth-reset-password"),
+    path("verify-email", views.verify_email, name="auth-verify-email"),
+    path("resend-verification", views.resend_verification, name="auth-resend-verification"),
+    path("mfa/verify", views.mfa_verify, name="auth-mfa-verify"),
+    path("sessions/<str:session_id>", views.session_detail, name="auth-session-detail"),
 ]
 
 
@@ -33,4 +40,20 @@ urlpatterns = [
     path("users/stats", views.user_stats, name="user-stats"),
     path("users/<str:user_id>", views.user_detail, name="user-detail"),
     path("users/<str:user_id>/reset-password", views.user_reset_password, name="user-reset-password"),
+
+    # Self-service MFA settings.
+    path("security/mfa/enroll/start", views.mfa_enroll_start, name="mfa-enroll-start"),
+    path("security/mfa/enroll/confirm", views.mfa_enroll_confirm, name="mfa-enroll-confirm"),
+    path("security/mfa/disable", views.mfa_disable, name="mfa-disable"),
+    path(
+        "security/mfa/recovery-codes/regenerate",
+        views.mfa_recovery_codes_regenerate,
+        name="mfa-recovery-codes-regenerate",
+    ),
+]
+
+# /api/v1/admin/... - role management lives under /auth/roles/* above (see
+# auth_urlpatterns); this is the rest of the admin-only surface.
+admin_urlpatterns = [
+    path("audit-logs", views.audit_log_collection, name="admin-audit-log-collection"),
 ]
