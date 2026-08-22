@@ -36,7 +36,7 @@ def list_holidays(organization, start_date=None, end_date=None, holiday_type=Non
     return queryset.order_by("date")
 
 
-def list_leave_requests(organization, employee=None, start_date=None, end_date=None, status=None):
+def list_leave_requests(organization, employee=None, manager=None, start_date=None, end_date=None, status=None):
     """Fetch leave requests for an employee/organization."""
     queryset = LeaveRequest.objects.filter(organization=organization, is_deleted=False)
 
