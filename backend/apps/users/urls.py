@@ -15,11 +15,9 @@ auth_urlpatterns = [
     path("me", views.me, name="auth-me"),
     path("sessions", views.sessions, name="auth-sessions"),
     path("change-password", views.change_password, name="auth-change-password"),
+    path("invite-details", views.invite_details, name="auth-invite-details"),
+    path("accept-invite", views.accept_invite, name="auth-accept-invite"),
 
-    path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
-    path("roles", views.role_collection, name="roles-collection"),
-    path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
-    path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
     path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
     path("roles", views.role_collection, name="roles-collection"),
     path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
@@ -31,11 +29,8 @@ auth_urlpatterns = [
 urlpatterns = [
     path("profile", views.profile, name="profile"),
     path("users", views.user_collection, name="user-collection"),
+    path("users/invite", views.invite_user, name="user-invite"),
     path("users/stats", views.user_stats, name="user-stats"),
     path("users/<str:user_id>", views.user_detail, name="user-detail"),
     path("users/<str:user_id>/reset-password", views.user_reset_password, name="user-reset-password"),
-    path("roles/permissions", views.permissions_catalog, name="roles-permissions"),
-    path("roles", views.role_collection, name="roles-collection"),
-    path("roles/<str:role_id>", views.role_detail, name="roles-detail"),
-    path("roles/<str:role_id>/assign", views.role_assign, name="roles-assign"),
 ]

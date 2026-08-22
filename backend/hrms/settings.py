@@ -17,6 +17,7 @@ from core.env import env_bool, env_int, env_list, env_str
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Core
@@ -196,3 +197,17 @@ LOGGING = {
     },
     "root": {"handlers": ["console", "file_error"], "level": "INFO"},
 }
+
+# ---------------------------------------------------------------------------
+# Email / SMTP Configuration
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = env_str("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env_str("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "HRMS Portal <noreply@hrms.com>")
+FRONTEND_URL = env_str("FRONTEND_URL", "http://localhost:4200")
+

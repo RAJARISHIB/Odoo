@@ -35,8 +35,11 @@ export class Employees {
   protected readonly meta = signal<PageMeta>(EMPTY_PAGE_META);
   protected readonly loading = signal(false);
   protected readonly showForm = signal(false);
+  protected readonly showInviteForm = signal(false);
   protected readonly saving = signal(false);
+  protected readonly inviteSaving = signal(false);
   protected readonly formErrors = signal<Record<string, string>>({});
+  protected readonly inviteFormErrors = signal<Record<string, string>>({});
   /**
    * The credentials the system just issued, shown once so the admin can pass
    * them to the employee.  The password is never retrievable afterwards.
@@ -44,6 +47,8 @@ export class Employees {
   protected readonly issuedCredentials = signal<
     { loginId: string; email: string; password: string } | null
   >(null);
+
+  protected readonly sentInviteInfo = signal<{ email: string; invite_url: string } | null>(null);
 
   protected readonly roles: Role[] = ['employee', 'manager', 'hr', 'admin', 'super_admin'];
 
@@ -61,6 +66,15 @@ export class Employees {
     employee_id: [''],
     role: ['employee' as Role, Validators.required],
     password: [''],
+  });
+
+  protected readonly inviteForm = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    first_name: ['', Validators.required],
+    last_name: [''],
+    designation: [''],
+    employee_id: [''],
+    role: ['employee' as Role, Validators.required],
   });
 
   constructor() {
@@ -105,10 +119,47 @@ export class Employees {
     this.load(page);
   }
 
-  // -- create ------------------------------------------------------------
+  // -- create & invite ---------------------------------------------------
   protected toggleForm(): void {
     this.showForm.update((open) => !open);
+    if (this.showForm()) {
+      this.showInviteForm.set(false);
+    }
     this.formErrors.set({});
+  }
+
+  protected toggleInviteForm(): void {
+    this.showInviteForm.update((open) => !open);
+    if (this.showInviteForm()) {
+      this.showForm.set(false);
+    }
+    this.inviteFormErrors.set({});
+  }
+
+  protected sendInvite(): void {
+    if (this.inviteForm.invalid || this.inviteSaving()) {
+      this.inviteForm.markAllAsTouched();
+      return;
+    }
+
+    this.inviteSaving.set(true);
+    this.inviteFormErrors.set({});
+    const payload = this.inviteForm.getRawValue();
+
+    this.users.invite(payload).subscribe({
+      next: (res) => {
+        this.inviteSaving.set(false);
+        this.toast.success(`Invitation sent to ${payload.email}!`);
+        this.sentInviteInfo.set({ email: payload.email, invite_url: res.invite_url });
+        this.inviteForm.reset({ role: 'employee' });
+        this.showInviteForm.set(false);
+        this.load(1);
+      },
+      error: (error: ApiErrorBody) => {
+        this.inviteSaving.set(false);
+        this.inviteFormErrors.set(error.details ?? { email: error.message });
+      },
+    });
   }
 
   protected create(): void {
@@ -152,5 +203,9 @@ export class Employees {
 
   protected dismissCredentials(): void {
     this.issuedCredentials.set(null);
+  }
+
+  protected dismissInviteInfo(): void {
+    this.sentInviteInfo.set(null);
   }
 }

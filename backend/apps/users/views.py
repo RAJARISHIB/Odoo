@@ -26,6 +26,16 @@ def refresh(request):
     return AuthController(request).refresh()
 
 
+@api_view("GET")
+def invite_details(request):
+    return AuthController(request).get_invite_details()
+
+
+@api_view("POST")
+def accept_invite(request):
+    return AuthController(request).accept_invite()
+
+
 # ---------------------------------------------------------------------------
 # Auth (authenticated)
 # ---------------------------------------------------------------------------
@@ -73,6 +83,12 @@ def profile(request):
 def user_collection(request):
     controller = UserController(request)
     return controller.list() if request.method == "GET" else controller.create()
+
+
+@api_view("POST")
+@admin_required
+def invite_user(request):
+    return UserController(request).invite()
 
 
 @api_view("GET", "PATCH", "PUT", "DELETE")

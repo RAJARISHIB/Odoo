@@ -77,6 +77,31 @@ export class Auth {
     return request.pipe(tap((result) => this.startSession(result.tokens, result.user)));
   }
 
+  getInviteDetails(token: string): Observable<{
+    email: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    designation: string;
+    role_name: string;
+    organization_name: string;
+    status: string;
+    is_valid: boolean;
+  }> {
+    const baseUrl = environment.apiUrl;
+    return this.http.get<any>(`${baseUrl}/auth/invite-details?token=${encodeURIComponent(token)}`).pipe(
+      map((res: ApiResponse<any>) => res.data)
+    );
+  }
+
+  acceptInvite(token: string, payload: { password: string; first_name?: string; last_name?: string; phone?: string }): Observable<LoginResponse> {
+    const baseUrl = environment.apiUrl;
+    return this.http.post<any>(`${baseUrl}/auth/accept-invite`, { token, ...payload }).pipe(
+      map((res: ApiResponse<LoginResponse>) => res.data),
+      tap((res) => this.startSession(res.tokens, res.user)),
+    );
+  }
+
   /** Re-read the session from the server - used by the app initialiser. */
   loadSession(): Observable<SessionResponse> {
     return this.api.get<SessionResponse>('auth/me').pipe(

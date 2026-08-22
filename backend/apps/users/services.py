@@ -5,11 +5,13 @@ a domain decision lives here, so the same logic can be reused from a management
 command, a seed script or a background job.
 """
 import logging
-from datetime import date, datetime, timezone
+import uuid
+from datetime import date, datetime, timedelta, timezone
 
 from django.conf import settings
+from django.core.mail import send_mail
 
-from apps.organization.models import Organization
+from apps.organization.models import Department, Organization
 from apps.users.models import RefreshToken, User, Role
 from core.constants import Role as RoleEnum, UserStatus, Permissions, RealtimeEvent
 from core.identifiers import generate_login_id, organization_code, split_full_name
@@ -287,7 +289,10 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
     else:
         raw_password = temporary_password = random_password()
 
-    role = validate_choice(data.get("role", Role.EMPLOYEE), Role.ALL, "role")
+    role_slug = validate_choice(data.get("role", RoleEnum.EMPLOYEE), RoleEnum.ALL, "role")
+    role_obj = Role.objects.filter(organization=organization, slug=role_slug).first()
+    if not role_obj:
+        role_obj = Role.objects.filter(organization=organization, slug=RoleEnum.EMPLOYEE).first()
     joined_at = parse_datetime(data.get("date_of_joining")) or datetime.now(timezone.utc)
 
     user = User(
@@ -300,7 +305,7 @@ def create_user(organization: Organization, data: dict, *, created_by: User = No
         employee_id=data.get("employee_id"),
         designation=data.get("designation"),
         date_of_joining=joined_at,
-        role=role,
+        role=role_obj,
         status=data.get("status", UserStatus.ACTIVE),
         must_change_password=temporary_password is not None,
     )
@@ -534,3 +539,198 @@ def assign_role(organization, role_id: str, user_ids: list):
             notify_user(user.id, RealtimeEvent.USER_UPDATED, user.to_dict())
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Employee Invitations & Onboarding Flow
+# ---------------------------------------------------------------------------
+def _async_send_mail(subject, message, from_email, recipient_list, html_message):
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=recipient_list,
+            html_message=html_message,
+            fail_silently=True,
+        )
+    except Exception as exc:
+        logger.warning("SMTP email sending failed: %s", exc)
+
+
+def send_invitation_email(user: User, invite_url: str):
+    """Dispatch invitation email to the employee via SMTP asynchronously."""
+    import threading
+
+    subject = f"You're invited to join {user.organization.name} on HRMS Portal"
+    message = (
+        f"Hello {user.first_name},\n\n"
+        f"You have been invited to join {user.organization.name} as a {user.designation or 'Team Member'}.\n\n"
+        f"Please click the link below to accept your invitation and complete your onboarding:\n"
+        f"{invite_url}\n\n"
+        f"This link will expire in 7 days.\n\n"
+        f"Best regards,\n"
+        f"{user.organization.name} HR Team"
+    )
+    html_message = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;">
+      <h2 style="color: #0f766e; margin-top: 0;">Welcome to {user.organization.name}!</h2>
+      <p style="color: #334155; font-size: 15px;">Hello <strong>{user.first_name}</strong>,</p>
+      <p style="color: #334155; font-size: 15px;">You have been invited to join <strong>{user.organization.name}</strong> as a <strong>{user.designation or 'Team Member'}</strong>.</p>
+      <p style="color: #334155; font-size: 15px;">Please click the button below to accept your invitation and complete your onboarding:</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="{invite_url}" style="background-color: #0f766e; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px;">Accept Invitation & Complete Onboarding</a>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">Or copy and paste this URL into your browser:<br><a href="{invite_url}" style="color: #0f766e; word-break: break-all;">{invite_url}</a></p>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px;">This invitation link will expire in 7 days.</p>
+    </div>
+    """
+    threading.Thread(
+        target=_async_send_mail,
+        args=(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message),
+        daemon=True,
+    ).start()
+
+
+def invite_employee(organization, inviter: User, data: dict) -> dict:
+    """Invite a new employee via SMTP email with an invitation acceptance link."""
+    email = validate_email(data.get("email"), "email")
+
+    existing = User.objects.filter(organization=organization, email=email, is_deleted=False).first()
+    if existing:
+        if existing.status == UserStatus.INVITED:
+            # Re-send invite
+            token = uuid.uuid4().hex
+            existing.invite_token = token
+            existing.invite_token_expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+            existing.invited_by = inviter
+            existing.invited_at = datetime.now(timezone.utc)
+            existing.save()
+
+            invite_url = f"{settings.FRONTEND_URL}/auth/accept-invite?token={token}"
+            send_invitation_email(existing, invite_url)
+            return {"user": existing.to_dict(), "invite_url": invite_url, "message": f"Invitation re-sent to {email} successfully."}
+
+        raise Conflict("A user with this email address already exists.", details={"email": "Email in use."})
+
+    first_name = str(data.get("first_name", "")).strip()
+    if not first_name:
+        raise ValidationError("First name is required.", details={"first_name": "This field is required."})
+
+    last_name = str(data.get("last_name", "")).strip()
+    designation = str(data.get("designation", "")).strip()
+    employee_id = str(data.get("employee_id", "")).strip()
+
+    # Department
+    department = None
+    if data.get("department_id"):
+        department = Department.objects.filter(id=data["department_id"], organization=organization).first()
+
+    # Role lookup
+    role_input = data.get("role", RoleEnum.EMPLOYEE)
+    role_obj = None
+    if isinstance(role_input, str):
+        role_obj = Role.objects.filter(organization=organization, slug=role_input).first()
+        if not role_obj:
+            role_obj = Role.objects.filter(organization=organization, slug=RoleEnum.EMPLOYEE).first()
+
+    if not role_obj:
+        raise ValidationError("Invalid role specified.")
+
+    login_id = generate_login_id(organization, first_name, last_name)
+    temp_pass = random_password()
+    invite_token = uuid.uuid4().hex
+
+    user = User(
+        organization=organization,
+        department=department,
+        login_id=login_id,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        designation=designation,
+        employee_id=employee_id,
+        role=role_obj,
+        status=UserStatus.INVITED,
+        invite_token=invite_token,
+        invite_token_expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        invited_by=inviter,
+        invited_at=datetime.now(timezone.utc),
+    )
+    user.set_password(temp_pass)
+    user.save()
+
+    invite_url = f"{settings.FRONTEND_URL}/auth/accept-invite?token={invite_token}"
+    send_invitation_email(user, invite_url)
+
+    return {
+        "user": user.to_dict(),
+        "invite_url": invite_url,
+        "message": f"Invitation sent to {email} successfully.",
+    }
+
+
+def get_invite_details(token: str) -> dict:
+    """Retrieve invitation details by token for public accept-invite screen."""
+    if not token:
+        raise ValidationError("Invitation token is required.")
+
+    user = User.objects.filter(invite_token=token, is_deleted=False).first()
+    if not user:
+        raise NotFound("Invitation link is invalid or expired.")
+
+    if user.status != UserStatus.INVITED:
+        raise ValidationError("This invitation has already been accepted or is no longer active.")
+
+    if user.invite_token_expires_at and datetime.now(timezone.utc) > user.invite_token_expires_at:
+        raise ValidationError("This invitation link has expired. Please request a new invitation.")
+
+    return {
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.full_name,
+        "designation": user.designation,
+        "role_name": user.role.name if hasattr(user.role, "name") else str(user.role),
+        "organization_name": user.organization.name if user.organization else "",
+        "status": user.status,
+        "is_valid": True,
+    }
+
+
+def accept_invitation(token: str, data: dict, *, ip_address: str = "", user_agent: str = "") -> dict:
+    """Complete employee onboarding: validate token, set password, mark ACTIVE and sign in."""
+    if not token:
+        raise ValidationError("Invitation token is required.")
+
+    user = User.objects.filter(invite_token=token, is_deleted=False).first()
+    if not user or user.status != UserStatus.INVITED:
+        raise ValidationError("Invitation link is invalid, expired, or already accepted.")
+
+    if user.invite_token_expires_at and datetime.now(timezone.utc) > user.invite_token_expires_at:
+        raise ValidationError("Invitation link has expired.")
+
+    password = validate_password(data.get("password"), "password")
+    user.set_password(password)
+
+    if data.get("first_name"):
+        user.first_name = str(data["first_name"]).strip()
+    if data.get("last_name"):
+        user.last_name = str(data["last_name"]).strip()
+    if data.get("phone"):
+        user.phone = validate_phone(data["phone"])
+
+    user.status = UserStatus.ACTIVE
+    user.must_change_password = False
+    user.invite_token = None
+    user.invite_token_expires_at = None
+    user.mark_logged_in()
+    user.save()
+
+    tokens = issue_token_pair(user, ip_address=ip_address, user_agent=user_agent)
+    return {
+        "user": user.to_dict(),
+        "tokens": tokens,
+        "message": "Invitation accepted! Welcome to your HRMS Portal.",
+    }
+

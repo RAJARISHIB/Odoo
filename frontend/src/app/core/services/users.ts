@@ -22,6 +22,10 @@ export class Users {
     return this.api.post<User>('users', payload);
   }
 
+  invite(payload: { email: string; first_name: string; last_name?: string; designation?: string; employee_id?: string; role?: string; department_id?: string }): Observable<{ user: User; invite_url: string; message: string }> {
+    return this.api.post<{ user: User; invite_url: string; message: string }>('users/invite', payload);
+  }
+
   update(id: string, payload: Partial<User>): Observable<User> {
     return this.api.patch<User>(`users/${id}`, payload);
   }

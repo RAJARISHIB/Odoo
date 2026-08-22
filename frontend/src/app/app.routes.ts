@@ -48,6 +48,11 @@ export const routes: Routes = [
         title: 'Create organization',
         loadComponent: () => import('./features/auth/register').then((m) => m.Register),
       },
+      {
+        path: 'accept-invite',
+        title: 'Accept invitation',
+        loadComponent: () => import('./features/auth/accept-invite').then((m) => m.AcceptInvite),
+      },
     ],
   },
 

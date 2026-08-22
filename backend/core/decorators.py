@@ -76,7 +76,8 @@ def roles_required(*roles):
             if request.method == "OPTIONS":
                 return view(request, *args, **kwargs)
             user = request.auth_user
-            if user.role not in roles:
+            user_role_slug = getattr(user.role, "slug", str(user.role)) if user and user.role else None
+            if user_role_slug not in roles:
                 raise PermissionDenied(
                     "Requires one of these roles: {}.".format(", ".join(roles))
                 )

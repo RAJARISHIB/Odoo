@@ -58,6 +58,18 @@ class AuthController(BaseController):
         result = services.refresh_session(self.field("refresh_token"), **self._session_meta())
         return self.ok(result, "Session refreshed.")
 
+    def get_invite_details(self):
+        """Public endpoint to fetch invitation details using an invite token."""
+        token = self.param("token") or self.field("token")
+        result = services.get_invite_details(token)
+        return self.ok(result)
+
+    def accept_invite(self):
+        """Public endpoint to accept an invitation and set password."""
+        token = self.field("token")
+        result = services.accept_invitation(token, self.data, **self._session_meta())
+        return self.ok(result, result.get("message", "Invitation accepted successfully."))
+
     def logout(self):
         """Revoke this session, or every session with `?all=true`."""
         all_sessions = self.param("all", "false").lower() == "true"
@@ -170,6 +182,14 @@ class UserController(BaseController):
         return self.created(
             payload, "Employee created. Login ID: {}.".format(user.login_id)
         )
+
+    def invite(self):
+        """Send an email invitation to a new employee."""
+        self.require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.HR)
+        self.require("email", "first_name")
+        result = services.invite_employee(self.user.organization, inviter=self.user, data=self.data)
+        self.emit_to_admins(RealtimeEvent.USER_CREATED, {"user": result["user"]})
+        return self.created(result, result.get("message", "Employee invitation sent."))
 
     def retrieve(self, user_id):
         self.assert_self_or_admin(user_id)

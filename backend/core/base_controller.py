@@ -118,7 +118,9 @@ class BaseController:
 
     @property
     def role(self):
-        return self.user.role if self.user else None
+        if not self.user or not self.user.role:
+            return None
+        return getattr(self.user.role, "slug", str(self.user.role))
 
     @property
     def organization_id(self):
@@ -132,6 +134,7 @@ class BaseController:
         if not self.user:
             raise AuthenticationError()
         return self.user
+
     def require_permissions(self, *permissions):
         """Restrict an action to users holding ALL the specified permissions."""
         user = self.require_user()
@@ -142,25 +145,26 @@ class BaseController:
             )
         return user
 
-    def _deprecated_require_roles(self, *roles):
-        """Restrict an action to specific role slugs (legacy compat)."""
+    def require_roles(self, *roles):
+        """Restrict an action to specific role slugs."""
         user = self.require_user()
-        if not hasattr(user.role, 'slug') or user.role.slug not in roles:
+        user_role_slug = self.role
+        if user_role_slug not in roles:
             raise PermissionDenied(
                 "This action requires one of these roles: {}.".format(", ".join(roles))
             )
         return user
 
-    def _deprecated_require_admin(self):
+    def require_admin(self):
         """Any role that has access to the admin panel."""
         return self.require_roles(*Role.ADMIN_PANEL)
 
-    def _deprecated_require_super_admin(self):
+    def require_super_admin(self):
         return self.require_roles(Role.SUPER_ADMIN)
 
     @property
     def is_admin(self) -> bool:
-        return bool(self.user and hasattr(self.user.role, 'slug') and self.user.role.slug in Role.ADMIN_PANEL)
+        return bool(self.user and getattr(self.user.role, "slug", str(self.user.role)) in Role.ADMIN_PANEL)
 
 
     def is_self(self, user_id) -> bool:
