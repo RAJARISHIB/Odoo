@@ -1,0 +1,218 @@
+.mt-4 { margin-top: 1.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.ml-2 { margin-left: 0.5rem; }
+.p-0 { padding: 0 !important; }
+
+.text-primary { color: var(--primary); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+
+.calendar-card {
+  overflow: hidden;
+}
+
+.calendar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 12.5px;
+  color: var(--text-muted);
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+
+    &.govt-dot { background: var(--info); }
+    &.org-dot { background: var(--primary); }
+    &.leave-dot { background: var(--warning); }
+  }
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--border);
+  gap: 1px;
+
+  .weekday {
+    background: var(--surface-alt);
+    padding: 10px;
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 650;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .day-cell {
+    background: var(--surface);
+    min-height: 100px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--surface-alt);
+    }
+
+    &.other-month {
+      background: var(--bg);
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    &.is-today {
+      background: var(--primary-soft);
+
+      .day-number span {
+        font-weight: 700;
+        color: var(--primary);
+      }
+    }
+
+    .day-number {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+
+      .today-badge {
+        font-size: 10px;
+        background: var(--primary);
+        color: #fff;
+        padding: 1px 5px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+    }
+
+    .day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 2px;
+      overflow-y: auto;
+      max-height: 70px;
+
+      .event-badge {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 550;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        .event-icon {
+          font-size: 11px;
+          flex-shrink: 0;
+        }
+
+        .event-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        &.holiday-event {
+          &.govt {
+            background: var(--info-soft);
+            color: var(--info);
+            border-left: 2.5px solid var(--info);
+          }
+
+          &.org {
+            background: var(--primary-soft);
+            color: var(--primary);
+            border-left: 2.5px solid var(--primary);
+          }
+        }
+
+        &.leave-event {
+          &.pending {
+            background: var(--warning-soft);
+            color: var(--warning);
+            border-left: 2.5px solid var(--warning);
+          }
+
+          &.approved {
+            background: var(--success-soft);
+            color: var(--success);
+            border-left: 2.5px solid var(--success);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.2s ease;
+}
+
+.modal-foot {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.alert.danger-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+  font-size: 13px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

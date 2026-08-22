@@ -12,6 +12,7 @@ from datetime import datetime, time, timedelta, timezone
 from django.core.management.base import BaseCommand
 
 from apps.attendance.models import Attendance, WorkSession
+from apps.leaves.models import Holiday, LeaveRequest
 from apps.organization.models import Department, Organization
 from apps.users.models import RefreshToken, User
 from core.constants import AttendanceSource, AttendanceStatus, Role, UserStatus
@@ -45,6 +46,8 @@ class Command(BaseCommand):
         owner = self._owner(organization)
         users = self._users(organization, departments)
         self._attendance(organization, [owner] + users, options["days"])
+        self._holidays(organization)
+        self._leaves(organization, users)
 
         self.stdout.write(self.style.SUCCESS("\nDemo data ready."))
         self.stdout.write("  Organization : {} ({}, code {})".format(
@@ -63,6 +66,8 @@ class Command(BaseCommand):
         if not organization:
             return
         Attendance.objects.filter(organization=organization).delete()
+        Holiday.objects.filter(organization=organization).delete()
+        LeaveRequest.objects.filter(organization=organization).delete()
         for user in User.objects.filter(organization=organization):
             RefreshToken.objects.filter(user=user).delete()
         User.objects.filter(organization=organization).delete()
@@ -188,3 +193,52 @@ class Command(BaseCommand):
                 written += 1
 
         self.stdout.write("Wrote {} attendance records.".format(written))
+
+    def _holidays(self, organization):
+        today = datetime.now(timezone.utc).date()
+        year = today.year
+        month = today.month
+
+        sample_holidays = [
+            ("Independence Day", datetime(year, 8, 15, tzinfo=timezone.utc), Holiday.TYPE_GOVERNMENT, "National Holiday"),
+            ("Republic Day", datetime(year, 1, 26, tzinfo=timezone.utc), Holiday.TYPE_GOVERNMENT, "National Holiday"),
+            ("Gandhi Jayanti", datetime(year, 10, 2, tzinfo=timezone.utc), Holiday.TYPE_GOVERNMENT, "National Holiday"),
+            ("Company Foundation Day", datetime(year, month, 28, tzinfo=timezone.utc), Holiday.TYPE_ORGANIZATION, "Annual Company Celebration"),
+        ]
+
+        count = 0
+        for name, dt, h_type, desc in sample_holidays:
+            if not Holiday.objects.filter(organization=organization, name=name, date=dt).first():
+                Holiday(
+                    organization=organization,
+                    name=name,
+                    date=dt,
+                    type=h_type,
+                    description=desc,
+                ).save()
+                count += 1
+        self.stdout.write("Seeded {} holidays.".format(count))
+
+    def _leaves(self, organization, users):
+        today = datetime.now(timezone.utc).date()
+        dev_user = next((u for u in users if u.email == "dev@acme.test"), None)
+        if not dev_user:
+            return
+
+        # Create one pending leave request for testing
+        start_d = today + timedelta(days=5)
+        end_d = today + timedelta(days=5)
+        start_dt = datetime.combine(start_d, time.min, tzinfo=timezone.utc)
+        end_dt = datetime.combine(end_d, time.max, tzinfo=timezone.utc)
+
+        if not LeaveRequest.objects.filter(organization=organization, employee=dev_user, start_date=start_dt).first():
+            LeaveRequest(
+                organization=organization,
+                employee=dev_user,
+                start_date=start_dt,
+                end_date=end_dt,
+                reason="Personal work",
+                status=LeaveRequest.STATUS_PENDING,
+            ).save()
+            self.stdout.write("Seeded sample leave request for dev@acme.test.")
+

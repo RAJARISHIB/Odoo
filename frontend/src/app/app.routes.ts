@@ -85,6 +85,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/user/attendance/my-attendance').then((m) => m.MyAttendance),
       },
       {
+        path: 'calendar',
+        loadComponent: () => import('./features/user/calendar/calendar').then((m) => m.UserCalendar),
+      },
+      {
         path: 'profile',
         loadComponent: () => import('./features/user/profile/profile').then((m) => m.Profile),
       },

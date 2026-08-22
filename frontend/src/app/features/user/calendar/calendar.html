@@ -1,0 +1,261 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Employee Calendar & Leave</h1>
+      <p>View government and organization holidays, track leave balances, and apply for leave.</p>
+    </div>
+    <div class="row">
+      <button class="btn" type="button" (click)="openApplyModal()">
+        <span>+</span> Apply for Leave
+      </button>
+    </div>
+  </div>
+
+  <!-- Stat Tiles: Leave Balance -->
+  <div class="grid cols-4 balance-grid">
+    <div class="stat">
+      <div class="label">Monthly Entitlement</div>
+      <div class="value">{{ balance()?.monthly_entitlement ?? '-' }} <small class="subtle">Days</small></div>
+      <div class="hint">Configured by organization</div>
+    </div>
+    <div class="stat">
+      <div class="label">Used Leave</div>
+      <div class="value text-success">{{ balance()?.used_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="hint">Approved requests this month</div>
+    </div>
+    <div class="stat">
+      <div class="label">Pending Leave</div>
+      <div class="value text-warning">{{ balance()?.pending_leave ?? 0 }} <small class="subtle">Days</small></div>
+      <div class="hint">Awaiting approval</div>
+    </div>
+    <div class="stat">
+      <div class="label">Remaining Balance</div>
+      <div class="value text-primary">{{ balance()?.remaining_leave ?? '-' }} <small class="subtle">Days</small></div>
+      <div class="hint">Available to apply</div>
+    </div>
+  </div>
+
+  <!-- Calendar Container Card -->
+  <div class="card calendar-card mt-4">
+    <div class="card-head calendar-head">
+      <div class="month-controls row">
+        <h2>{{ monthTitle() }}</h2>
+        <div class="btn-group row ml-2">
+          <button class="btn ghost sm" type="button" (click)="prevMonth()" title="Previous month">&larr;</button>
+          <button class="btn ghost sm" type="button" (click)="todayMonth()">Today</button>
+          <button class="btn ghost sm" type="button" (click)="nextMonth()" title="Next month">&rarr;</button>
+        </div>
+      </div>
+
+      <div class="calendar-legend row">
+        <span class="legend-item"><span class="dot govt-dot"></span> Govt Holiday</span>
+        <span class="legend-item"><span class="dot org-dot"></span> Org Holiday</span>
+        <span class="legend-item"><span class="dot leave-dot"></span> Employee Leave</span>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      @if (loading()) {
+        <div class="empty">
+          <div class="skeleton" style="height: 300px; width: 100%;"></div>
+        </div>
+      } @else {
+        <div class="calendar-grid">
+          <!-- Weekday Headers -->
+          <div class="weekday">Sun</div>
+          <div class="weekday">Mon</div>
+          <div class="weekday">Tue</div>
+          <div class="weekday">Wed</div>
+          <div class="weekday">Thu</div>
+          <div class="weekday">Fri</div>
+          <div class="weekday">Sat</div>
+
+          <!-- Days Cells -->
+          @for (day of calendarDays(); track day.dateStr) {
+            <div
+              class="day-cell"
+              [class.other-month]="!day.isCurrentMonth"
+              [class.is-today]="day.isToday"
+              [class.has-events]="day.holidays.length > 0 || day.leaves.length > 0"
+              (click)="selectDay(day)"
+            >
+              <div class="day-number">
+                <span>{{ day.dayNumber }}</span>
+                @if (day.isToday) {
+                  <span class="today-badge">Today</span>
+                }
+              </div>
+
+              <div class="day-events">
+                <!-- Holidays -->
+                @for (h of day.holidays; track h.id) {
+                  <div
+                    class="event-badge holiday-event"
+                    [class.govt]="h.type === 'government'"
+                    [class.org]="h.type === 'organization'"
+                    [title]="h.name + (h.description ? ' - ' + h.description : '')"
+                  >
+                    <span class="event-icon">{{ h.type === 'government' ? '🏛️' : '🏢' }}</span>
+                    <span class="event-title">{{ h.name }}</span>
+                  </div>
+                }
+
+                <!-- Leave Requests -->
+                @for (l of day.leaves; track l.id) {
+                  <div
+                    class="event-badge leave-event"
+                    [class.pending]="l.status === 'PENDING'"
+                    [class.approved]="l.status === 'APPROVED'"
+                    [title]="'Leave: ' + l.reason + ' (' + l.status + ')'"
+                  >
+                    <span class="event-icon">📝</span>
+                    <span class="event-title">Leave ({{ l.status }})</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Submitted Leave Requests Table Card -->
+  <div class="card mt-4">
+    <div class="card-head">
+      <h3>My Submitted Leave Requests</h3>
+      <span class="subtle">{{ myRequests().length }} requests</span>
+    </div>
+    <div class="card-body p-0">
+      @if (myRequests().length === 0) {
+        <div class="empty">
+          <strong>No leave requests submitted yet.</strong>
+          <p>Select dates on the calendar or click "Apply for Leave" above to submit a request.</p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>Duration</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Submitted On</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (req of myRequests(); track req.id) {
+                <tr>
+                  <td>
+                    <strong>{{ req.start_date }}</strong>
+                    <span class="muted"> &rarr; </span>
+                    <strong>{{ req.end_date }}</strong>
+                  </td>
+                  <td>{{ req.total_days }} {{ req.total_days === 1 ? 'day' : 'days' }}</td>
+                  <td>{{ req.reason }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [class.warning]="req.status === 'PENDING'"
+                      [class.success]="req.status === 'APPROVED'"
+                      [class.danger]="req.status === 'REJECTED' || req.status === 'CANCELLED'"
+                    >
+                      {{ req.status }}
+                    </span>
+                  </td>
+                  <td class="subtle">{{ req.created_at | date: 'mediumDate' }}</td>
+                  <td>
+                    @if (req.status !== 'CANCELLED') {
+                      <button class="btn ghost sm danger" type="button" (click)="cancelLeave(req)">
+                        Cancel
+                      </button>
+                    } @else {
+                      <span class="subtle">&mdash;</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Leave Application Modal -->
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeApplyModal()">
+    <div class="modal-card card" (click)="$event.stopPropagation()">
+      <div class="card-head">
+        <h3>Apply for Leave</h3>
+        <button class="btn ghost sm" type="button" (click)="closeApplyModal()">&times;</button>
+      </div>
+
+      <form [formGroup]="applyForm" (ngSubmit)="submitLeaveApplication()">
+        <div class="card-body">
+          @if (formErrors()['general']) {
+            <div class="alert danger-alert mb-3">
+              {{ formErrors()['general'] }}
+            </div>
+          }
+
+          <div class="grid cols-2">
+            <div class="field">
+              <label for="start_date">Start Date</label>
+              <input
+                id="start_date"
+                type="date"
+                formControlName="start_date"
+                [class.invalid]="applyForm.get('start_date')?.touched && (applyForm.get('start_date')?.invalid || formErrors()['start_date'])"
+              />
+              @if (formErrors()['start_date']) {
+                <div class="error">{{ formErrors()['start_date'] }}</div>
+              }
+            </div>
+
+            <div class="field">
+              <label for="end_date">End Date</label>
+              <input
+                id="end_date"
+                type="date"
+                formControlName="end_date"
+                [class.invalid]="applyForm.get('end_date')?.touched && (applyForm.get('end_date')?.invalid || formErrors()['end_date'])"
+              />
+              @if (formErrors()['end_date']) {
+                <div class="error">{{ formErrors()['end_date'] }}</div>
+              }
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="reason">Reason for Leave</label>
+            <textarea
+              id="reason"
+              rows="3"
+              placeholder="Provide a clear reason for your leave request..."
+              formControlName="reason"
+              [class.invalid]="applyForm.get('reason')?.touched && (applyForm.get('reason')?.invalid || formErrors()['reason'])"
+            ></textarea>
+            @if (formErrors()['reason']) {
+              <div class="error">{{ formErrors()['reason'] }}</div>
+            } @else if (applyForm.get('reason')?.touched && applyForm.get('reason')?.hasError('required')) {
+              <div class="error">Reason is required.</div>
+            }
+          </div>
+        </div>
+
+        <div class="card-head modal-foot">
+          <button class="btn ghost" type="button" (click)="closeApplyModal()" [disabled]="submitting()">
+            Cancel
+          </button>
+          <button class="btn primary" type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Submitting...' : 'Submit Request' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

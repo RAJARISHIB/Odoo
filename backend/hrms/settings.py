@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.organization",
     "apps.attendance",
+    "apps.leaves",
 ]
 
 MIDDLEWARE = [

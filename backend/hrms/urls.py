@@ -34,6 +34,7 @@ urlpatterns = [
     path(API_PREFIX, include("apps.users.urls")),
     path(API_PREFIX, include("apps.organization.urls")),
     path(API_PREFIX, include("apps.attendance.urls")),
+    path(API_PREFIX, include("apps.leaves.urls")),
 
     path(API_PREFIX + "admin/", include((attendance_admin_urls, "admin"))),
 

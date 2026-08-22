@@ -32,6 +32,7 @@ export class UserShell {
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', path: '/app/dashboard', icon: '▦' },
     { label: 'My attendance', path: '/app/attendance', icon: '⏱' },
+    { label: 'Calendar & Leave', path: '/app/calendar', icon: '📅' },
     { label: 'Profile', path: '/app/profile', icon: '☺' },
   ];
 
